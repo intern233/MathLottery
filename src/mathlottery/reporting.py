@@ -1,0 +1,148 @@
+import json
+
+from mathlottery.budget import elapsed
+from mathlottery.models import Run
+from mathlottery.storage import Store, atomic_write
+
+
+def report(store: Store, run: Run):
+    problem = run.problem
+    backend = run.config.get("backend", {})
+    sections = [
+        "# MathLottery — Mathematical Research Report",
+        f"Run: `{run.id}` · Workflow: `{run.workflow}` · State: **{run.state}** · Phase: `{run.phase}`",
+        "## Problem",
+        f"### {problem.title}\n\n{problem.statement}" if problem else "No problem selected.",
+        f"Source: {problem.source_url or 'User-provided / educational example'}" if problem else "",
+        "## Open Status",
+        (
+            f"**{problem.status}** (agent assessment, not a certification).\n\n"
+            f"Checked: {problem.status_checked_at or 'not established'}\n\n"
+            + "\n".join(f"- {url}" for url in problem.status_evidence)
+        )
+        if problem
+        else "UNKNOWN",
+        "## Research Configuration",
+        f"Backend: `{run.mode}` · Execution: `{run.execution}` · "
+        f"Requested model: `{backend.get('model') or 'inherited from Codex / unreported'}` · "
+        f"Requested reasoning effort: `{backend.get('reasoning_effort') or 'inherited from Codex / unreported'}`",
+        (
+            f"Requested Chat reasoning mode: `{backend.get('chat', {}).get('reasoning_mode') or 'API default'}`"
+            if run.mode == "chat"
+            else ""
+        ),
+        "```json\n"
+        + json.dumps({"budget": run.config.get("budget"), "environment": run.environment}, indent=2)
+        + "\n```",
+        "## Exploration Summary",
+    ]
+    if run.shortlist:
+        sections.extend(
+            ["## Ranked Problems", "Ranking is a heuristic, not a probability of success."]
+        )
+        for number, item in enumerate(run.shortlist, 1):
+            sections.append(
+                f"{number}. **{item.title}** (`{item.id}`, {item.status})\n\n"
+                f"{item.statement}\n\nReason: {item.selection_reason}\n\n"
+                f"Difficulty: {item.difficulty_estimate}\n\n"
+                f"Verification feasibility: {item.verification_feasibility}\n\n"
+                f"Source: {item.source_url or 'not established'}"
+            )
+        sections.append("[Selection record and agent assessments](literature/selection.json)")
+    sections += [f"- Round {m.source_iteration} [{m.status}] {m.content}" for m in run.memory]
+    if not run.memory and run.execution != "native":
+        sections.append("No research memory recorded yet.")
+    if run.execution == "native":
+        sections.extend(
+            [
+                "## Native Research",
+                f"Codex research session: `{run.native.solver_session_id or 'not started'}`",
+                f"Reviewer session: `{run.native.reviewer_session_id or 'not started'}`",
+                f"Chat research response: `{run.native.solver_response_id or 'not started'}`",
+                f"Chat review response: `{run.native.reviewer_response_id or 'not started'}`",
+                "Native conversation history and research files replace the structured memory window. "
+                "Codex may compact its own context; no unbounded context guarantee is made.",
+            ]
+        )
+        for entry in run.native.history:
+            line = f"- {entry['role']} · {entry['status']} · [Full answer]({entry['answer']})"
+            if (store.run_dir(run.id) / entry["events"]).is_file():
+                line += f" · [Native events]({entry['events']})"
+            sections.append(line)
+            if entry.get("milestone", {}).get("summary"):
+                sections.append(entry["milestone"]["summary"])
+            if entry.get("runtime"):
+                sections.append(
+                    "Observed runtime: " + json.dumps(entry["runtime"], ensure_ascii=False)
+                )
+    sections.append("## Candidate Results")
+    for candidate in run.candidates:
+        sections.extend(
+            [
+                f"### {candidate.id} — {candidate.level}",
+                f"SHA-256: `{candidate.sha256}`",
+                candidate.claim,
+                "Assumptions: " + ("; ".join(candidate.assumptions) or "none stated"),
+                candidate.proof,
+            ]
+        )
+    if not run.candidates:
+        sections.append("No candidate proof was produced. This is a valid research outcome.")
+    sections.append("## Verification")
+    for candidate in run.candidates:
+        for review in candidate.reviews:
+            sections.extend(
+                [
+                    f"{candidate.id}: **{review.verdict}**",
+                    f"Truth: {review.truth_assessment}",
+                    f"Proof: {review.proof_assessment}",
+                    "\n".join(f"- {issue}" for issue in review.issues),
+                    "Evidence: " + "; ".join(review.evidence),
+                ]
+            )
+    for observation in run.observations:
+        if observation.get("tool") in ("python_exec", "sympy_compute", "lean_check"):
+            result = observation["result"]
+            sections.append(
+                f"- `{observation['tool']}`: {result.get('status')} — "
+                f"[{observation['artifact']}]({observation['artifact']})"
+            )
+    sections.append("## Novelty Assessment")
+    for candidate in run.candidates:
+        if candidate.reviews:
+            review = candidate.reviews[-1]
+            sections.append(f"{candidate.id}: **{review.novelty}**. {review.novelty_notes}")
+            sections.extend(
+                f"- [{ref.title or ref.url}]({ref.url})" for ref in review.novelty_references
+            )
+    sections.append(
+        "Search coverage is limited to retrieved sources; no search hit is not proof of novelty."
+    )
+    sections += [
+        "## Resource Usage",
+        f"Completed/attempted rounds: {run.iteration}",
+        f"Active wall time: {elapsed(run):.2f} seconds (manual Chat waiting is excluded).",
+        f"Measured input tokens: {run.usage.input_tokens if run.usage.input_tokens is not None else 'unknown'}",
+        f"Measured output tokens: {run.usage.output_tokens if run.usage.output_tokens is not None else 'unknown'}",
+        f"Calls with unknown token usage: {run.usage.unknown_calls}",
+        "Chat uses explicitly selected API billing; Codex uses its configured ChatGPT login. "
+        "There is no automatic backend fallback. API dollar costs, subscription balance and "
+        "third-party tool costs are not measured here; use provider account spending controls.",
+        "## Limitations",
+        "LLM review and finite experiments do not prove a general theorem. No expert review "
+        "has been recorded. Lean compilation alone is not the complete formal trust policy. "
+        "Natural-language/formal-statement equivalence is not automatically certified.",
+        f"Stop reason: {run.stop_reason or 'none'}",
+        f"Last error: {run.last_error or 'none'}",
+        "## Reproduction",
+        "Run the following commands from the MathLottery project directory.",
+        "```bash\nconda activate mathlottery\n"
+        f"mathlottery status {run.id}\nmathlottery report {run.id}\n"
+        f"mathlottery resume {run.id}\n```",
+        "See config.yaml, events.jsonl, checkpoints/, literature/, experiments/, and candidates/ "
+        "in this run directory. Demo responses are scripted and explicitly labelled; "
+        "their Python calculations are real local executions.",
+    ]
+    path = store.run_dir(run.id) / "report.md"
+    atomic_write(path, "\n\n".join(part for part in sections if part) + "\n")
+    return path

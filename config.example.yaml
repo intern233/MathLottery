@@ -1,0 +1,49 @@
+# 复制为 config.yaml，在这里选择模型；运行命令只需指定研究任务。
+backend:
+  # codex：官方 Codex 会话；chat：OpenAI Responses API。
+  mode: codex
+  model: gpt-6-astra
+  reasoning_effort: max
+  chat:
+    # 仅 mode: chat 时生效；可选 pro、standard，null 使用 API 默认值。
+    reasoning_mode: pro
+    api_key_env: OPENAI_API_KEY
+    base_url: https://api.openai.com/v1
+    poll_interval_seconds: 1
+    request_timeout_seconds: 30
+    tools:
+      - type: web_search
+      - type: code_interpreter
+        container:
+          type: auto
+
+  # 以下为运行设置。model / reasoning_effort 改为 null 可继承 Codex 用户配置。
+  execution: native
+  codex_command: codex
+  codex_profile: null
+  # null uses the remaining total budget for a native turn.
+  native_turn_timeout_seconds: null
+  native_web_search: live
+  native_network_access: true
+  native_max_log_bytes: 100000000
+  # Legacy structured calls only:
+  timeout_seconds: 300
+  max_retries: 2
+budget:
+  max_wall_time_minutes: 180
+  max_iterations: 50
+  max_input_tokens: null
+  max_output_tokens: null
+  # null: provider account controls spending. Legacy value 0 blocks the Chat API.
+  max_external_cost_usd: null
+tools:
+  # Legacy structured tools only; native commands use Codex's runtime.
+  timeout_seconds: 15
+  memory_mb: 512
+  max_output_chars: 20000
+  web_timeout_seconds: 15
+  web_interval_seconds: 3
+  max_download_bytes: 2000000
+  lean_command: lean
+# Legacy structured memory only.
+memory_context_chars: 16000

@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "case": "mesh-involutions",
+  "evidence_date": "2026-10-21",
+  "evidence_kind": "Curated summary of existing local evidence, not a new research run.",
+  "independent_ai_verdict": "NO_ISSUES_FOUND",
+  "stored_candidate_level": "SELF_CHECKED",
+  "external_expert_review": false,
+  "external_statement_equivalence_certification": false,
+  "runtime": {
+    "transport": "codex",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "max",
+    "sandbox": "workspace-write"
+  },
+  "provenance": "Controller-assisted native research; independent ordinary-proof review in a separate session. Later partial Lean work was continued by the controller.",
+  "raw_logs_bundled": false,
+  "new_lean_build_during_showcase_export": false,
+  "source": {
+    "url": "https://arxiv.org/abs/2606.14367v2",
+    "locator": "Corrected Conjecture 1, printed page 17"
+  },
+  "result": "Complete ordinary candidate proof for all n,k and all four exact patterns on involutions.",
+  "novelty": "POTENTIALLY_NEW",
+  "novelty_limit": "Positive open-status evidence in the revised primary paper and bounded literature checks; inaccessible and unpublished work cannot be ruled out.",
+  "candidate_content_sha256": "74183c541d86feb6ecc57151b1cfc661663afb1d50b985c806defec3bf0c4e6f",
+  "reviewed_proof_sha256": "8c6844e8b904f446524ec16aea6baf94343d317ba3b6b089fca5305b66e1a01b",
+  "original_review_report_sha256": "08956a0884958da8013ac18e1d264a804e72df0fdec1f5e15e2fed64669c68e9",
+  "presentation_edits": "Replaced archive-only references with public citations and local showcase links. The preceding presentation corrected three typographical issues. Mathematical proof body unchanged; no new review claimed. Presentation documentation now has English and Chinese editions; written proofs, Lean sources, certificates, checkers, and historical verification evidence are unchanged. Documentation hashes cover the current language editions; translation is not a new proof review.",
+  "lean": {
+    "full_conjecture_verified": false,
+    "proof_modules": 12,
+    "audited_theorems": 107,
+    "version": "4.35.0",
+    "mathlib_commit": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "unchanged_source_sha256": {
+      "MeshCompatibility.lean": "ff83da03043b8d8ed8fb3030a69da09cd63355efe2f7e74b2fdb392f71c02d9d",
+      "MeshComponents.lean": "3882654f5bf911ae8b5efc37140cfad3b2d8208252776495ffe7fbbb48f412a2",
+      "MeshDefinitions.lean": "9bac2a293d768004d0a8507ad5c71167e7db67fe517d6e99f3ebd535a8ac0a4e",
+      "MeshEquivariance.lean": "997a9f7d8de69ad255debd6003863dc5901677d6a4a4aff1c70a986963eef4de",
+      "MeshNesting.lean": "81055e6a56ccdbfec4c3a24d4215c00e64cc7280df41fa56804541fa887b5cbc",
+      "MeshOrbitCounting.lean": "24c82721a9c6621a5f3439051d97bd3d186d77c10f91d1a1b13be1fc6f0e1ac6",
+      "MeshPartial.lean": "d91e8f23ff1ce50cd72ef2ef101bb88a47d1bfcf32efaef5e20ed84694965b50",
+      "MeshPolynomial.lean": "33f6ed655e248b43c76604cfdc208be500468d6e6f95f73d7e279c54b9ea8501",
+      "MeshReduction.lean": "57a2b6b1a4354a46eaf70b1cabc909ef52b9936ab5bb8488150887626910edc4",
+      "MeshRotation.lean": "8222189953c3eb36ce96a5e349cd23e4679f0350359067c7d78457ca83e3af90",
+      "MeshStructure.lean": "3e2f503183ddbd1f621b017652b7b14c2fe056707b5b5889686a2e9ce896d60a",
+      "MeshSymmetry.lean": "8143c05a87b737470e57a8a584d08e4b437534b90d3d211f00cdf2c7ad181ffc",
+      "MeshTransport.lean": "b5e2d2b6ed53b8194895336338264a6d5df2cdc68f18f8f70c2d5be40254576b"
+    },
+    "axioms": [
+      "Classical.choice",
+      "Quot.sound",
+      "propext"
+    ],
+    "missing": [
+      "Canonical decomposition and reconstruction for arbitrary marked occurrence subsets.",
+      "Assembly and two-sided validity of the global simultaneous component rotation.",
+      "Global object and edge equivariance, yielding an actual MarkedTransport n for every n."
+    ],
+    "conditional_theorem_type": "Mesh.correctedConjecture_of_markedTransport : (∀ (n : ℕ), Nonempty (Mesh.MarkedTransport n)) → Mesh.correctedConjecture",
+    "historical_checks": [
+      {
+        "label": "lake-build",
+        "command": [
+          "lake",
+          "build"
+        ],
+        "exit_code": 0,
+        "log_sha256": "aff7e62778b122ae2692af50cd6249a61e2375b4d86e73825ba3eec8e8a8e289"
+      },
+      {
+        "label": "lake-types-axioms",
+        "command": [
+          "lake",
+          "env",
+          "lean",
+          "MeshPartial.lean"
+        ],
+        "exit_code": 0,
+        "log_sha256": "a09bc38ba75d6b0c8b0da9a952ac42e77c496e5f8227bafecaa7405f8f3f230b"
+      },
+      {
+        "label": "leanchecker-fresh",
+        "command": [
+          "lake",
+          "env",
+          "leanchecker",
+          "--fresh",
+          "--verbose",
+          "MeshPartial"
+        ],
+        "exit_code": 0,
+        "log_sha256": "466c80eb1ee7288d74f15ecd4614b3b28b01446a63947ed4509bd4c74bc07c9d"
+      }
+    ],
+    "checker": "Controller compilation and Lean kernel replay; no independent AI formalization review."
+  },
+  "finite_challenges": {
+    "all_permutations_up_to_n": 8,
+    "permutations_checked": 46234,
+    "A_marked_objects": 130354,
+    "B_marked_objects": 130354,
+    "component_arrangements_up_to_n": 7,
+    "component_arrangements_checked": 199630,
+    "all_involutions_up_to_n": 11,
+    "involutions_checked": 48928,
+    "interpretation": "Finite counterexample and implementation checks, not a universal proof."
+  },
+  "workflow_states": {
+    "find": "COMPLETED",
+    "solve": "RATE_LIMITED",
+    "ordinary_verify": "COMPLETED"
+  },
+  "files_sha256": {
+    "README.cn.md": "0b78e1af82f07e7ea67a462bcf454a21a536acf927877d00c30b1c59d0634646",
+    "README.md": "ddd34f98b8171d4ec4e5607541c73147df844559dd357f2810f7724c14c11487",
+    "formal/MeshCompatibility.lean": "ff83da03043b8d8ed8fb3030a69da09cd63355efe2f7e74b2fdb392f71c02d9d",
+    "formal/MeshComponents.lean": "3882654f5bf911ae8b5efc37140cfad3b2d8208252776495ffe7fbbb48f412a2",
+    "formal/MeshDefinitions.lean": "9bac2a293d768004d0a8507ad5c71167e7db67fe517d6e99f3ebd535a8ac0a4e",
+    "formal/MeshEquivariance.lean": "997a9f7d8de69ad255debd6003863dc5901677d6a4a4aff1c70a986963eef4de",
+    "formal/MeshNesting.lean": "81055e6a56ccdbfec4c3a24d4215c00e64cc7280df41fa56804541fa887b5cbc",
+    "formal/MeshOrbitCounting.lean": "24c82721a9c6621a5f3439051d97bd3d186d77c10f91d1a1b13be1fc6f0e1ac6",
+    "formal/MeshPartial.lean": "d91e8f23ff1ce50cd72ef2ef101bb88a47d1bfcf32efaef5e20ed84694965b50",
+    "formal/MeshPolynomial.lean": "33f6ed655e248b43c76604cfdc208be500468d6e6f95f73d7e279c54b9ea8501",
+    "formal/MeshReduction.lean": "57a2b6b1a4354a46eaf70b1cabc909ef52b9936ab5bb8488150887626910edc4",
+    "formal/MeshRotation.lean": "8222189953c3eb36ce96a5e349cd23e4679f0350359067c7d78457ca83e3af90",
+    "formal/MeshStructure.lean": "3e2f503183ddbd1f621b017652b7b14c2fe056707b5b5889686a2e9ce896d60a",
+    "formal/MeshSymmetry.lean": "8143c05a87b737470e57a8a584d08e4b437534b90d3d211f00cdf2c7ad181ffc",
+    "formal/MeshTransport.lean": "b5e2d2b6ed53b8194895336338264a6d5df2cdc68f18f8f70c2d5be40254576b",
+    "formal/README.cn.md": "a80a05b73c5c540bf8a14f202110af4489f50c84860f82a0193b6e45bf8c6355",
+    "formal/README.md": "6b87f8ab73b054a13b4f5df28620ca506cc2dd2d09087acc40677489ed45159b",
+    "formal/lake-manifest.json": "35d978fa9cd26856313ac3a248bc9fb971cdf59479f62ec5e18974009e30709f",
+    "formal/lakefile.toml": "87aac4742e53482b220372dd308d75daf644d1c174f0defd87faf5be9e69665e",
+    "formal/lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+    "proof.md": "0788dc26255153faaab5e5458b373d279767b950bd702204534ce6d7cba26e47",
+    "review.cn.md": "c94f9195beaf311f8472b76307f52d8a7dd8cc64e0d8964f61aabc0962246a5e",
+    "review.md": "93f8010f5572f547d53eddfc6109f17366fea4e2a913cd07755f24947c8919a3"
+  }
+}

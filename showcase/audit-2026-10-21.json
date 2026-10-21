@@ -1,0 +1,335 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-21",
+  "audit_kind": "Additional controller review with fresh web retrieval and computation; previous reviews were read. Not a new blind review or external expert certification.",
+  "original_candidates_unchanged": true,
+  "public_original_pdfs": [
+    {
+      "name": "mesh-original-v2",
+      "url": "https://arxiv.org/pdf/2606.14367v2",
+      "final_url": "https://arxiv.org/pdf/2606.14367v2",
+      "status": 200,
+      "type": "application/pdf",
+      "bytes": 340531,
+      "sha256": "d019d71fbb265fc0fc4619d9849855c644811498dd0812c34a2c0e741a04c57a"
+    },
+    {
+      "name": "graph-original",
+      "url": "https://www.ejgta.org/index.php/ejgta/article/download/1077/pdf_357",
+      "final_url": "https://www.ejgta.org/index.php/ejgta/article/download/1077/pdf_357",
+      "status": 200,
+      "type": "application/pdf",
+      "bytes": 334746,
+      "sha256": "2a2475b57fd15d103e558a3ef88854a3b646987ee7007ecafb46b2ef9f1ecfbd"
+    },
+    {
+      "name": "geometry-original",
+      "url": "https://ijopcm.zuj.edu.jo/index.php/IJOPCM/article/download/56/43",
+      "final_url": "https://ijopcm.zuj.edu.jo/index.php/IJOPCM/article/download/56/43",
+      "status": 200,
+      "type": "application/pdf",
+      "bytes": 222898,
+      "sha256": "0d96143c1a8b348cbebcdc760f1547e7eaf85ab04448796bcb9324dfe531fd3b"
+    }
+  ],
+  "related_source_fetches": [
+    {
+      "name": "mesh-july-prior",
+      "url": "https://arxiv.org/pdf/2607.04111",
+      "final_url": "https://arxiv.org/pdf/2607.04111",
+      "status": 200,
+      "type": "application/pdf",
+      "bytes": 233280,
+      "sha256": "380cc56b2d9b6b8ab65abc2f5bf2fd4acfe88058ac1212e7a5d80378bd931fc1",
+      "pages": 5
+    },
+    {
+      "name": "mesh-layered-prior",
+      "url": "https://strathprints.strath.ac.uk/97484/7/Zhang-etal-DM-2026-Equidistribution-of-mesh-patterns-of-short-length-on-layered-permutations.pdf",
+      "final_url": "https://strathprints.strath.ac.uk/97484/7/Zhang-etal-DM-2026-Equidistribution-of-mesh-patterns-of-short-length-on-layered-permutations.pdf",
+      "status": 200,
+      "type": "application/pdf",
+      "bytes": 781031,
+      "sha256": "22d4d19be4e7dc4fc5e4bb0abe8c7f6fb9c8a8307d2e9baff7b8045788140460",
+      "pages": 26
+    },
+    {
+      "name": "graph-2022-prior",
+      "url": "https://www.aimspress.com/aimspress-data/math/2022/5/PDF/math-07-05-485.pdf",
+      "final_url": "https://www.aimspress.com/aimspress-data/math/2022/5/PDF/math-07-05-485.pdf",
+      "status": 200,
+      "type": "application/pdf",
+      "bytes": 251455,
+      "sha256": "65535b948ca828835fbd22bba82b5c6707f8688e358ef6dae07180c0905eabd2",
+      "pages": 16
+    },
+    {
+      "name": "graph-2018-preprint",
+      "url": "https://arxiv.org/pdf/1809.03297",
+      "final_url": "https://arxiv.org/pdf/1809.03297",
+      "status": 200,
+      "type": "application/pdf",
+      "bytes": 153263,
+      "sha256": "c487293dda74ed979075b5274e3001e83ab82499687b09a1b2a6effb23080a15",
+      "pages": 12
+    },
+    {
+      "name": "geometry-followup",
+      "url": "https://journals.uol.edu.pk/JNHM/article/download/5387/2470",
+      "final_url": "https://journals.uol.edu.pk/JNHM/article/download/5387/2470",
+      "status": 403,
+      "type": "text/html; charset=UTF-8",
+      "bytes": 5539
+    },
+    {
+      "name": "mesh-alternating-prior",
+      "url": "https://papers.ssrn.com/sol3/Delivery.cfm/7425138.pdf?abstractid=7425138&mirid=1",
+      "final_url": "https://papers.ssrn.com/sol3/Delivery.cfm/7425138.pdf?abstractid=7425138&mirid=1",
+      "status": 403,
+      "type": "text/html; charset=UTF-8",
+      "bytes": 896436
+    }
+  ],
+  "overall_assessment": {
+    "all_three_original_problems_publicly_stated": true,
+    "new_mathematical_errors_found": false,
+    "all_three_currently_unsolved_before_this_work_certified": false,
+    "first_discovery_certified": false,
+    "external_expert_certification_added": false
+  },
+  "mesh": {
+    "novelty": "POTENTIALLY_NEW",
+    "open_status_evidence": "Latest author revision dated 2026-10-11 retains the corrected involution conjecture; no full prior involution solution identified in the checked material.",
+    "ordinary_proof_review": "No substantive gap found in component decomposition, simultaneous rotations, inverse maps, object/edge equivariance, and two-variable orbit-weight recovery.",
+    "finite_challenge": {
+      "status": "PASS",
+      "n_max": 8,
+      "permutations": 46234,
+      "A_marked_objects": 130354,
+      "transpose_fixed_marked_objects": 4192,
+      "B_marked_objects": 130354,
+      "checks": [
+        "literal shaded rectangles",
+        "star/path shape",
+        "valid marks after simultaneous component rotations",
+        "two-sided inverse",
+        "object and individual-edge transpose equivariance",
+        "fixed-edge orbit weights",
+        "all four involution histograms"
+      ],
+      "involution_histograms": [
+        {
+          "0": 1
+        },
+        {
+          "0": 1
+        },
+        {
+          "0": 1,
+          "1": 1
+        },
+        {
+          "0": 2,
+          "1": 1,
+          "2": 1
+        },
+        {
+          "0": 4,
+          "1": 3,
+          "2": 2,
+          "3": 1
+        },
+        {
+          "0": 12,
+          "1": 5,
+          "2": 6,
+          "3": 2,
+          "4": 1
+        },
+        {
+          "0": 35,
+          "1": 15,
+          "2": 14,
+          "3": 8,
+          "4": 3,
+          "5": 1
+        },
+        {
+          "0": 116,
+          "1": 38,
+          "2": 45,
+          "3": 17,
+          "4": 12,
+          "5": 3,
+          "6": 1
+        },
+        {
+          "0": 390,
+          "1": 127,
+          "2": 137,
+          "3": 57,
+          "4": 33,
+          "5": 15,
+          "6": 4,
+          "7": 1
+        }
+      ],
+      "elapsed_seconds": 3.586,
+      "scope": "Finite challenge, not a proof for arbitrary n. No previous checker imported."
+    },
+    "formal_status": "PARTIAL_ONLY; the premise forall n, Nonempty (Mesh.MarkedTransport n) remains unconstructed.",
+    "new_lean_execution": false
+  },
+  "geometry": {
+    "novelty": "UNKNOWN",
+    "open_status_evidence": "Conjecture 5 appears in the original paper; full text of the 2025 local-strengthening paper and 2026-09 related paper remains unavailable.",
+    "ordinary_proof_review": "Geometric estimates, all positive integer powers, all positive weights, strictness and boundary cases checked without finding a substantive error.",
+    "new_formal_checks": {
+      "source_sha256": {
+        "MedialAlgebra.lean": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+        "MedialGeometry.lean": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94",
+        "Conjecture5.lean": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9"
+      },
+      "checks": [
+        {
+          "command": [
+            "lean",
+            "-j1",
+            "-M2048",
+            "-R",
+            ".",
+            "-o",
+            "MedialAlgebra.olean",
+            "MedialAlgebra.lean"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 15.03,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "lean",
+            "-j1",
+            "-M6144",
+            "-R",
+            ".",
+            "-o",
+            "MedialGeometry.olean",
+            "MedialGeometry.lean"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 6.534,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "lean",
+            "-j1",
+            "-M6144",
+            "-R",
+            ".",
+            "-o",
+            "Conjecture5.olean",
+            "Conjecture5.lean"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 1.547,
+          "log_sha256": "8180a32f21764c0f771085a34f9d6baf4311b9fac2bf42b2cc7f84ec33f8ef74"
+        },
+        {
+          "command": [
+            "leanchecker",
+            "--verbose",
+            "MedialAlgebra",
+            "MedialGeometry",
+            "Conjecture5"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 9.584,
+          "log_sha256": "8b8ae13cfba362649c71276db63bb616b5e1b939480b3066bda681cafca679e8"
+        }
+      ],
+      "earlier_resource_failures": [
+        {
+          "stage": "compile-MedialAlgebra",
+          "exit_code": 1,
+          "error": "failed to create thread: Resource temporarily unavailable",
+          "elapsed_seconds": 0.046,
+          "virtual_address_limit_gib": 4,
+          "proof_result": "not checked; process initialization failed"
+        },
+        {
+          "stage": "compile-MedialGeometry",
+          "exit_code": -6,
+          "elapsed_seconds": 27.433,
+          "lean_memory_limit_mib": 2048,
+          "error": "lean::memory_exception: excessive memory consumption detected at interpreter",
+          "proof_result": "incomplete under this allocation limit"
+        }
+      ],
+      "peak_child_rss_kib": 2965952,
+      "dependencies": "Existing pinned mathlib and official Lean libraries reused; no downloads.",
+      "scope": "Fresh compilation of all three showcase modules and module kernel replay. This run does not use --fresh to replay every imported dependency."
+    },
+    "main_theorem": "ZengFeiYang.conjecture5_original",
+    "main_theorem_axioms": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "statement_correspondence": "AI review against original PDF page 51; not external semantic certification."
+  },
+  "graph": {
+    "novelty": "UNKNOWN",
+    "open_status_evidence": "Printed Conjecture 1 is public; no prior complete refutation identified in checked material. Some recent related full texts were inaccessible.",
+    "ordinary_proof_review": "The sequence meets the conjecture premises and admits an ordinary connected simple bipartite realization; an SI realization would require six incident edges from degree-2 vertices into vertices of total degree four.",
+    "independent_matrix_check": {
+      "status": "PASS",
+      "method": "Independently transcribed the proof adjacency table into a binary matrix; did not import the supplied checker.",
+      "vertices": 16,
+      "edges": 34,
+      "connected": true,
+      "bipartite": true,
+      "degree_multiplicities": {
+        "1": 1,
+        "2": 3,
+        "3": 1,
+        "4": 1,
+        "5": 6,
+        "6": 4
+      },
+      "even_degree_sum": 34,
+      "odd_degree_sum": 34,
+      "SI_degree2_demand": 6,
+      "SI_neighbors_capacity": 4,
+      "certificate_matches_table": true
+    },
+    "known_method": "Local incidence capacity inequality is already explicit in AIMS Mathematics 7(5) (2022), p.8687, equation (2.4).",
+    "lean_formalized": false
+  },
+  "audited_showcase_proof_sha256": {
+    "mesh-involutions": "0788dc26255153faaab5e5458b373d279767b950bd702204534ce6d7cba26e47",
+    "medial-triangle-inequality": "fdd130c5ce90d2497196c9c03e1c42841b4422594e8852820fad25092b671833",
+    "stepwise-irregular-graphs": "dafe5ab70e8e70544dc7878fab40de7f88af84b1ee2e31dcc5e1bb84b39e4b8d"
+  },
+  "unchanged_showcase_lean_sha256": {
+    "mesh-involutions/formal/MeshCompatibility.lean": "ff83da03043b8d8ed8fb3030a69da09cd63355efe2f7e74b2fdb392f71c02d9d",
+    "mesh-involutions/formal/MeshComponents.lean": "3882654f5bf911ae8b5efc37140cfad3b2d8208252776495ffe7fbbb48f412a2",
+    "mesh-involutions/formal/MeshDefinitions.lean": "9bac2a293d768004d0a8507ad5c71167e7db67fe517d6e99f3ebd535a8ac0a4e",
+    "mesh-involutions/formal/MeshEquivariance.lean": "997a9f7d8de69ad255debd6003863dc5901677d6a4a4aff1c70a986963eef4de",
+    "mesh-involutions/formal/MeshNesting.lean": "81055e6a56ccdbfec4c3a24d4215c00e64cc7280df41fa56804541fa887b5cbc",
+    "mesh-involutions/formal/MeshOrbitCounting.lean": "24c82721a9c6621a5f3439051d97bd3d186d77c10f91d1a1b13be1fc6f0e1ac6",
+    "mesh-involutions/formal/MeshPartial.lean": "d91e8f23ff1ce50cd72ef2ef101bb88a47d1bfcf32efaef5e20ed84694965b50",
+    "mesh-involutions/formal/MeshPolynomial.lean": "33f6ed655e248b43c76604cfdc208be500468d6e6f95f73d7e279c54b9ea8501",
+    "mesh-involutions/formal/MeshReduction.lean": "57a2b6b1a4354a46eaf70b1cabc909ef52b9936ab5bb8488150887626910edc4",
+    "mesh-involutions/formal/MeshRotation.lean": "8222189953c3eb36ce96a5e349cd23e4679f0350359067c7d78457ca83e3af90",
+    "mesh-involutions/formal/MeshStructure.lean": "3e2f503183ddbd1f621b017652b7b14c2fe056707b5b5889686a2e9ce896d60a",
+    "mesh-involutions/formal/MeshSymmetry.lean": "8143c05a87b737470e57a8a584d08e4b437534b90d3d211f00cdf2c7ad181ffc",
+    "mesh-involutions/formal/MeshTransport.lean": "b5e2d2b6ed53b8194895336338264a6d5df2cdc68f18f8f70c2d5be40254576b",
+    "medial-triangle-inequality/formal/Conjecture5.lean": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+    "medial-triangle-inequality/formal/MedialAlgebra.lean": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+    "medial-triangle-inequality/formal/MedialGeometry.lean": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94"
+  },
+  "report_sha256": "8d413907acc33e0a17395e5da5cb27be5c8b59ba39c98e0b1cb8b8ec2ddb6a26",
+  "raw_pdfs_logs_build_products_bundled": false
+}

@@ -1,0 +1,12 @@
+# Keep generated Lean dependencies and binaries out of the result samples.
+.lake/
+*.olean
+*.olean.private
+*.olean.server
+*.ilean
+*.ir
+*.c
+*.o
+*.a
+*.so
+*.trace

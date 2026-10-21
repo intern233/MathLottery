@@ -1,0 +1,9 @@
+{
+  "id": "odd-sum",
+  "title": "前 n 个奇数之和",
+  "statement": "对每个整数 n ≥ 0，证明 ∑_{k=1}^n (2k−1) = n²。n=0 时取空和为 0。",
+  "field": "elementary mathematics",
+  "status": "UNKNOWN",
+  "educational": true,
+  "selection_reason": "已知的基础恒等式，用于检验研究流程，不是开放问题。"
+}

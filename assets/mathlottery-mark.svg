@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="224" viewBox="0 0 240 224" role="img" aria-labelledby="title desc">
+  <title id="title">MathLottery mark</title>
+  <desc id="desc">A lottery ticket carrying a summation symbol, with a lucky star.</desc>
+  <defs>
+    <linearGradient id="ticket" x1="38" y1="50" x2="198" y2="186" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23CFA9"/>
+      <stop offset="1" stop-color="#07867C"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(12 8)">
+    <g transform="rotate(-11 112 112)">
+      <path d="M55 34H181Q197 34 197 50V65" fill="none" stroke="#0CA88D" stroke-width="6" stroke-linecap="round" opacity=".38"/>
+      <path d="M38 53H179Q197 53 197 71V94C178 94 178 122 197 122V145Q197 163 179 163H38Q20 163 20 145V122C39 122 39 94 20 94V71Q20 53 38 53Z" fill="url(#ticket)"/>
+      <path d="M53 76H112V88H74L95 108 74 128H112V140H53V127L74 108 53 89Z" fill="#FFFFFF"/>
+      <path d="M139 65V72M139 82V89M139 99V106M139 116V123M139 133V140M139 150V152" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+      <circle cx="166" cy="85" r="4" fill="#FFFFFF" opacity=".9"/>
+      <circle cx="166" cy="108" r="4" fill="#FFFFFF" opacity=".9"/>
+      <circle cx="166" cy="131" r="4" fill="#FFFFFF" opacity=".9"/>
+    </g>
+    <path d="M197 18C200 34 203 37 219 40 203 43 200 46 197 62 194 46 191 43 175 40 191 37 194 34 197 18Z" fill="#FFB84D"/>
+    <circle cx="33" cy="187" r="4" fill="#0CA88D" opacity=".55"/>
+  </g>
+</svg>
