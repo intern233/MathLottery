@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 
+from mathlottery.codex_identity import CodexIdentity
 from mathlottery.config import BackendConfig
 from mathlottery.storage import atomic_write, json_text
 
@@ -60,7 +61,9 @@ class ChatInteractiveBackend(AgentBackend):
         return BackendResult(BackendStatus.PENDING_USER, artifacts=[str(directory / "prompt.md")])
 
 
-def resolve_codex(command: str, deadline: float | None = None) -> str:
+def resolve_codex(
+    command: str, deadline: float | None = None, *, env: dict | None = None
+) -> str:
     """Skip broken PATH shims, but never replace an explicitly configured executable."""
     candidates = [command]
     if command == "codex":
@@ -73,7 +76,8 @@ def resolve_codex(command: str, deadline: float | None = None) -> str:
             raise subprocess.TimeoutExpired("Codex executable detection", 0)
         try:
             result = subprocess.run(
-                [candidate, "--version"], capture_output=True, text=True, timeout=available
+                [candidate, "--version"], capture_output=True, text=True, timeout=available,
+                env=env,
             )
             if result.returncode == 0 and "codex" in result.stdout.lower():
                 return str(Path(shutil.which(candidate) or candidate).absolute())
@@ -84,14 +88,16 @@ def resolve_codex(command: str, deadline: float | None = None) -> str:
         except OSError:
             continue
     raise ValueError(
-        "No working Codex CLI found. Install the Linux Codex CLI, then run codex login."
+        "No working Codex CLI found. Install the official Codex CLI, then sign in "
+        "through MathLottery's account panel."
     )
 
 
 class WorkBackend(AgentBackend):
     required_flags = ("--output-schema", "--json", "--ignore-user-config", "--ephemeral")
-    def __init__(self, config: BackendConfig):
+    def __init__(self, config: BackendConfig, root: Path | None = None):
         self.config = config
+        self.identity = CodexIdentity(root or Path.cwd())
         self.executable: str | None = None
         self.help_text = ""
 
@@ -101,7 +107,9 @@ class WorkBackend(AgentBackend):
     def check(self, timeout: float = 30) -> dict:
         deadline = time.monotonic() + timeout
         self.executable = None
-        executable = resolve_codex(self.config.codex_command, deadline)
+        self.identity.prepare()
+        environment = self.environment()
+        executable = resolve_codex(self.config.codex_command, deadline, env=environment)
 
         def remaining_timeout():
             available = min(10, deadline - time.monotonic())
@@ -110,23 +118,25 @@ class WorkBackend(AgentBackend):
             return available
 
         result = subprocess.run(
-            [executable, "login", "status"],
+            [executable, *self.identity.overrides(), "login", "status"],
             text=True,
             capture_output=True,
             timeout=remaining_timeout(),
-            env=self.environment(),
+            env=environment,
         )
         status = (result.stdout + result.stderr).strip()
         if result.returncode != 0 or "chatgpt" not in status.lower():
             raise ValueError(
-                "Work mode requires ChatGPT authentication (not API-key auth). "
-                f"Run: {executable} login"
+                "MathLottery requires ChatGPT authentication in its isolated account storage "
+                "(not API-key auth). Sign in through MathLottery's account panel; "
+                "your local Codex login is separate."
             )
         result = subprocess.run(
             [executable, "exec", "--help"],
             text=True,
             capture_output=True,
             timeout=remaining_timeout(),
+            env=environment,
         )
         self.help_text = result.stdout
         for flag in self.required_flags:
@@ -135,18 +145,14 @@ class WorkBackend(AgentBackend):
         self.executable = executable
         return {"available": True, "executable": self.executable, "authentication": "ChatGPT"}
 
-    @staticmethod
-    def environment() -> dict:
+    def environment(self) -> dict:
         # Auth remains with the official CLI. Never read its credentials or use API-key fallback.
-        return {
-            k: v
-            for k, v in os.environ.items()
-            if k not in {"OPENAI_API_KEY", "CODEX_API_KEY", "OPENAI_BASE_URL", "CODEX_ACCESS_TOKEN"}
-        }
+        return self.identity.environment()
 
     def command(self, directory: Path) -> list[str]:
         command = [
             self.executable,
+            *self.identity.overrides(),
             "exec",
             "--json",
             "--ephemeral",

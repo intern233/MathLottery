@@ -262,6 +262,24 @@ class NativeSession(Model):
     candidate_conclude: bool = False
 
 
+class ReviewSource(Model):
+    """An exact UTF-8 source snapshot, not a claim of successful verification."""
+
+    path: str = Field(min_length=1, max_length=2048)
+    size: int = Field(ge=0, le=1_000_000)
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    content: str = Field(max_length=1_000_000)
+
+
+class ReviewEvidence(Model):
+    source_run_id: str = Field(pattern=r"^run-[a-f0-9]{12}$")
+    source_candidate_id: str = Field(pattern=r"^candidate-[a-f0-9]{12}$")
+    candidate_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    candidate_id: str | None = Field(default=None, pattern=r"^candidate-[a-f0-9]{12}$")
+    captured_at: str
+    files: list[ReviewSource] = Field(min_length=1, max_length=20)
+
+
 class Run(Model):
     id: str = Field(pattern=r"^run-[a-f0-9]{12}$")
     mode: Literal["chat", "codex", "work", "manual", "demo"]
@@ -286,6 +304,7 @@ class Run(Model):
     memory: list[MemoryItem] = Field(default_factory=list)
     next_actions: list[str] = Field(default_factory=list)
     candidates: list[Candidate] = Field(default_factory=list)
+    review_evidence: ReviewEvidence | None = None
     observations: list[dict] = Field(default_factory=list)
     task_id: str | None = None
     prompt_path: str | None = None

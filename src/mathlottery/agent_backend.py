@@ -1,5 +1,6 @@
 """Transport selection is independent of finding, solving and verifying mathematics."""
 
+from pathlib import Path
 from typing import Protocol
 
 from mathlottery.backends import BackendResult
@@ -22,9 +23,9 @@ class ResearchBackend(Protocol):
     ) -> BackendResult: ...
 
 
-def research_backend(config: BackendConfig) -> ResearchBackend:
+def research_backend(config: BackendConfig, root: Path | None = None) -> ResearchBackend:
     if config.mode == "chat":
         return ChatBackend(config)
     if config.mode in {"codex", "work"}:
-        return NativeWorkBackend(config)
+        return NativeWorkBackend(config, root=root)
     raise ValueError("Manual handoff has no automatic agent transport")

@@ -60,9 +60,10 @@ When it finds a problem, send specific feedback back to the original research se
 We want to preserve as much of GPT's native agent capability as possible, leaving research methods and tool choices to the agent. MathLottery organizes each attempt into a research record that can be resumed, revisited, and checked:
 
 - **Continuous research:** preserve the same research session and working files, resume after interruptions, and add guidance along the way.
-- **Native tools:** use the search, shell, computation, and file tools available through official Codex, inheriting the existing tool configuration.
+- **Native tools:** use official Codex search, shell, computation, and file tools, with a dedicated MathLottery login and tool configuration.
 - **Research budgets:** set limits such as time and record the usage actually reported by the backend, giving each attempt a defined scope.
 - **Results and review:** save candidate proof versions, references, review feedback, and research reports, distinguishing progress, conjectures, and verification evidence.
+- **Local browser workspace:** launch `mathlottery serve` to find problems, start solutions, review proofs, and manage research history from your browser.
 
 The code provides three independent workflows: **`find`, `solve`, and `verify`**. The `run` workflow connects them into a full research pipeline. Finding produces reusable problem statements, solving saves candidate proofs, and verification produces a separate review.
 
@@ -74,11 +75,13 @@ Contributions to the harness are welcome: improve problem selection, reduce repe
 
 [Explore three experimental case studies](showcase/README.md): an equidistribution proof for four mesh patterns on involutions, a medial-triangle inequality proof involving a moving point, and a counterexample to a conjecture on stepwise irregular graphs. The samples include complete written proofs, review summaries, compact verification records, and the available Lean source files or counterexample checkers. Large dependencies and runtime caches are excluded.
 
-Each case states its formal verification scope and novelty status. The mesh-pattern proof has partial Lean verification, the triangle inequality has full formal verification, and the graph counterexample includes an executable certificate. Novelty remains “potentially new” or “unknown”; an independent AI review is not expert certification. See the [source and correctness audit](showcase/audit-2026-10-21.md) for the evidence behind these assessments.
+Each case states its formal verification scope and novelty status. The mesh-pattern proof has partial Lean verification, the triangle inequality has full formal verification, and the graph counterexample includes an executable certificate. Novelty remains “potentially new” or “unknown”; an independent AI review is not expert certification. Each case's review summary and verification records explain the evidence behind these assessments.
 
 ## Take your first shot
 
 Choose the backend, model, and reasoning mode in `config.yaml`, then specify the research task when you run the system. Installation, configuration, and commands are covered in separate guides:
+
+For the [browser interface](docs/usage.md#local-browser-workspace), run `mathlottery serve` and open the printed local address. It starts on loopback, preferring port `8765` and skipping occupied or Windows-reserved ports; Windows browsers use the printed `localhost` address through WSL forwarding. The **MathLottery account** panel supports official ChatGPT device-code sign-in with login state isolated from your local Codex CLI / IDE. Sign in once in MathLottery; you may use the same account, with the same account usage limits. The interface shares the MathLottery CLI's local problems, checkpoints, and reports.
 
 - [Installation and usage](docs/usage.md): environment setup, the three workflows, Chat API / Codex configuration, and pausing and resuming.
 - [Architecture and recovery](docs/architecture.md): persistent sessions, saved state, and separate reviews.

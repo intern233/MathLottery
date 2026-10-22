@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>MathLottery · Research workspace</title>
+  <link rel="icon" href="/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="MathLottery home"><img src="/mark.svg" alt=""><span>MathLottery<small data-i18n="localLab">LOCAL RESEARCH LAB</small></span></a>
+    <div class="nav-label" data-i18n="workflows">WORKFLOWS</div>
+    <nav aria-label="Workflows">
+      <button type="button" class="nav-item selected" data-workflow="find"><span class="nav-number">01</span><span data-i18n="find">Find problems</span><span class="nav-arrow">↗</span></button>
+      <button type="button" class="nav-item" data-workflow="solve"><span class="nav-number">02</span><span data-i18n="solve">Attempt a solution</span><span class="nav-arrow">↗</span></button>
+      <button type="button" class="nav-item" data-workflow="verify"><span class="nav-number">03</span><span data-i18n="verify">Verify a proof</span><span class="nav-arrow">↗</span></button>
+    </nav>
+    <div class="sidebar-note"><span class="note-symbol">∴</span><p data-i18n="sideNote">One agent. A little curiosity. A result worth checking.</p></div>
+    <div class="local-status"><span class="dot"></span><span id="connection" role="status" data-i18n="connecting">Connecting…</span></div>
+  </aside>
+
+  <main>
+    <header class="topbar"><span data-i18n="workspace">Research workspace</span><div><span id="model-chip" class="chip">config.yaml</span><button id="language" class="text-button" type="button">中文</button></div></header>
+    <section class="hero">
+      <div><p class="eyebrow" data-i18n="eyebrow">MATHEMATICS, WITH A LITTLE CHANCE</p><h1>Token is all you need<span>.</span></h1><p class="hero-copy" data-i18n="heroCopy">Find a worthwhile question. Give it a serious attempt. Check what holds.</p></div>
+      <div class="hero-math" aria-hidden="true"><span>Σ</span><span class="math-line"></span><span>∴</span><small>FIND · SOLVE · VERIFY</small></div>
+    </section>
+    <section id="account-panel" class="account-panel" aria-labelledby="account-title">
+      <div class="account-header">
+        <div class="account-identity"><span class="account-symbol" aria-hidden="true">◎</span><div><h2 id="account-title" data-i18n="accountTitle">MathLottery account</h2><p id="account-status" role="status" aria-live="polite">Checking account…</p><p id="account-details" class="account-details" hidden></p></div></div>
+        <div class="account-actions"><button id="account-login" type="button" class="secondary" data-i18n="accountSignIn" disabled>Sign in with ChatGPT</button><button id="account-switch" type="button" class="secondary" data-i18n="accountSwitch" hidden>Switch account</button><button id="account-logout" type="button" class="text-button danger" data-i18n="accountSignOut" hidden>Sign out</button><button id="account-refresh" type="button" class="text-button" data-i18n="accountRefresh">Refresh status</button></div>
+      </div>
+      <div id="account-pending" class="account-pending" hidden>
+        <div><p data-i18n="accountInstructions">Open the official sign-in page and enter this one-time code.</p><a id="account-link" class="secondary account-link" target="_blank" rel="noopener noreferrer" data-i18n="accountOpen">Continue at OpenAI ↗</a></div>
+        <div class="account-code-group"><span class="field-hint" data-i18n="accountCode">One-time code</span><div><code id="account-code"></code><button id="account-copy" type="button" class="text-button" data-i18n="accountCopy">Copy</button></div><button id="account-cancel" type="button" class="text-button" data-i18n="accountCancel">Cancel sign-in</button></div>
+      </div>
+      <p id="account-error" class="notice error" role="alert" hidden></p>
+      <p class="account-note" data-i18n="accountNote">This workspace has its own login. Switching or signing out leaves your local Codex CLI / IDE login unchanged. You may use the same ChatGPT account; its usage limits still apply across sessions. Chat API requires a separate API key and API billing.</p>
+    </section>
+    <div class="stats" aria-label="Workspace statistics">
+      <div><span data-i18n="totalRuns">Research runs</span><strong id="count-runs">0</strong></div>
+      <div><span data-i18n="activeRuns">Running now</span><strong id="count-active">0</strong></div>
+      <div><span data-i18n="savedProblems">Saved problems</span><strong id="count-problems">0</strong></div>
+      <div><span data-i18n="candidates">Candidate proofs</span><strong id="count-candidates">0</strong></div>
+    </div>
+
+    <div id="global-error" class="notice error" role="alert" hidden></div>
+    <div class="workspace-grid">
+      <section class="panel composer" id="composer">
+        <div class="section-heading"><div><p class="eyebrow" data-i18n="newAttempt">NEW ATTEMPT</p><h2 id="form-title">Find problems</h2></div><span class="round-mark" id="form-number">01</span></div>
+        <p class="section-copy" id="form-description"></p>
+        <div class="segmented" aria-label="Choose workflow"><button type="button" data-workflow="find" class="selected">Find</button><button type="button" data-workflow="solve">Solve</button><button type="button" data-workflow="verify">Verify</button></div>
+        <form id="task-form">
+          <div id="find-fields">
+            <label for="query" data-i18n="criteria">What kind of problem?</label>
+            <textarea id="query" rows="4" maxlength="30000" data-placeholder="criteriaPlaceholder"></textarea>
+            <div class="fields-row"><div class="grow"><label for="source" data-i18n="source">Preferred source · optional</label><input id="source" type="url" placeholder="https://…" maxlength="2048"></div><div class="narrow"><label for="count" data-i18n="shortlistSize">Shortlist size</label><input id="count" type="number" value="5" min="1" max="50"></div></div>
+          </div>
+          <div id="verify-fields" hidden>
+            <label for="verify-mode" data-i18n="reviewInput">What would you like to review?</label>
+            <select id="verify-mode"><option value="saved" data-i18n="savedCandidate">Latest candidate from a saved run</option><option value="proof" data-i18n="pasteProof">A proof I provide</option></select>
+            <div id="saved-review">
+              <label for="from-run" data-i18n="sourceRun">Run with a candidate</label><select id="from-run"></select>
+              <p class="field-hint" data-i18n="separateReview">The reviewer starts a separate session with the displayed candidate, its references, and any source files you select.</p>
+              <button id="source-refresh" class="text-button" type="button" data-i18n="sourceRefresh">Refresh source</button>
+              <p class="field-hint" data-i18n="sourceRefreshHint">Refresh loads the latest candidate and clears the file selection. Background updates never change the candidate shown here.</p>
+              <p id="source-status" class="notice" role="status" hidden></p>
+              <div id="source-preview" hidden>
+                <p id="source-candidate" class="source-binding"></p>
+                <p id="source-claim" class="problem-preview"></p>
+                <fieldset id="source-files"><legend data-i18n="sourceFiles">Attach proof source files · optional</legend><p class="field-hint" data-i18n="sourceFilesHint">Select the files needed to reproduce the proof. No files are attached by default. The reviewer must recheck these untrusted inputs; attaching them does not raise the proof level.</p><div id="source-file-list"></div></fieldset>
+                <p id="source-files-truncated" class="field-hint" data-i18n="leanFilesTruncated" hidden>Only part of the file list is shown. The remaining files stay in the local run directory.</p>
+                <p id="source-file-selection" class="field-hint" aria-live="polite"></p>
+                <p class="field-hint" data-i18n="sourceLimits">Up to 20 files, 1,000,000 bytes each and 2,000,000 bytes in total. Chat accepts at most 128,000 bytes in total as inline text.</p>
+                <p id="source-attachment-support" class="notice" hidden></p>
+                <p class="field-hint" data-i18n="sourceCapturedHint">Files are copied and hashed when the review starts. The captured manifest appears in Results; later source changes do not change that snapshot.</p>
+              </div>
+            </div>
+          </div>
+          <div id="problem-fields" hidden>
+            <label for="problem-id" data-i18n="problem">Problem</label><select id="problem-id"></select>
+            <div id="new-problem"><label for="title" data-i18n="problemTitle">Title · optional</label><input id="title" maxlength="200" data-placeholder="titlePlaceholder"><label for="statement" data-i18n="statement">Problem statement</label><textarea id="statement" rows="5" maxlength="30000" data-placeholder="statementPlaceholder"></textarea></div>
+            <div id="selected-problem" class="problem-preview" hidden></div>
+            <div id="proof-fields" hidden><label for="proof" data-i18n="proof">Proof to review</label><textarea id="proof" rows="7" maxlength="100000" data-placeholder="proofPlaceholder"></textarea></div>
+          </div>
+          <label for="instructions" data-i18n="instructions">Task instructions · optional</label>
+          <textarea id="instructions" rows="3" maxlength="30000" data-placeholder="instructionsPlaceholder" aria-describedby="instructions-hint"></textarea>
+          <p id="instructions-hint" class="field-hint" data-i18n="instructionsHint">Add requirements for this task, such as Lean verification. The original problem statement stays unchanged.</p>
+          <details class="settings"><summary><span data-i18n="settings">Model & budget</span><span class="muted" data-i18n="configDefault">defaults from config.yaml</span></summary>
+            <div class="fields-row"><div><label for="backend" data-i18n="backend">Backend</label><select id="backend"><option value="" data-i18n="useConfig">Use configuration</option><option value="codex">Codex</option><option value="chat">Chat API</option></select></div><div><label for="model" data-i18n="model">Model</label><input id="model" maxlength="200" autocomplete="off"></div></div>
+            <div class="fields-row"><div><label for="effort" data-i18n="effort">Reasoning effort</label><input id="effort" list="efforts" maxlength="50"><datalist id="efforts"><option value="low"><option value="medium"><option value="high"><option value="xhigh"><option value="max"></datalist></div><div><label for="reasoning-mode" data-i18n="chatMode">Chat reasoning mode</label><select id="reasoning-mode"><option value="" data-i18n="useConfig">Use configuration</option><option value="pro">Pro</option><option value="standard">Standard</option></select></div></div>
+            <div class="fields-row"><div><label for="budget" data-i18n="timeBudget">Time budget · minutes</label><input id="budget" type="number" min="0.01" step="any"></div><div><label for="iterations" data-i18n="roundBudget">Maximum rounds</label><input id="iterations" type="number" min="1" step="1"></div></div>
+            <p class="field-hint" data-i18n="overrideHint">Overrides apply to this task only. Credentials stay in your environment.</p>
+          </details>
+          <p id="backend-hint" class="field-hint"></p>
+          <p id="start-readiness" class="notice" role="status" hidden></p>
+          <div id="form-error" class="notice error" role="alert" hidden></div>
+          <button id="start" type="submit" class="primary" aria-describedby="start-readiness" disabled><span id="start-label">Start finding</span><span aria-hidden="true">↗</span></button>
+          <p class="form-footnote" data-i18n="backgroundHint">Runs in the background. You can close this page and return later.</p>
+        </form>
+      </section>
+
+      <section class="panel history"><div class="section-heading"><div><p class="eyebrow" data-i18n="notebook">YOUR NOTEBOOK</p><h2 data-i18n="recentRuns">Research history</h2></div><button id="refresh" class="icon-button" type="button" aria-label="Refresh">↻</button></div><div id="run-list" class="run-list"></div></section>
+    </div>
+
+    <section id="run-detail" class="panel detail" hidden aria-label="Selected run">
+      <div class="section-heading"><div><p id="detail-id" class="eyebrow"></p><h2 id="detail-title"></h2></div><span id="detail-state" class="badge"></span></div>
+      <div id="run-facts" class="run-facts"></div>
+      <div id="run-message" class="notice" hidden></div>
+      <div class="run-actions"><button id="stop" class="secondary danger" type="button" data-i18n="stop">Stop task</button><button id="show-resume" class="secondary" type="button" data-i18n="resume">Resume / add direction</button><button id="verify-latest" class="secondary" type="button" data-i18n="verifyLatest">Verify latest candidate</button><a id="download" class="text-button" data-i18n="download">Download report ↓</a></div>
+      <form id="resume-form" class="resume-form" hidden><label for="direction" data-i18n="direction">Additional direction · optional</label><textarea id="direction" rows="3" maxlength="30000" data-placeholder="directionPlaceholder"></textarea><div class="fields-row"><div><label for="resume-budget" data-i18n="newTotalBudget">New total time budget · minutes</label><input id="resume-budget" type="number" min="0.01" step="any"></div><div><label for="resume-rounds" data-i18n="newTotalRounds">New total round limit</label><input id="resume-rounds" type="number" min="1"></div></div><p class="field-hint" data-i18n="resumeHint">These replace total limits, rather than adding time. The saved model settings are preserved.</p><p id="resume-readiness" class="notice" role="status" hidden></p><button id="resume-submit" class="primary small" type="submit" data-i18n="continue" aria-describedby="resume-readiness" disabled>Continue research</button></form>
+      <div class="detail-tabs" role="tablist"><button class="selected" type="button" role="tab" aria-selected="true" data-tab="results" data-i18n="results">Results</button><button type="button" role="tab" aria-selected="false" data-tab="activity" data-i18n="activity">Activity</button><button type="button" role="tab" aria-selected="false" data-tab="report" data-i18n="report">Report</button></div>
+      <div id="results" class="tab-content"></div>
+      <div id="activity" class="tab-content" hidden><h3 data-i18n="visibleProgress">Latest visible output</h3><p id="progress-note" class="field-hint"></p><pre id="progress"></pre><h3 data-i18n="events">Recent checkpoint events</h3><div id="event-list"></div></div>
+      <div id="report" class="tab-content" hidden><p id="report-note" class="field-hint"></p><pre id="report-text"></pre></div>
+    </section>
+    <footer><span>MathLottery</span><span data-i18n="footer">Curiosity starts the run. Evidence decides the result.</span></footer>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </main>
+</body>
+</html>

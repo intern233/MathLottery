@@ -140,7 +140,7 @@ def show_run(store: Store, run: Run):
 def diagnostics(store, config):
     try:
         backend = NativeWorkBackend if config.backend.execution == "native" else WorkBackend
-        codex = backend(config.backend).check()
+        codex = backend(config.backend, store.root).check()
     except Exception as error:
         codex = {"available": False, "reason": str(error)}
     try:
@@ -159,6 +159,24 @@ def diagnostics(store, config):
         "lean": shutil.which(config.tools.lean_command),
         "bubblewrap": shutil.which("bwrap"),
     }
+
+
+@app.command()
+@friendly
+def serve(
+    ctx: typer.Context,
+    port: Annotated[int, typer.Option(min=1, max=65535, help="Preferred port; tries the next if busy")] = 8765,
+    open_browser: Annotated[bool, typer.Option("--open", help="Open the local browser interface")] = False,
+    loopback_only: Annotated[bool, typer.Option(help="Keep the default loopback-only binding")] = False,
+    wsl_direct: Annotated[bool, typer.Option(help="Explicitly allow direct WSL IP access from its Windows host")] = False,
+):
+    """Open a local browser workspace for find, solve and verify."""
+    from mathlottery.web.server import serve as serve_web
+    from mathlottery.web.startup import resolve_workspace
+
+    source = ctx.find_root().get_parameter_source("root")
+    root = resolve_workspace(ctx.obj["root"], explicit=source is not None and source.name != "DEFAULT")
+    serve_web(root, ctx.obj["config"], port, open_browser, loopback_only, wsl_direct)
 
 
 @app.command()

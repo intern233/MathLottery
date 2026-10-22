@@ -6,7 +6,7 @@ English | [简体中文](README.cn.md)
 
 This directory presents three complete candidate solutions from local MathLottery experiments: two proofs and one counterexample. Each case includes a readable result, a complete written proof, a review summary, and compact verification records. Cases suited to formal verification also include Lean source files.
 
-See the [2026-10-21 audit](audit-2026-10-21.md) for additional source and correctness checks. Public sources were confirmed for all three problems, and that audit found no mathematical errors in the three solutions. Claims about current open status and priority remain limited by the evidence available for each case.
+Each case documents its public sources, correctness checks, and review limits. Claims about current open status and priority remain limited by the evidence available for each case.
 
 | Case | Mathematical result | Lean verification | Novelty assessment |
 | --- | --- | --- | --- |
@@ -22,6 +22,6 @@ These experiments used native Codex sessions with model `gpt-6-astra` and reason
 
 The collection contains small text files, necessary source code, and counterexample certificates. Toolchains, mathlib, build caches, databases, raw sessions, downloaded papers, and full run logs remain in local experiment archives. Original candidates are unchanged, and each verification summary describes presentation edits.
 
-Guides, case introductions, review summaries, and the audit have English and Chinese editions. Proof artifacts retain their original language: English for mesh patterns, Chinese for the triangle inequality and graph counterexample.
+Guides, case introductions, and review summaries have English and Chinese editions. Proof artifacts retain their original language: English for mesh patterns, Chinese for the triangle inequality and graph counterexample.
 
 Git can track this directory. Its `.gitignore` excludes generated Lean dependencies and build products. Running the Lean reproduction commands downloads toolchains and dependencies separately and may require several GiB; those dependencies are not part of the samples.

@@ -1,6 +1,7 @@
 """Scripted CLI integration fixtures, not model-quality or sandbox evaluations."""
 
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -24,9 +25,14 @@ FAKE_NATIVE = r"""
 import json, os, sys, time, uuid
 from pathlib import Path
 args = sys.argv[1:]
+if os.environ.get('MATHLOTTERY_FAKE_ENV_LOG'):
+    with Path(os.environ['MATHLOTTERY_FAKE_ENV_LOG']).open('a') as stream:
+        stream.write(json.dumps({'args':args, 'home':os.environ.get('CODEX_HOME'),
+            'sqlite':os.environ.get('CODEX_SQLITE_HOME'),
+            'api_key_present':'OPENAI_API_KEY' in os.environ}) + '\n')
 if args == ['--version']:
     print('codex-cli fake-native-tests')
-elif args == ['login', 'status']:
+elif args[-2:] == ['login', 'status']:
     print('Logged in using ChatGPT')
 elif '--help' in args:
     print('--json --output-last-message --sandbox resume')
@@ -38,9 +44,20 @@ else:
     session = args[-2] if 'resume' in args else str(uuid.uuid4())
     if behavior == 'wrong_session':
         session = str(uuid.uuid4())
+    sessions = Path(os.environ['CODEX_HOME']) / 'sessions'
+    sessions.mkdir(parents=True, exist_ok=True)
+    record = sessions / (session + '.jsonl')
+    if not record.exists():
+        record.write_text(json.dumps({'type':'event_msg','payload':{'type':'token_count',
+            'info':{'total_token_usage':{'input_tokens':0,'output_tokens':0,'cached_input_tokens':0}}}}) + '\n')
     if behavior != 'missing_session':
         print(json.dumps({'type':'thread.started', 'thread_id':session}), flush=True)
     if behavior == 'slow':
+        time.sleep(20)
+    if behavior == 'visible_then_slow':
+        for message in ('First complete lemma.', 'Second complete derivation.'):
+            print(json.dumps({'type':'item.completed','item':{
+                'type':'agent_message','text':message}}), flush=True)
         time.sleep(20)
     if behavior == 'rate':
         print(json.dumps({'type':'turn.failed','error':{'message':'429 usage limit'}}), flush=True)
@@ -79,14 +96,26 @@ else:
         checkpoint['task_id'] = 'stale-task'
     path = work / 'submissions' / (fields['task_id'] + '.json')
     path.parent.mkdir(exist_ok=True)
-    if behavior != 'no_milestone':
+    if behavior not in ('no_milestone', 'answer_milestone'):
         path.write_text(json.dumps(checkpoint))
     answer = Path(args[args.index('--output-last-message')+1])
     answer.write_text('Full ordinary Markdown answer with mathematical derivations.\n')
+    if behavior == 'answer_milestone':
+        checkpoint.update(kind='candidate', conclude=True,
+                          candidate={'claim':'A precise claim', 'proof':'A self-contained proof'})
+        answer.write_text('Full proof\n```mathlottery\n' + json.dumps(checkpoint) + '\n```\n')
     print(json.dumps({'type':'item.completed','item':{'type':'command_execution','command':'python research.py','exit_code':0}}))
     event = {'type':'turn.completed'}
     if behavior != 'no_usage':
-        event['usage'] = {'input_tokens':19,'output_tokens':7,'cached_input_tokens':3}
+        sessions = Path(os.environ['CODEX_HOME']) / 'sessions'
+        sessions.mkdir(parents=True, exist_ok=True)
+        record = sessions / (session + '.jsonl')
+        previous = json.loads(record.read_text().splitlines()[-1])['payload']['info']['total_token_usage'] if record.exists() else {}
+        event['usage'] = {key: previous.get(key, 0) + value for key, value in
+                          {'input_tokens':19,'output_tokens':7,'cached_input_tokens':3}.items()}
+        with record.open('a') as stream:
+            stream.write(json.dumps({'type':'event_msg','payload':{'type':'token_count',
+                         'info':{'total_token_usage':event['usage']}}}) + '\n')
     print(json.dumps(event), flush=True)
 """
 
@@ -97,6 +126,7 @@ def native_config(tmp_path, monkeypatch):
     executable.write_text(f"#!{sys.executable}\n" + FAKE_NATIVE)
     executable.chmod(0o755)
     monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "progress")
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "fake-codex-home"))
     config = Config()
     config.backend.mode = "work"
     config.backend.codex_command = str(executable)
@@ -118,7 +148,7 @@ def test_native_defaults_inherit_model_and_remove_microstep_restrictions(tmp_pat
     config = BackendConfig()
     assert config.execution == "native"
     assert config.model is config.reasoning_effort is config.native_turn_timeout_seconds is None
-    backend = NativeWorkBackend(config)
+    backend = NativeWorkBackend(config, root=tmp_path)
     backend.executable = "codex"
     cmd = backend.native_command(tmp_path, tmp_path / "workspace", None)
     assert "--model" not in cmd
@@ -150,6 +180,19 @@ def test_native_resume_keeps_session_files_tools_and_usage(store, native_config)
     assert run.usage.input_tokens == 38 and run.usage.output_tokens == 14
     assert run.native.history[-1]["runtime"]["tools_observed"] == ["command_execution"]
     assert len(list((store.run_dir(run.id) / "workspace/research-history").glob("*.md"))) == 1
+
+
+def test_cumulative_codex_usage_does_not_exhaust_budget_one_turn_early(store, native_config):
+    native_config.budget.max_iterations = 5
+    native_config.budget.max_input_tokens = 45
+    engine = Orchestrator(store)
+    run = engine.drive(engine.create(native_config, demo_problem()).id)
+    assert run.iteration == 3 and run.usage.input_tokens == 57
+    assert run.usage.output_tokens == 21 and run.usage.cached_input_tokens == 9
+    assert run.native.history[-1]["runtime"]["reported_usage"]["input_tokens"] == 57
+    assert run.native.history[-1]["usage"]["input_tokens"] == 19
+    assert run.native.history[-1]["runtime"]["usage_scope"] == "session_cumulative_delta"
+    assert "Measured input_tokens budget reached" in run.stop_reason
 
 
 def test_inconclusive_review_returns_to_same_solver_then_uses_fresh_reviewer(
@@ -197,6 +240,37 @@ def test_incomplete_milestone_keeps_full_answer_and_continues(
         assert "mathematical derivations" in (store.run_dir(run.id) / entry["answer"]).read_text()
     if behavior == "malformed":
         assert "Stale" in run.native.checkpoint_error
+    else:
+        assert "Missing milestone" in run.native.checkpoint_error
+        second = store.run_dir(run.id) / run.native.history[1]["answer"]
+        assert "do not repeat completed research" in second.with_name("prompt.md").read_text()
+
+
+def test_codex_explicit_answer_milestone_avoids_repeating_research(store, native_config, monkeypatch):
+    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "answer_milestone")
+    engine = Orchestrator(store)
+    run = engine.drive(engine.create(native_config, demo_problem(), workflow=Workflow.SOLVE).id)
+    assert run.state == State.COMPLETED and run.iteration == 1
+    assert run.candidates[0].proof == "A self-contained proof"
+    assert run.native.checkpoint_error is None
+
+
+def test_interrupted_turn_preserves_all_visible_work_without_accepting_a_proof(
+    store, native_config, monkeypatch,
+):
+    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "visible_then_slow")
+    native_config.backend.native_turn_timeout_seconds = 1
+    engine = Orchestrator(store)
+    run = engine.drive(engine.create(native_config, demo_problem()).id)
+    assert run.state == State.PAUSED and not run.candidates
+    entry = run.native.history[-1]
+    assert entry["status"] == "INTERRUPTED" and "milestone" not in entry
+    saved = (store.run_dir(run.id) / entry["answer"]).read_text()
+    assert "First complete lemma." in saved and "Second complete derivation." in saved
+    # Switching to another transport imports the full saved visible work, even after a timeout.
+    resumed = engine.resume(run.id, mode="manual", message="Continue the two saved derivations")
+    prompt = (store.run_dir(resumed.id) / resumed.prompt_path).read_text()
+    assert "First complete lemma." in prompt and "Second complete derivation." in prompt
 
 
 def test_manual_accepts_markdown_without_json_and_supports_steering(store):
@@ -296,8 +370,12 @@ def test_receipt_recovery_does_not_repeat_native_model_call(store, native_config
 @pytest.mark.parametrize("behavior", ["missing_session", "wrong_session"])
 def test_no_silent_replacement_of_native_sessions(tmp_path, native_config, monkeypatch, behavior):
     monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", behavior)
-    backend = NativeWorkBackend(native_config.backend)
+    backend = NativeWorkBackend(native_config.backend, root=tmp_path)
     session = "11111111-1111-4111-8111-111111111111" if behavior == "wrong_session" else None
+    if session:
+        folder = backend.identity.home / "sessions"
+        folder.mkdir(parents=True)
+        (folder / f"rollout-{session}.jsonl").write_text("{}\n")
     result = backend.invoke_native(
         "run_id: run-123456789012\ntask_id: task-example\n",
         tmp_path / "attempt",
@@ -336,9 +414,10 @@ def test_direct_prompt_cli_and_old_checkpoint_compatibility(tmp_path):
 
 
 def test_runtime_metadata_reports_actual_settings_only_from_matching_session(tmp_path, monkeypatch):
-    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
-    folder = tmp_path / "sessions"
-    folder.mkdir()
+    backend = NativeWorkBackend(BackendConfig(), root=tmp_path)
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "unrelated-home"))
+    folder = backend.identity.home / "sessions"
+    folder.mkdir(parents=True)
     session = "11111111-1111-4111-8111-111111111111"
     (folder / f"rollout-{session}.jsonl").write_text(
         json.dumps(
@@ -354,11 +433,11 @@ def test_runtime_metadata_reports_actual_settings_only_from_matching_session(tmp
         )
         + "\n"
     )
-    runtime = NativeWorkBackend.session_runtime(session)
+    runtime = backend.session_runtime(session)
     assert runtime["model"] == "actually-selected-model"
     assert runtime["reasoning_effort"] == "high"
     assert "private" not in runtime
-    assert NativeWorkBackend.session_runtime("22222222-2222-4222-8222-222222222222") == {}
+    assert backend.session_runtime("22222222-2222-4222-8222-222222222222") == {}
 
 
 def test_chat_feedback_is_imported_when_returning_to_work(store, native_config):
@@ -437,6 +516,15 @@ def test_new_direction_survives_recovery_of_older_completion(store, native_confi
 @pytest.mark.parametrize("workflow", [Workflow.FIND, Workflow.SOLVE, Workflow.VERIFY])
 def test_three_standalone_tasks_use_codex(store, native_config, monkeypatch, workflow):
     monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "three_tasks")
+    local_home = store.root / "local-codex"
+    local_home.mkdir()
+    credential = local_home / "auth.json"
+    credential.write_text('{"fixture":"separate account"}')
+    before = credential.read_bytes()
+    log = store.root / "child-environments.jsonl"
+    monkeypatch.setenv("CODEX_HOME", str(local_home))
+    monkeypatch.setenv("OPENAI_API_KEY", "must-not-forward")
+    monkeypatch.setenv("MATHLOTTERY_FAKE_ENV_LOG", str(log))
     native_config.backend.mode = "codex"
     engine = Orchestrator(store)
     kwargs = {"workflow": workflow}
@@ -447,6 +535,16 @@ def test_three_standalone_tasks_use_codex(store, native_config, monkeypatch, wor
     run = engine.drive(engine.create(native_config, **kwargs).id)
     assert run.state == State.COMPLETED and run.iteration == 1
     assert len(commands(store, run)) == 1
+    entries = [json.loads(line) for line in log.read_text().splitlines()]
+    isolated_home = store.root / ".mathlottery" / "codex-home"
+    assert len(entries) == 4
+    assert all(entry["home"] == str(isolated_home) for entry in entries)
+    assert all(not entry["api_key_present"] for entry in entries)
+    assert list((isolated_home / "sessions").glob("*.jsonl"))
+    assert not (local_home / "sessions").exists()
+    assert credential.read_bytes() == before
+    assert os.environ["CODEX_HOME"] == str(local_home)
+    assert 'cli_auth_credentials_store="file"' in commands(store, run)[0]
     if workflow == Workflow.FIND:
         assert run.shortlist[0].id == "fixture-problem"
         assert store.load_problem("fixture-problem") == run.problem
@@ -457,3 +555,24 @@ def test_three_standalone_tasks_use_codex(store, native_config, monkeypatch, wor
     else:
         assert run.candidates[0].reviews[0].verdict == "INCONCLUSIVE"
         assert run.native.solver_session_id is None
+
+
+def test_old_shared_session_is_not_resumed_or_copied(tmp_path, native_config, monkeypatch):
+    session = "11111111-1111-4111-8111-111111111111"
+    local_home = tmp_path / "local-codex"
+    sessions = local_home / "sessions"
+    sessions.mkdir(parents=True)
+    record = sessions / f"rollout-{session}.jsonl"
+    record.write_text('{"fixture":"shared session stays separate"}\n')
+    before = record.read_bytes()
+    monkeypatch.setenv("CODEX_HOME", str(local_home))
+    backend = NativeWorkBackend(native_config.backend, root=tmp_path)
+    result = backend.invoke_native(
+        "Saved research", tmp_path / "attempt", tmp_path / "research", 3, session_id=session,
+    )
+    assert result.status == BackendStatus.UNSUPPORTED
+    assert not result.invoked
+    assert "isolated account" in result.error
+    assert not (backend.identity.home / "sessions").exists()
+    assert not (tmp_path / "attempt").exists()
+    assert record.read_bytes() == before

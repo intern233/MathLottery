@@ -1,11 +1,14 @@
 import json
 
 from mathlottery.budget import elapsed
+from mathlottery.metrics import run_metrics
 from mathlottery.models import Run
-from mathlottery.storage import Store, atomic_write
+from mathlottery.storage import Store, atomic_write, json_text
 
 
 def report(store: Store, run: Run):
+    metrics = run_metrics(run)
+    atomic_write(store.run_dir(run.id) / "metrics.json", json_text(metrics))
     problem = run.problem
     backend = run.config.get("backend", {})
     sections = [
@@ -53,6 +56,20 @@ def report(store: Store, run: Run):
     if not run.memory and run.execution != "native":
         sections.append("No research memory recorded yet.")
     if run.execution == "native":
+        sections += [
+            "## Workflow Measurements",
+            "[Machine-readable metrics](metrics.json). Invocation seconds cover measured client "
+            "calls only; unmeasured history and recovery are not counted as zero. "
+            "These are workflow measurements, not mathematical success rates.",
+            "| Stage | Returns | Completed | Milestone errors | Timed returns | Invocation seconds |\n"
+            "| --- | ---: | ---: | ---: | ---: | ---: |\n"
+            + "\n".join(
+                f"| {phase} | {values['returns']} | {values['completed']} | "
+                f"{values['handoff_errors']} | {values['timed_returns']} | "
+                f"{values['invocation_seconds'] if values['invocation_seconds'] is not None else 'unknown'} |"
+                for phase, values in metrics["stages"].items()
+            ),
+        ]
         sections.extend(
             [
                 "## Native Research",
@@ -120,6 +137,7 @@ def report(store: Store, run: Run):
     )
     sections += [
         "## Resource Usage",
+        metrics["usage_warning"],
         f"Completed/attempted rounds: {run.iteration}",
         f"Active wall time: {elapsed(run):.2f} seconds (manual Chat waiting is excluded).",
         f"Measured input tokens: {run.usage.input_tokens if run.usage.input_tokens is not None else 'unknown'}",

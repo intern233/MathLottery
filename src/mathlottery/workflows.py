@@ -1,8 +1,10 @@
 """The three mathematical tasks, independent of the agent transport."""
 
-from mathlottery.models import NativeCheckpoint, Phase, Run, Workflow
+from mathlottery.models import NativeCheckpoint, Phase, Run, State, Workflow
 from mathlottery.sources import conservative_status
 from mathlottery.storage import Store, atomic_write, json_text
+
+ACTIVE = {Phase.FIND: State.DISCOVERING, Phase.SOLVE: State.SOLVING, Phase.VERIFY: State.VERIFYING}
 
 
 def task_instructions(run: Run) -> str:

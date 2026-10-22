@@ -26,6 +26,63 @@ mathlottery doctor
 
 For an existing environment, run `python -m pip install -e '.[dev,research]'`. Research dependencies include NumPy, SciPy, Matplotlib, pypdf, and SymPy/mpmath. Lean is optional and must be installed separately. You can also use `mathlottery init` to initialize local configuration and storage.
 
+## Local browser workspace
+
+After environment setup, start the local interface:
+
+~~~bash
+conda activate mathlottery
+mathlottery serve
+~~~
+
+The terminal prints the workspace, actual port and browser address. The preferred port is `8765`. Starting again reuses a compatible MathLottery service for the same workspace and configuration and prints its address. When a port belongs to another service, startup tries the next port, up to 20 binding attempts. Under WSL, startup reads and skips Windows-reserved TCP port ranges when the Windows networking utility is available. Use `mathlottery serve --open` to open the browser automatically, or `--port 9001` to choose a different preferred port.
+
+With an editable installation, `serve` finds the MathLottery checkout even when launched from another project directory. An explicit `mathlottery --root ./research-workspace serve` selects a different data workspace. Other CLI commands keep their existing root behavior. There is no Node.js build step or separate frontend installation. The interface supports English and Chinese and initially follows the browser language.
+
+The default listener is `127.0.0.1`, including under WSL. Open the printed **Windows** `http://localhost:<port>` address from a Windows browser; WSL normally forwards localhost connections into Linux. Use the actual printed port, since a port that can bind in Linux may still be reserved on Windows. If access fails, check the Linux and Windows sides separately. [Microsoft's WSL networking guide](https://learn.microsoft.com/en-us/windows/wsl/networking)
+
+For an explicit alternative on NAT-mode WSL, `mathlottery serve --wsl-direct` enables direct access through the WSL address and prints it. This option broadens the listener and restricts request peers to loopback, the WSL address and the Windows gateway. It is never enabled automatically. `--loopback-only` remains a supported way to select the default loopback behavior and cannot be combined with `--wsl-direct`. Startup does not modify WSL configuration, proxies, port-forwarding rules or the firewall.
+
+1. **Find:** enter selection criteria, an optional source URL and a shortlist size. When results arrive, inspect the statements, sources and status evidence, then choose **Solve this problem**.
+2. **Solve:** select a saved problem or enter a statement. The result panel shows candidate proofs; **Verify latest candidate** prepares a separate review task.
+3. **Verify:** select a run's latest candidate, or provide a problem and proof. Reviews retain verdicts, issues, evidence and novelty separately from the candidate's proof level.
+
+Use the optional **Task instructions** field to request Lean formalization, compiler checks or a particular research approach from the first turn, while preserving the selected problem's statement.
+
+New tasks read the current `config.yaml`. Expand **Model & budget** for per-task backend, model, reasoning and budget overrides; this does not edit the configuration file. Codex uses this MathLottery workspace's own login and tool configuration; Chat uses its API credentials and billing. Starting a task makes real calls to the selected backend.
+
+For Codex, **Start** and **Continue research** require a completed ChatGPT login in the MathLottery account panel. The server checks again before saving a new task or launching a continuation, using the selected backend for a new task and the saved backend for a continuation. An unavailable CLI, pending login or API-key-only Codex account produces an actionable error without starting a worker. These checks leave local Codex credentials unchanged and do not gate Chat API tasks. Login readiness does not guarantee that the provider will accept a later model request; execution errors remain visible in the task.
+
+The history and detail panels refresh every two seconds while the page is visible. They show checkpoints, saved visible output, token usage, candidate proofs and reports; a long native call can remain quiet between checkpoints. Download the report or use **Stop task** to request cancellation and retain already saved progress. Stopping does not guarantee that the agent can finish its current submission. User cancellation and an exhausted active-time budget have distinct stop reasons; provider failures remain errors. **Resume / add direction** continues the saved session. Resume budget fields replace total limits, and the task retains its saved model settings. A completed task needs additional direction to continue.
+
+When a research or review workspace contains Lean files, **Results** also lists downloadable `.lean`, `lean-toolchain` and `lakefile.toml` text files. Each download is limited to 1 MB; linked files, hidden directories, dependency caches and build outputs are excluded. The list is bounded and reports when it is incomplete. Downloads contain the selected source text, not a complete Lean project archive, and preserve the source filename in modern browsers; retain the displayed relative path when reconstructing the project locally. Source availability is not evidence that Lean ran successfully, that the formal statement matches the public problem, or that the result is new. The candidate's proof level is unchanged by listing or downloading these files.
+
+When verifying a saved candidate, you can explicitly select proof source files from its research workspace. No files are selected automatically. The form retains the displayed candidate ID and checksum; if that candidate changes before submission, refresh the source before trying again. The source task must be idle. At submission, MathLottery freezes the selected file contents and records their paths, sizes and SHA256 hashes. Later source edits do not change the review input. The review's Results panel shows this manifest separately from its verdict.
+
+Attachments are limited to 20 files, 1 MB per file and 2 MB total for native Codex. Native Chat includes the actual source text in its prompt, with a smaller 128 KB total limit. Codex receives the files under `submitted-evidence/` in its independent review workspace. Logs, previous reviews, dependency caches and login data are not included. Provide all small local Lean dependencies needed by the proof; this does not package or install mathlib. Attached sources are untrusted evidence for the reviewer to inspect and recheck, and never automatically raise the proof level.
+
+The result summary distinguishes the proof level, latest agent review, recorded problem status and novelty. A completed task or an agent finding no issues is not a claim of complete formal verification or a confirmed new solution to an open problem.
+
+Workers continue when the browser or UI server closes. To stop research, use **Stop task** or `mathlottery stop <run-id>`. Restarting the UI reconnects to the same local state; it does not relaunch tasks automatically. The UI and CLI share `problems/`, `runs/` and `.mathlottery/`, and per-task worker records live under `runs/<run-id>/web/`. Use the CLI for the full `run` pipeline and legacy manual handoffs.
+
+Browser writes require a same-origin request token, and only packaged assets and selected run data are served. Agent output is displayed as text. This remains a local workspace; the Codex account connection is not multi-user access control for the web interface.
+
+### Sign in with ChatGPT
+
+The **MathLottery account** panel manages a login dedicated to the current workspace. Signing in, switching accounts, or signing out here leaves your ordinary local Codex CLI / IDE login unchanged. The MathLottery browser interface, MathLottery CLI commands, and background research workers all use this workspace's login.
+
+Sign in once in MathLottery even if your local Codex is already logged in. Choose **Sign in with ChatGPT**, open the official link, and enter the one-time code. Complete authentication on OpenAI's page. You may choose the same ChatGPT account or a different account. Separate login state does not provide additional quota: sessions using the same account still use its subscription allowance. Device-code login may first need enabling in ChatGPT security settings or by a workspace administrator. [Official authentication guidance](https://learn.chatgpt.com/docs/auth)
+
+After login, the panel shows the masked email and plan when available. **Switch account** signs out of this MathLottery workspace first, then starts a new device-code login. Cancelling or failing the new authorization leaves MathLottery signed out; sign in again to restore access. **Sign out** ends only this workspace's login. Both actions ask for confirmation and are blocked while a Codex task is running in this workspace. Reading status or using ordinary sign-in never automatically replaces an existing MathLottery login. The ChatGPT website's browser session is separate.
+
+MathLottery sets `CODEX_HOME` only in its Codex child processes, to `.mathlottery/codex-home`, and forces `cli_auth_credentials_store="file"`. Official Codex stores credentials there; the directory is Git-ignored and owner-only on POSIX systems. The parent's environment, local Codex home, and OS credential store remain untouched. MathLottery does not copy or fall back to local Codex credentials, configuration, or sessions. Configure optional MCP servers, plugins and Codex defaults in this dedicated home when needed. Search, shell and file tools still run through official Codex. [Codex environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables)
+
+Existing MathLottery problems, reports and checkpoints remain available after this change. A native conversation previously stored in your personal Codex home is not copied: resuming it may require a new run because its original session is absent from the dedicated home. Newly created sessions persist in the dedicated home for later continuation.
+
+Passwords and tokens never pass through the MathLottery frontend. Only masked account details and pending device-code state are retained in application memory, not in configuration, reports or browser localStorage. Login checks do not start research. The integration uses the official [Codex app-server authentication protocol](https://learn.chatgpt.com/docs/app-server). Keep `.mathlottery/` private and excluded from Git, including its credentials and sessions.
+
+This login connects the **codex** backend. MathLottery's current **chat** backend still requires an API key and API billing; it does not implement the separate Sign in with ChatGPT API integration.
+
 ## Choose a model in config.yaml
 
 Common settings are grouped at the top of the configuration file. This example selects Codex, GPT-6 Astra, and Max:
@@ -74,13 +131,13 @@ Use `--backend`, `--model`, `--reasoning-effort`, or `--reasoning-mode` for a te
 
 ### codex: persistent native agent sessions
 
-Install the official Codex CLI and run `codex login` to sign in with ChatGPT. MathLottery uses official `codex exec` calls and resumes the exact same session. Codex supplies search, shell, file operations, and existing MCP/plugin configuration. Available tools depend on the machine and account.
+Install the official Codex CLI, then sign in through the browser workspace's **MathLottery account** panel. Running plain `codex login` signs in to your separate local Codex and does not sign in to MathLottery. MathLottery uses official `codex exec` calls and resumes the exact same session in its dedicated home. Codex supplies search, shell and file operations; optional MCP/plugin configuration belongs in the MathLottery home. Available tools depend on the machine and account.
 
 ~~~bash
 mathlottery solve --prompt 'Please solve Goldbach’s conjecture'
 ~~~
 
-Set `backend.mode` to `codex` in `config.yaml`. When `model` and `reasoning_effort` are `null`, they inherit the Codex user configuration; set them in the file to choose explicitly. A model selected in a separate chat interface may differ from the CLI default. Research files are written to the current research workspace using the `workspace-write` sandbox and configured network permissions.
+Set `backend.mode` to `codex` in `config.yaml`. When `model` and `reasoning_effort` are `null`, they use Codex defaults from the dedicated MathLottery home; set them in the file to choose explicitly. A model selected in a separate chat interface may differ from the CLI default. Research files are written to the current research workspace using the `workspace-write` sandbox and configured network permissions.
 
 Native calls use ordinary agent execution without the per-action JSON protocol, the legacy 15-second / 512 MB tool wrapper, or fixed-length summaries in place of native history. Codex still has its own context window and compaction behavior. [Official non-interactive usage](https://learn.chatgpt.com/docs/non-interactive-mode)
 
@@ -147,7 +204,7 @@ mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
 
 Candidate JSON retains its `claim`, `proof`, `assumptions`, and `references`; prior review verdicts are excluded from the new review. Without `--problem`, the JSON candidate's `claim` is the statement being checked. A plain proof file requires `--problem`.
 
-Reviews use a separate session and workspace. The initial context contains only the problem, candidate, and references. Any of `NO_ISSUES_FOUND`, `ISSUES_FOUND`, or `INCONCLUSIVE` ends an independent `verify` task without starting a solver. A favorable model review can establish at most `SELF_CHECKED`; finite tests or an agent's claim that Lean passed do not automatically establish a formal proof.
+Reviews use a separate session and workspace. The initial context contains the problem, candidate and references, plus any proof sources explicitly selected in the browser. Previous solver conversations and review verdicts are not included. Any of `NO_ISSUES_FOUND`, `ISSUES_FOUND`, or `INCONCLUSIVE` ends an independent `verify` task without starting a solver. A favorable model review can establish at most `SELF_CHECKED`; finite tests or an agent's claim that Lean passed do not automatically establish a formal proof.
 
 Codex's `workspace-write` sandbox does not fully isolate file reads. Review independence here concerns the context; it is not a certified blind review.
 
@@ -174,6 +231,8 @@ mathlottery export <run-id> --format json --output checkpoint.json
 ~~~
 
 Budget overrides set new total limits and do not reset time already consumed. Paused time does not count as active time. `max_iterations` counts research handoffs, not native tool calls within a round. Token accounting uses actual backend reports and is checked between calls; unreported usage stays unknown.
+
+Reports include a stage measurement table and `metrics.json`: completed returns, missing/invalid milestones, measured invocation seconds, candidate counts and review outcomes. Use these to locate time spent on discovery, solving or review, and to detect repeated handoff failures. Missing historical timing is `unknown`, not zero. These measurements do not certify mathematical success. See [code flow and recovery](architecture.md) for the module boundaries.
 
 A finished native task can receive further guidance through `resume --message` and continue its original workflow. Use `--backend` explicitly to switch agents; pending calls must be recovered first. Each backend has separate context IDs, and switching imports recorded research answers.
 
@@ -223,7 +282,7 @@ The [showcase](../showcase/README.md) contains three compact case studies with p
 - [Medial-triangle inequality](../showcase/medial-triangle-inequality/README.md): a complete written proof and a checked Lean formalization.
 - [Stepwise irregular graphs](../showcase/stepwise-irregular-graphs/README.md): a complete counterexample with an executable finite certificate.
 
-Each case links to its reproduction instructions and states its novelty limits. See the [source and correctness audit](../showcase/audit-2026-10-21.md) for the evidence behind those assessments. These are research outputs; their formal verification and novelty status should be read separately.
+Each case links to its reproduction instructions and states its novelty limits. Its review summary and verification records explain the evidence behind those assessments. These are research outputs; their formal verification and novelty status should be read separately.
 
 ## Local artifacts
 
@@ -241,6 +300,7 @@ runs/<run-id>/
   verification/                    # Separate review results
   checkpoints/ / usage.json         # Recovery state and actual usage
   report.md                        # Workflow results and evidence
+  metrics.json                     # Measured stage outcomes and invocation timing
 ~~~
 
 Model and tool information comes from actual responses or session metadata; unreported fields stay unknown. External tool side effects are not guaranteed to occur exactly once. Check logs and research files during recovery.

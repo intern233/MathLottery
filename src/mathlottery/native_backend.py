@@ -12,6 +12,7 @@ from pathlib import Path
 from uuid import UUID
 
 from mathlottery.backends import BackendResult, BackendStatus, WorkBackend
+from mathlottery.codex_metadata import session_path, session_runtime, turn_usage
 from mathlottery.storage import atomic_write, json_text, safe_path
 
 
@@ -24,49 +25,11 @@ class NativeWorkBackend(WorkBackend):
             "persistent_sessions": True,
             "native_tools": True,
             "sandbox": "workspace-write",
-            "user_configuration": "inherited with explicit run overrides",
+            "user_configuration": "isolated MathLottery Codex home with explicit run overrides",
         }
 
-    @staticmethod
-    def session_runtime(session_id: str) -> dict:
-        """Read only this session's whitelisted runtime metadata, never credentials/history."""
-        UUID(session_id)
-        sessions = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "sessions"
-        runtime = {}
-        try:
-            path = next(sessions.rglob(f"*{session_id}*.jsonl"), None)
-            if path is None:
-                return runtime
-            with path.open("rb") as stream:
-                size = stream.seek(0, os.SEEK_END)
-                offset = max(0, size - 4_000_000)
-                stream.seek(offset)
-                if offset:
-                    stream.readline()
-                for line in stream:
-                    if b'"turn_context"' not in line:
-                        continue
-                    try:
-                        event = json.loads(line)
-                    except (ValueError, UnicodeError):
-                        continue
-                    if not isinstance(event, dict) or event.get("type") != "turn_context":
-                        continue
-                    payload = event.get("payload") or {}
-                    if not isinstance(payload, dict):
-                        continue
-                    if isinstance(payload.get("model"), str):
-                        runtime["model"] = payload["model"]
-                        runtime["model_source"] = "Codex session turn_context"
-                    effort = payload.get("effort") or payload.get("reasoning_effort")
-                    if isinstance(effort, str):
-                        runtime["reasoning_effort"] = effort
-                    policy = payload.get("sandbox_policy") or {}
-                    if isinstance(policy, dict) and isinstance(policy.get("type"), str):
-                        runtime["sandbox"] = policy["type"]
-        except OSError:
-            pass  # Session formats/storage can change; unknown is not a guessed model name.
-        return runtime
+    def session_runtime(self, session_id: str) -> dict:
+        return session_runtime(session_id, self.identity.home)
 
     @staticmethod
     def process_start(pid: int) -> str | None:
@@ -106,6 +69,7 @@ class NativeWorkBackend(WorkBackend):
     ) -> list[str]:
         command = [
             self.executable,
+            *self.identity.overrides(),
             "exec",
             "--cd",
             str(workspace),
@@ -161,6 +125,15 @@ class NativeWorkBackend(WorkBackend):
     ) -> BackendResult:
         started = time.monotonic()
         try:
+            self.identity.prepare()
+            if session_id and session_path(session_id, self.identity.home) is None:
+                return BackendResult(
+                    BackendStatus.UNSUPPORTED,
+                    error="This Codex session is absent from MathLottery's isolated account "
+                    "storage. Sessions created with the previous shared login cannot be resumed "
+                    "here. Start a new research run using the saved results; local Codex "
+                    "credentials and sessions will not be imported.",
+                )
             if not self.executable:
                 self.check(timeout=max(0, timeout))
         except subprocess.TimeoutExpired:
@@ -175,6 +148,7 @@ class NativeWorkBackend(WorkBackend):
         workspace.mkdir(parents=True, exist_ok=True)
         if any((directory / name).exists() for name in ("answer.md", "command.json")):
             return BackendResult(BackendStatus.FAILED, error="Attempt artifacts already exist")
+        before_usage = self.session_runtime(session_id).get("token_usage") if session_id else None
         atomic_write(directory / "prompt.md", prompt)
         command = self.native_command(directory, workspace, session_id, reviewer)
         atomic_write(directory / "command.json", json_text(command))
@@ -191,10 +165,12 @@ class NativeWorkBackend(WorkBackend):
         source_urls = set()
         observed_session, last_message, outcome = session_id, "", None
         saw_session, completed = False, False
+        session_error = False
+        progress_path = directory / "progress.md"
         process = None
 
         def consume(reader):
-            nonlocal observed_session, saw_session, last_message, outcome, completed
+            nonlocal observed_session, saw_session, last_message, outcome, completed, session_error
             while True:
                 position = reader.tell()
                 line = reader.readline()
@@ -216,23 +192,31 @@ class NativeWorkBackend(WorkBackend):
                         value = str(UUID(value))
                     except (ValueError, TypeError, AttributeError):
                         outcome = "Codex emitted an invalid session ID"
+                        session_error = True
                         continue
                     if observed_session and value != observed_session:
                         outcome = "Codex resumed a different session; refusing to mix research"
+                        session_error = True
                         continue
                     observed_session, saw_session = value, True
                     on_session(value)  # Commit immediately, even if the turn is later interrupted.
                 if kind == "turn.completed":
                     completed = True
+                    usage.clear()  # The current CLI reports a session total, not additive events.
                     for key, value in (event.get("usage") or {}).items():
                         if isinstance(value, int) and value >= 0:
-                            usage[key] = usage.get(key, 0) + value
+                            usage[key] = value
                 if kind in ("error", "turn.failed"):
                     errors.append(json.dumps(event, ensure_ascii=False))
                 item = event.get("item") or {}
                 if isinstance(item, dict):
                     if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
                         last_message = item["text"]
+                        if kind == "item.completed":
+                            # Preserve all visible messages on disk, not a truncated memory excerpt.
+                            with progress_path.open("a", encoding="utf-8") as progress:
+                                progress.write(last_message + "\n\n")
+                                progress.flush()
                     if item.get("type") in (
                         "command_execution",
                         "web_search",
@@ -311,9 +295,29 @@ class NativeWorkBackend(WorkBackend):
             diagnostic = "\n".join(errors) + "\n" + stderr.read(20000)
         if observed_session:
             runtime.update(self.session_runtime(observed_session))
+        runtime["reported_usage"] = usage.copy()
+        runtime["usage_before"] = before_usage
+        usage, runtime["usage_scope"] = turn_usage(
+            usage, before_usage, runtime.get("token_usage"), resumed=session_id is not None
+        )
+        if not saw_session or session_error:
+            usage, runtime["usage_scope"] = {}, "unknown: session identity was not confirmed"
         runtime["tools_observed"] = sorted(tools_used)
         runtime["source_urls"] = sorted(source_urls)
+        answer = directory / "answer.md"
+        text = ""
+        if saw_session and not session_error:
+            text = answer.read_text() if answer.is_file() else ""
+            if not text:
+                text = (
+                    progress_path.read_text()
+                    if (outcome or not completed) and progress_path.is_file()
+                    else last_message
+                )
+                if text:
+                    atomic_write(answer, text)
         metadata = dict(
+            text=text,
             usage=usage,
             invoked=True,
             session_id=observed_session,
@@ -344,8 +348,6 @@ class NativeWorkBackend(WorkBackend):
                 error="No native session ID was reported",
                 **metadata,
             )
-        answer = directory / "answer.md"
-        text = answer.read_text() if answer.is_file() else last_message
         if not answer.exists():
             atomic_write(answer, text)
-        return BackendResult(BackendStatus.COMPLETED, text=text, **metadata)
+        return BackendResult(BackendStatus.COMPLETED, **metadata)

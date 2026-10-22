@@ -16,12 +16,17 @@ FAKE = r"""
 import json, os, sys, time
 from pathlib import Path
 args = sys.argv[1:]
+if os.environ.get('MATHLOTTERY_FAKE_ENV_LOG'):
+    with Path(os.environ['MATHLOTTERY_FAKE_ENV_LOG']).open('a') as stream:
+        stream.write(json.dumps({'args':args, 'home':os.environ.get('CODEX_HOME'),
+            'sqlite':os.environ.get('CODEX_SQLITE_HOME'),
+            'api_key_present':'OPENAI_API_KEY' in os.environ}) + '\n')
 behavior = os.environ.get('MATHLOTTERY_FAKE_BEHAVIOR', 'ok')
 if args == ['--version']:
     if behavior == 'slow_version':
         time.sleep(20)
     print('codex-cli fake-for-tests')
-elif args == ['login', 'status']:
+elif args[-2:] == ['login', 'status']:
     if behavior == 'slow_login':
         time.sleep(20)
     print('Logged in using API key' if behavior == 'api_auth' else 'Logged in using ChatGPT')
@@ -81,15 +86,15 @@ def test_work_invokes_real_process_and_accounts_reported_usage(store, config, fa
 
 
 @pytest.mark.parametrize("behavior", ["api_auth", "no_login"])
-def test_work_requires_chatgpt_login(fake_codex, monkeypatch, behavior):
+def test_work_requires_chatgpt_login(fake_codex, tmp_path, monkeypatch, behavior):
     monkeypatch.setenv("MATHLOTTERY_FAKE_BEHAVIOR", behavior)
-    backend = WorkBackend(BackendConfig(codex_command=fake_codex))
+    backend = WorkBackend(BackendConfig(codex_command=fake_codex), root=tmp_path)
     with pytest.raises(ValueError, match="requires ChatGPT authentication"):
         backend.check()
 
 
 def test_work_missing_installation_has_clear_error(tmp_path):
-    backend = WorkBackend(BackendConfig(codex_command="/missing/codex"))
+    backend = WorkBackend(BackendConfig(codex_command="/missing/codex"), root=tmp_path)
     result = backend.invoke("prompt", {}, tmp_path, 2)
     assert result.status == BackendStatus.UNSUPPORTED
     assert not result.invoked
@@ -165,17 +170,17 @@ def test_stop_active_work_kills_child_and_checkpoints(store, config, fake_codex,
 
 def test_work_timeout_is_bounded(fake_codex, tmp_path, monkeypatch):
     monkeypatch.setenv("MATHLOTTERY_FAKE_BEHAVIOR", "slow")
-    backend = WorkBackend(BackendConfig(codex_command=fake_codex))
+    backend = WorkBackend(BackendConfig(codex_command=fake_codex), root=tmp_path)
     started = time.monotonic()
     result = backend.invoke("prompt", {}, tmp_path / "attempt", 0.5)
     assert result.status == BackendStatus.INTERRUPTED
     assert time.monotonic() - started < 3
 
 
-def test_api_credentials_are_not_forwarded(monkeypatch):
+def test_api_credentials_are_not_forwarded(tmp_path, monkeypatch):
     for key in ("OPENAI_API_KEY", "CODEX_API_KEY", "OPENAI_BASE_URL", "CODEX_ACCESS_TOKEN"):
         monkeypatch.setenv(key, "should-not-forward")
-    env = WorkBackend.environment()
+    env = WorkBackend(BackendConfig(), root=tmp_path).environment()
     assert not any(
         key in env
         for key in ("OPENAI_API_KEY", "CODEX_API_KEY", "OPENAI_BASE_URL", "CODEX_ACCESS_TOKEN")
@@ -186,7 +191,7 @@ def test_api_credentials_are_not_forwarded(monkeypatch):
 @pytest.mark.parametrize("behavior", ["slow_version", "slow_login"])
 def test_setup_obeys_the_same_wall_time_budget(fake_codex, tmp_path, monkeypatch, behavior):
     monkeypatch.setenv("MATHLOTTERY_FAKE_BEHAVIOR", behavior)
-    backend = WorkBackend(BackendConfig(codex_command=fake_codex))
+    backend = WorkBackend(BackendConfig(codex_command=fake_codex), root=tmp_path)
     started = time.monotonic()
     result = backend.invoke("prompt", {}, tmp_path / "attempt", 0.3)
     assert result.status == BackendStatus.INTERRUPTED
@@ -196,7 +201,7 @@ def test_setup_obeys_the_same_wall_time_budget(fake_codex, tmp_path, monkeypatch
 
 def test_failed_auth_is_not_cached_as_ready(fake_codex, tmp_path, monkeypatch):
     monkeypatch.setenv("MATHLOTTERY_FAKE_BEHAVIOR", "api_auth")
-    backend = WorkBackend(BackendConfig(codex_command=fake_codex))
+    backend = WorkBackend(BackendConfig(codex_command=fake_codex), root=tmp_path)
     for _ in range(2):
         result = backend.invoke("prompt", {}, tmp_path / "attempt", 2)
         assert result.status == BackendStatus.UNSUPPORTED
@@ -225,8 +230,40 @@ def test_backend_cannot_reuse_stale_answer(fake_codex, tmp_path):
     directory = tmp_path / "attempt"
     directory.mkdir()
     (directory / "answer.json").write_text('{"stale":true}')
-    backend = WorkBackend(BackendConfig(codex_command=fake_codex))
+    backend = WorkBackend(BackendConfig(codex_command=fake_codex), root=tmp_path)
     result = backend.invoke("prompt", {}, directory, 2)
     assert result.status == BackendStatus.FAILED
     assert not result.invoked
     assert (directory / "answer.json").read_text() == '{"stale":true}'
+
+
+def test_structured_checks_and_execution_use_workspace_account(
+    store, config, fake_codex, monkeypatch,
+):
+    local_home = store.root / "local-codex"
+    local_home.mkdir()
+    sentinel = local_home / "auth.json"
+    sentinel.write_text('{"fixture":"local credential must remain untouched"}')
+    before = sentinel.read_bytes()
+    log = store.root / "child-environments.jsonl"
+    monkeypatch.setenv("CODEX_HOME", str(local_home))
+    monkeypatch.setenv("CODEX_SQLITE_HOME", str(local_home / "db"))
+    monkeypatch.setenv("OPENAI_API_KEY", "must-not-forward")
+    monkeypatch.setenv("MATHLOTTERY_FAKE_ENV_LOG", str(log))
+    config.backend.mode = "codex"
+    config.backend.codex_command = fake_codex
+    config.budget.max_iterations = 1
+    engine = Orchestrator(store)
+    run = engine.drive(engine.create(config, demo_problem()).id)
+    assert run.iteration == 1
+    entries = [json.loads(line) for line in log.read_text().splitlines()]
+    isolated_home = store.root / ".mathlottery" / "codex-home"
+    assert len(entries) == 4  # version, login status, help, research
+    assert all(entry["home"] == str(isolated_home) for entry in entries)
+    assert all(not entry["api_key_present"] for entry in entries)
+    assert all(entry["sqlite"] != str(local_home / "db") for entry in entries)
+    for entry in entries:
+        if "login" in entry["args"] or "--output-schema" in entry["args"]:
+            assert 'cli_auth_credentials_store="file"' in entry["args"]
+    assert os.environ["CODEX_HOME"] == str(local_home)
+    assert sentinel.read_bytes() == before
