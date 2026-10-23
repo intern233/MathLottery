@@ -133,7 +133,7 @@ def test_arxiv_parses_authors_and_dates():
     assert result["retrieved_at"]
 
 
-def test_open_status_needs_actual_recent_cross_source_evidence():
+def test_open_status_is_not_established_by_two_fresh_urls():
     source, paper = "https://www.erdosproblems.com/9", "https://arxiv.org/abs/1234.5678"
     problem = Problem(
         id="test",
@@ -148,7 +148,8 @@ def test_open_status_needs_actual_recent_cross_source_evidence():
     assert conservative_status(problem, [first]).status == OpenStatus.UNKNOWN
     second = {"status": "OK", "results": [{"url": paper, "retrieved_at": now()}]}
     checked = conservative_status(problem, [first, second])
-    assert checked.status == OpenStatus.OPEN
+    assert checked.status == OpenStatus.UNKNOWN
+    assert checked.evidence_assessment.reasons
     assert checked.status_checked_at
     first["retrieved_at"] = "2020-01-01T00:00:00+00:00"
     assert conservative_status(problem, [first, second]).status == OpenStatus.UNKNOWN

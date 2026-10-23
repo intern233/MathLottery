@@ -17,6 +17,10 @@ New tasks automatically read `config.yaml` in the project root for the backend, 
 
 ## Environment setup
 
+Before installing Lean or starting local experiments, read [resource requirements and Lean setup](resources.md). Plan for 2–4 GiB of available RAM and 3–5 GiB of disk for a single remote workflow; with Lean/mathlib, start with 6–8 GiB available RAM and 20–30 GiB of disk. These are planning allowances, not measured minimums. Larger builds and concurrent tasks need more.
+
+**Lean can use several GiB even for one proof check.** The guide includes a measured showcase module (about 1.99 GiB peak RSS), cache/concurrency commands, WSL memory/swap settings, and failure diagnosis. `tools.memory_mb: 512` does not limit native Codex or Lean/Lake memory.
+
 ~~~bash
 conda env create -f environment.yml
 conda activate mathlottery
@@ -43,7 +47,7 @@ The default listener is `127.0.0.1`, including under WSL. Open the printed **Win
 
 For an explicit alternative on NAT-mode WSL, `mathlottery serve --wsl-direct` enables direct access through the WSL address and prints it. This option broadens the listener and restricts request peers to loopback, the WSL address and the Windows gateway. It is never enabled automatically. `--loopback-only` remains a supported way to select the default loopback behavior and cannot be combined with `--wsl-direct`. Startup does not modify WSL configuration, proxies, port-forwarding rules or the firewall.
 
-1. **Find:** enter selection criteria, an optional source URL and a shortlist size. When results arrive, inspect the statements, sources and status evidence, then choose **Solve this problem**.
+1. **Find:** enter preferences, an optional source URL and a shortlist size. Compare each problem’s difficulty, verification feasibility, Lean feasibility, prerequisites, obstacles and source evidence. The agent recommendation is not a user selection. Click **Choose this problem**, review **Your choice** in the Solve form, and then click **Start solving**. Choosing alone never starts a model call.
 2. **Solve:** select a saved problem or enter a statement. The result panel shows candidate proofs; **Verify latest candidate** prepares a separate review task.
 3. **Verify:** select a run's latest candidate, or provide a problem and proof. Reviews retain verdicts, issues, evidence and novelty separately from the candidate's proof level.
 
@@ -52,6 +56,10 @@ Use the optional **Task instructions** field to request Lean formalization, comp
 New tasks read the current `config.yaml`. Expand **Model & budget** for per-task backend, model, reasoning and budget overrides; this does not edit the configuration file. Codex uses this MathLottery workspace's own login and tool configuration; Chat uses its API credentials and billing. Starting a task makes real calls to the selected backend.
 
 For Codex, **Start** and **Continue research** require a completed ChatGPT login in the MathLottery account panel. The server checks again before saving a new task or launching a continuation, using the selected backend for a new task and the saved backend for a continuation. An unavailable CLI, pending login or API-key-only Codex account produces an actionable error without starting a worker. These checks leave local Codex credentials unchanged and do not gate Chat API tasks. Login readiness does not guarantee that the provider will accept a later model request; execution errors remain visible in the task.
+
+History groups Solve and Verify records by saved problem ID and exact statement. Each Find remains a separate shortlist, rather than being assigned to its first recommendation. A solver started from a shortlist links back to its source Find. Multiple runs of the same stage remain visible and are numbered. Click any record to open its own results. Groups show their latest update time, while each record shows its start time. **Agent turns** count research handoffs, including interrupted calls and continuations, rather than complete attempts to solve the problem. Resuming keeps the same run record.
+
+You can skip Find: open **Solve**, choose **Enter a new problem**, and enter a statement and optional title. Without a title, the first 100 characters of the statement become the title. The problem is saved for reuse, and its history initially contains only a Solve record. **Verify latest candidate** prepares a review in the same problem group; no Find record is created. A supplied problem starts with status **Unknown**; entering it does not establish that it is open or solved.
 
 The history and detail panels refresh every two seconds while the page is visible. They show checkpoints, saved visible output, token usage, candidate proofs and reports; a long native call can remain quiet between checkpoints. Download the report or use **Stop task** to request cancellation and retain already saved progress. Stopping does not guarantee that the agent can finish its current submission. User cancellation and an exhausted active-time budget have distinct stop reasons; provider failures remain errors. **Resume / add direction** continues the saved session. Resume budget fields replace total limits, and the task retains its saved model settings. A completed task needs additional direction to continue.
 
@@ -162,6 +170,12 @@ Full API answers, tool results, and citation metadata are saved locally. Code In
 
 References: [Conversation state](https://developers.openai.com/api/docs/guides/conversation-state), [background calls and cancellation](https://developers.openai.com/api/docs/guides/background), [web search](https://developers.openai.com/api/docs/guides/tools-web-search), and [Code Interpreter](https://developers.openai.com/api/docs/guides/tools-code-interpreter).
 
+## Native agent capabilities
+
+The native backend keeps official search, shell tools and persistent sessions. It adds no per-action JSON protocol or legacy memory excerpt limit. In `config.yaml`, `backend.native_multi_agent` and `backend.native_memories` accept `true`, `false` or `null`; `null` inherits the isolated Codex configuration and runtime defaults. The browser exposes both as task overrides. A continuous primary researcher remains responsible for the result. Helper agents can consume additional tokens; choosing `false` keeps a single agent. Review sessions always force memories off.
+
+Optional MCP servers, plugins and Codex defaults belong in `.mathlottery/codex-home/config.toml` and the corresponding private home, not your personal Codex home. They are not copied automatically. A feature flag does not install tools or guarantee account support. Existing workspace isolation, network configuration and budgets still apply. Independent source/Lean checks currently share the research time budget. Chat continues to use its configured hosted tools; it does not gain local Shell/Lean access from these Codex options.
+
 ## Find problems
 
 ~~~bash
@@ -171,6 +185,19 @@ mathlottery problems
 ~~~
 
 The agent searches, compares problems, and checks prior progress. Finding saves reusable problems and the current ranking, then stops before solving. The terminal lists problem IDs; detailed output is in `runs/<run-id>/literature/selection.json` and `report.md`.
+
+To choose a problem and carry its Find context forward:
+
+~~~bash
+mathlottery solve --from-find <find-run-id> --problem <problem-id>
+~~~
+
+The problem must belong to that exact shortlist. The browser also binds the displayed version by checksum, so a changed list requires a fresh choice. A new Solve session receives a frozen dossier containing the preferences, shortlist, full visible research answers, notes and supported source files. It does not share the mutable Find conversation or inherit hidden reasoning. The original Find stays unchanged, and you can choose another problem from it later. Verify does not inherit this research dossier.
+
+The snapshot defaults to 300 files, 8 MB per file and 32 MB total. Dependency/build caches, hidden files, credentials and linked files are excluded. Supported formats are Markdown/text, JSON, CSV/TSV, Python, Lean, LaTeX/BibTeX and PDF. The manifest lists files omitted by size, scan or read limits. Chat receives up to 256 KB of text inline on its first response; binary PDFs and text beyond that limit are explicitly listed as not sent. Configure `discovery.context_max_files`, `context_max_file_bytes`, `context_max_total_bytes` and `chat_context_max_bytes` when needed. Source files remain untrusted, and old open-status evidence may need refreshing.
+
+Find may explore examples or proof routes to estimate difficulty, but returns its list for your choice. Uncertain open status stays **Unknown**; an estimate is never a success probability. The CLI’s explicit `run` command remains the automatic full-pipeline alternative.
+
 
 Each problem retains its exact statement, sources, difficulty estimate, verification feasibility, and selection reason. Open status is an agent assessment supported by evidence; ranking is not a probability of success. Only sources supported by the run record count toward status checks. Insufficient evidence leaves status at `UNKNOWN`, while the original agent assessment remains in the selection record.
 
@@ -206,6 +233,10 @@ Candidate JSON retains its `claim`, `proof`, `assumptions`, and `references`; pr
 
 Reviews use a separate session and workspace. The initial context contains the problem, candidate and references, plus any proof sources explicitly selected in the browser. Previous solver conversations and review verdicts are not included. Any of `NO_ISSUES_FOUND`, `ISSUES_FOUND`, or `INCONCLUSIVE` ends an independent `verify` task without starting a solver. A favorable model review can establish at most `SELF_CHECKED`; finite tests or an agent's claim that Lean passed do not automatically establish a formal proof.
 
+New Find/Verify milestones must provide checkable excerpts, search coverage and concrete proof checks to support their conclusions. Results display **original-problem coverage**, remaining obligations and evidence gaps separately from the verdict. A correct partial result does not become a complete solution. Historical records without these fields remain unassessed under the new policy.
+
+For an independent Lean receipt, attach the required sources in the browser and ask the reviewer to request a check of the named theorem declarations. Configure `verification` in `config.yaml`; prepare compatible Lean/leanchecker, bubblewrap, `prlimit` and prebuilt libraries first. Successful kernel replay can support `PARTIALLY_VERIFIED`, with its exact scope recorded. Missing tools, resource limits and source failures remain visible. See [evidence requirements and configuration](evidence.md).
+
 Codex's `workspace-write` sandbox does not fully isolate file reads. Review independence here concerns the context; it is not a certified blind review.
 
 ## Run the full pipeline
@@ -239,6 +270,8 @@ A finished native task can receive further guidance through `resume --message` a
 Do not operate the same active session simultaneously from another Codex client.
 
 ## Configuration and usage accounting
+
+Time and token budgets do not cap local RAM or disk. See [the scope of resource controls](resources.md#what-the-configuration-actually-limits) before increasing concurrency or launching a Lean build.
 
 See [config.example.yaml](../config.example.yaml) for the full template. Common settings:
 

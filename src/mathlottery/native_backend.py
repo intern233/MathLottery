@@ -13,6 +13,7 @@ from uuid import UUID
 
 from mathlottery.backends import BackendResult, BackendStatus, WorkBackend
 from mathlottery.codex_metadata import session_path, session_runtime, turn_usage
+from mathlottery.search_trace import queries_from_call
 from mathlottery.storage import atomic_write, json_text, safe_path
 
 
@@ -98,8 +99,11 @@ class NativeWorkBackend(WorkBackend):
             "sandbox_workspace_write.exclude_slash_tmp": True,
             "web_search": self.config.native_web_search,
             "features.shell_tool": True,
-            "features.multi_agent": False,
         }
+        if self.config.native_multi_agent is not None:
+            settings["features.multi_agent"] = self.config.native_multi_agent
+        if self.config.native_memories is not None:
+            settings["features.memories"] = self.config.native_memories
         if reviewer:
             settings["features.memories"] = False
         if self.config.reasoning_effort is not None:
@@ -163,6 +167,7 @@ class NativeWorkBackend(WorkBackend):
         usage, runtime, errors = {}, {}, []
         tools_used = set()
         source_urls = set()
+        search_queries = set()
         observed_session, last_message, outcome = session_id, "", None
         saw_session, completed = False, False
         session_error = False
@@ -210,6 +215,8 @@ class NativeWorkBackend(WorkBackend):
                     errors.append(json.dumps(event, ensure_ascii=False))
                 item = event.get("item") or {}
                 if isinstance(item, dict):
+                    if kind == "item.completed":
+                        search_queries.update(queries_from_call(item))
                     if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
                         last_message = item["text"]
                         if kind == "item.completed":
@@ -227,7 +234,7 @@ class NativeWorkBackend(WorkBackend):
                     if item.get("type") == "web_search":
                         action = item.get("action") or {}
                         if isinstance(action, dict):
-                            records = [action, *action.get("sources", [])]
+                            records = [action, *(action.get("sources") or []), *(item.get("results") or [])]
                             for record in records:
                                 if isinstance(record, dict) and isinstance(record.get("url"), str):
                                     source_urls.add(record["url"])
@@ -304,6 +311,7 @@ class NativeWorkBackend(WorkBackend):
             usage, runtime["usage_scope"] = {}, "unknown: session identity was not confirmed"
         runtime["tools_observed"] = sorted(tools_used)
         runtime["source_urls"] = sorted(source_urls)
+        runtime["search_queries"] = sorted(search_queries)
         answer = directory / "answer.md"
         text = ""
         if saw_session and not session_error:

@@ -25,10 +25,21 @@ backend:
   native_turn_timeout_seconds: null
   native_web_search: live
   native_network_access: true
+  # null inherits the isolated Codex configuration/runtime defaults; false keeps one agent.
+  native_multi_agent: null
+  # Research only; independent reviewers always disable memories.
+  native_memories: null
   native_max_log_bytes: 100000000
   # Legacy structured calls only:
   timeout_seconds: 300
   max_retries: 2
+discovery:
+  # Frozen Find dossier passed to a user-selected Solve task; skipped files are reported.
+  context_max_files: 300
+  context_max_file_bytes: 8000000
+  context_max_total_bytes: 32000000
+  # Hosted Chat cannot read local files; send text inline once, with explicit omissions.
+  chat_context_max_bytes: 256000
 budget:
   max_wall_time_minutes: 180
   max_iterations: 50
@@ -39,11 +50,27 @@ budget:
 tools:
   # Legacy structured tools only; native commands use Codex's runtime.
   timeout_seconds: 15
+  # Legacy Python worker address space only, NOT a native/Lean/Lake/WSL RAM cap.
+  # See docs/resources.md (中文：docs/resources.cn.md).
   memory_mb: 512
   max_output_chars: 20000
   web_timeout_seconds: 15
   web_interval_seconds: 3
   max_download_bytes: 2000000
   lean_command: lean
+verification:
+  # Independent milestone checks. See docs/evidence.md (中文：docs/evidence.cn.md).
+  fetch_sources: true
+  max_sources: 12
+  source_timeout_seconds: 60
+  formal_enabled: true
+  lean_command: lean
+  # Prebuilt library directories relative to this project; no automatic Lake build.
+  lean_library_paths: []
+  formal_timeout_seconds: 120
+  # Lean internal -M threshold; not a native-command or host-wide RAM cap.
+  formal_memory_mb: 2048
+  # OS virtual-address-space ceiling; includes reserved stacks and mapped libraries, not RSS.
+  formal_address_space_mb: 8192
 # Legacy structured memory only.
 memory_context_chars: 16000

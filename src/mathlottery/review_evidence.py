@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import os
-import stat
 from pathlib import Path
-from uuid import uuid4
 
+from mathlottery.artifact_io import write_confined as _write_confined
 from mathlottery.models import Candidate, ReviewEvidence, ReviewSource, Run, digest, now
 from mathlottery.storage import json_text
 from mathlottery.web.artifacts import _allowed, read_formal_artifact
@@ -91,43 +89,6 @@ def capture(root: Path, source: Run, paths: list[str], mode: str) -> ReviewEvide
     validate(evidence, candidate, mode, bound=False)
     return evidence
 
-
-def _write_confined(root: Path, relative: str, data: bytes) -> None:
-    """Atomic projection using directory descriptors; never follow swapped parents."""
-    directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    temporary = None
-    try:
-        parts = relative.split("/")
-        for part in parts[:-1]:
-            try:
-                os.mkdir(part, 0o700, dir_fd=directory)
-            except FileExistsError:
-                pass
-            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
-            os.close(directory)
-            directory = child
-        try:
-            info = os.stat(parts[-1], dir_fd=directory, follow_symlinks=False)
-        except FileNotFoundError:
-            pass
-        else:
-            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-                raise ValueError("Submitted evidence projection must use regular, unlinked files")
-        name = f".evidence-{uuid4().hex}.tmp"
-        descriptor = os.open(
-            name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory,
-        )
-        temporary = name
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(data)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, parts[-1], src_dir_fd=directory, dst_dir_fd=directory)
-        temporary = None
-    finally:
-        if temporary is not None:
-            os.unlink(temporary, dir_fd=directory)
-        os.close(directory)
 
 
 def project(run: Run, workspace: Path) -> None:

@@ -6,6 +6,23 @@ from mathlottery.models import Run
 from mathlottery.storage import Store, atomic_write, json_text
 
 
+def source_assessment(assessment) -> str:
+    if not assessment.policy_version:
+        return "Evidence policy: not assessed (historical or user-supplied record)."
+    lines = [f"Evidence policy: `{assessment.policy_version}` · Checked: {assessment.assessed_at}"]
+    lines += [f"- Gap: {reason}" for reason in assessment.reasons]
+    for citation in assessment.checked_citations:
+        lines.append(
+            f"- {citation['role']} · {citation['url']} · {citation['locator']} · "
+            f"excerpt matched: {citation['verified_excerpt']} · "
+            f"source date (reported): {citation.get('source_date') or 'unknown'} · "
+            f"SHA-256: `{citation.get('sha256') or 'unavailable'}`"
+        )
+    lines += [f"- Observed search: {query}" for query in assessment.observed_queries]
+    lines.append("Excerpt matching verifies retrieved text, not its interpretation or search completeness.")
+    return "\n\n".join(lines)
+
+
 def report(store: Store, run: Run):
     metrics = run_metrics(run)
     atomic_write(store.run_dir(run.id) / "metrics.json", json_text(metrics))
@@ -22,6 +39,7 @@ def report(store: Store, run: Run):
             f"**{problem.status}** (agent assessment, not a certification).\n\n"
             f"Checked: {problem.status_checked_at or 'not established'}\n\n"
             + "\n".join(f"- {url}" for url in problem.status_evidence)
+            + "\n\n" + source_assessment(problem.evidence_assessment)
         )
         if problem
         else "UNKNOWN",
@@ -52,6 +70,22 @@ def report(store: Store, run: Run):
                 f"Source: {item.source_url or 'not established'}"
             )
         sections.append("[Selection record and agent assessments](literature/selection.json)")
+        if run.workflow == "find":
+            sections.append("Find has not started solving. Choose a problem from this list to start a separate Solve task with its discovery dossier.")
+        for item in run.shortlist:
+            sections.append(f"### Assessment: {item.title}\n\nDifficulty: {item.difficulty_estimate}\n\n"
+                            f"Verification: {item.verification_feasibility}\n\nLean: {item.lean_feasibility}\n\n"
+                            f"Prerequisites: {'; '.join(item.prerequisites) or 'not assessed'}\n\n"
+                            f"Obstacles: {'; '.join(item.known_obstacles) or 'not assessed'}\n\n"
+                            f"Initial approach: {item.initial_approach or 'not assessed'}")
+    if run.discovery_context:
+        context = run.discovery_context
+        sections += ["## User-selected Discovery Context",
+                     f"Source Find: `{context.source_run_id}` · Captured: {context.captured_at}\n\n"
+                     f"Selected problem SHA-256: `{context.problem_sha256}`\n\n"
+                     f"{len(context.files)} frozen research files; a new solver session, not a shared Find conversation.",
+                     "[Context manifest](discovery-context/manifest.json)",
+                     *[f"- Omitted: {item}" for item in context.omitted]]
     sections += [f"- Round {m.source_iteration} [{m.status}] {m.content}" for m in run.memory]
     if not run.memory and run.execution != "native":
         sections.append("No research memory recorded yet.")
@@ -100,6 +134,8 @@ def report(store: Store, run: Run):
                 f"SHA-256: `{candidate.sha256}`",
                 candidate.claim,
                 "Assumptions: " + ("; ".join(candidate.assumptions) or "none stated"),
+                f"Declared scope: **{candidate.scope}** (researcher assessment)",
+                "Remaining obligations: " + ("; ".join(candidate.remaining_obligations) or "none listed; not a completeness certificate"),
                 candidate.proof,
             ]
         )
@@ -115,8 +151,27 @@ def report(store: Store, run: Run):
                     f"Proof: {review.proof_assessment}",
                     "\n".join(f"- {issue}" for issue in review.issues),
                     "Evidence: " + "; ".join(review.evidence),
+                    f"Original-problem coverage: **{review.original_problem_coverage}** (reviewer assessment). "
+                    + review.coverage_explanation,
+                    "Remaining obligations: " + ("; ".join(review.remaining_obligations) or "none listed"),
+                    "\n".join(f"- Evidence gate: {note}" for note in review.validation_notes),
                 ]
             )
+            for check in review.checks:
+                sections.append(
+                    f"- {check.method} / {check.result} · blocking: {check.blocking}\n\n"
+                    f"{check.claim}\n\n{check.reasoning}\n\n" + "; ".join(check.evidence)
+                )
+            if review.reported_verdict and review.reported_verdict != review.verdict:
+                sections.append(f"Raw agent verdict: {review.reported_verdict}; stored verdict: {review.verdict}.")
+            if review.formal_receipt:
+                receipt = review.formal_receipt
+                sections += [
+                    f"Independent Lean check: **{receipt['status']}**. {receipt.get('reason', '')}",
+                    f"[Execution receipt]({receipt.get('artifact', '')}). "
+                    "This checks named declarations, not equivalence to the original problem.",
+                    "```json\n" + json.dumps(receipt, indent=2, ensure_ascii=False) + "\n```",
+                ]
     for observation in run.observations:
         if observation.get("tool") in ("python_exec", "sympy_compute", "lean_check"):
             result = observation["result"]
@@ -129,6 +184,9 @@ def report(store: Store, run: Run):
         if candidate.reviews:
             review = candidate.reviews[-1]
             sections.append(f"{candidate.id}: **{review.novelty}**. {review.novelty_notes}")
+            sections.append(source_assessment(review.evidence_assessment))
+            if review.reported_novelty and review.reported_novelty != review.novelty:
+                sections.append(f"Raw agent novelty: {review.reported_novelty}; stored assessment: {review.novelty}.")
             sections.extend(
                 f"- [{ref.title or ref.url}]({ref.url})" for ref in review.novelty_references
             )

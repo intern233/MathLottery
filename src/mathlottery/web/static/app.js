@@ -4,6 +4,12 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const words = {
   en: {
+    chooseStep: "Find → Choose → Solve", chooseHint: "Compare the shortlist and choose a problem. Find does not start solving automatically.", estimateHint: "Difficulty and Lean feasibility are reasoned estimates, not success probabilities. Check source evidence before treating a problem as open.",
+    yourChoice: "Your choice", chooseProblem: "Choose this problem", chosen: "Selected", recommended: "Agent recommendation", clearChoice: "Clear choice", discoveryCarry: "The Find dossier, notes and sources will accompany this problem. Review your choice, then start solving.",
+    difficulty: "Difficulty", leanFeasibility: "Lean feasibility", prerequisites: "Prerequisites", obstacles: "Main obstacles", initialApproach: "Possible first approach", findNotReady: "Wait for Find to finish before choosing.",
+    discoveryOrigin: "Selected from Find", contextFiles: "Research files carried forward", contextOmitted: "Files not carried forward", contextScope: "A frozen research dossier in a new Solve session. This does not transfer hidden reasoning or certify the findings.",
+    specialistAgents: "Specialist agents", researchMemories: "Research memories", nativeInherit: "Inherit isolated Codex settings", enabled: "Enabled", disabled: "Disabled", capabilitiesHint: "Codex settings apply within MathLottery's separate account. Review sessions always disable memories. Extra agents share the research budget and can use more tokens.",
+
     localLab: "LOCAL RESEARCH LAB", workflows: "WORKFLOWS", find: "Find problems", solve: "Attempt a solution", verify: "Verify a proof",
     sideNote: "One agent. A little curiosity. A result worth checking.", connecting: "Connecting…", connected: "Local workspace connected", disconnected: "Server disconnected",
     workspace: "Research workspace", eyebrow: "MATHEMATICS, WITH A LITTLE CHANCE", heroCopy: "Find a worthwhile question. Give it a serious attempt. Check what holds.",
@@ -13,7 +19,7 @@ const words = {
     accountConfirmSwitch: "Switch the MathLottery account?\n\nThis signs out of this workspace first, then starts a new ChatGPT sign-in. If you cancel or the new sign-in fails, MathLottery stays signed out. Your local Codex CLI / IDE login is unchanged.\n\nContinue?",
     accountConfirmLogout: "Sign out of MathLottery?\n\nThis workspace will need to sign in again. Your local Codex CLI / IDE login is unchanged.\n\nContinue?",
     accountNote: "This workspace has its own login. Switching or signing out leaves your local Codex CLI / IDE login unchanged. You may use the same ChatGPT account; its usage limits still apply across sessions. Chat API requires a separate API key and API billing.", accountApiKey: "API key", accountPlan: "Plan",
-    totalRuns: "Research runs", activeRuns: "Running now", savedProblems: "Saved problems", candidates: "Candidate proofs", newAttempt: "NEW ATTEMPT",
+    totalRuns: "Run records", activeRuns: "Running now", savedProblems: "Saved problems", candidates: "Candidate proofs", newAttempt: "NEW ATTEMPT",
     findDescription: "Search public sources, compare promising questions, and keep the evidence for their status.",
     solveDescription: "Give the research agent a precise question and room to explore its own approach.",
     verifyDescription: "Ask a separate reviewer to examine the proof, its assumptions, and its novelty.",
@@ -29,14 +35,18 @@ const words = {
     codexHint: "Uses this MathLottery workspace's Codex login and tools.", chatHint: "Uses the Chat API and its API billing. An API key must be configured in the server environment.",
     readinessChecking: "Checking the MathLottery account before starting Codex…", readinessSignIn: "Sign in with ChatGPT in the account panel above to start Codex research. Your draft stays here.", readinessPending: "Finish signing in on the official page, then return here. Your draft stays here.", readinessUnavailable: "Codex is unavailable. Install or configure it, then refresh the account status above.", readinessUnknown: "Account status could not be checked. Refresh the account status above before starting Codex.", readinessApiKey: "Use Switch account above to sign in with ChatGPT before starting subscription-backed Codex research.",
     backgroundHint: "Runs in the background. You can close this page and return later.", notebook: "YOUR NOTEBOOK", recentRuns: "Research history",
+    historyHint: "Each Find keeps its shortlist. Solve and Verify are grouped by problem; repeated runs are numbered. Agent turns include continuations.",
+    stageFind: "Find", stageSolve: "Solve", stageVerify: "Verify", stagePipeline: "Full workflow", runRecords: "run records", lastUpdated: "Updated", startedAt: "Started", attempt: "Attempt {n}",
     startFind: "Start finding", startSolve: "Start solving", startVerify: "Start verification", starting: "Starting…", emptyRuns: "Your next question starts here.", emptyRunsHint: "Start a task to collect problems, proof attempts, and review evidence.",
-    rounds: "rounds", tokens: "tokens", elapsed: "active time", unknown: "unknown", stop: "Stop task", stopping: "Stop requested…", resume: "Resume / add direction", verifyLatest: "Verify latest candidate", download: "Download report ↓",
+    rounds: "agent turns", tokens: "tokens", elapsed: "active time", unknown: "unknown", stop: "Stop task", stopping: "Stop requested…", resume: "Resume / add direction", verifyLatest: "Verify latest candidate", download: "Download report ↓",
     direction: "Additional direction · optional", directionPlaceholder: "Point out an approach, ask for an edge case, or give the agent a new direction.", newTotalBudget: "New total time budget · minutes", newTotalRounds: "New total round limit",
     resumeHint: "These replace total limits, rather than adding time. The saved model settings are preserved.", continue: "Continue research", results: "Results", activity: "Activity", report: "Report",
     visibleProgress: "Latest visible output", events: "Recent checkpoint events", footer: "Curiosity starts the run. Evidence decides the result.", noCandidates: "No candidate runs yet — solve a problem first, or provide a proof.",
     noResults: "No results have been submitted yet.", waitingResults: "Check Activity for saved checkpoints and visible agent output.", shortlist: "Discovered problems", solveThis: "Solve this problem →", statementDetails: "Statement and sources", sourceEvidence: "Status evidence", selection: "Why this problem", feasibility: "Verification feasibility",
     fullProof: "Read full proof", claim: "Claim", review: "Independent review", novelty: "Novelty", unreviewed: "Awaiting independent review", assessmentLimit: "Task completion, proof evidence, and novelty are separate. A favorable agent review does not establish a new solution to a still-open problem.", proofLevel: "Recorded proof level", latestReview: "Latest agent review", problemStatus: "Recorded problem status", levelCandidate: "A proposed proof awaiting independent checking.", levelSelfChecked: "An agent review found no issues. Full formal verification and expert review have not been established by this level.", levelPartial: "Some evidence has been checked. This level does not establish a complete formal proof of the original statement.", levelFormal: "Recorded as formally verified. Check the verification evidence and its correspondence to the original statement.", levelExpert: "Recorded as expert reviewed. Read the review's evidence and scope.", levelRejected: "The recorded review identified supported issues in this candidate.",
     proofEvidence: "Evidence and references", leanFiles: "Lean files", leanFilesNote: "These are agent-generated source files. Their presence does not establish successful compilation or a complete proof of the original statement.", leanFileTooLarge: "Too large to download here", leanFilesTruncated: "Only part of the file list is shown. The remaining files stay in the local run directory.",
+    declaredScope: "Researcher's scope", originalCoverage: "Reviewer: original problem coverage", obligations: "Remaining proof obligations", evidenceGaps: "Evidence checks and gaps", notAssessed: "Not assessed under the evidence policy", excerptMatched: "Source excerpt matched", excerptMissing: "Source excerpt not verified", searchObserved: "Observed searches", proofChecks: "Explicit proof checks", formalReceipt: "Independent Lean execution receipt", formalScope: "Checks named declarations only; equivalence to the original problem is not certified.", evidenceGate: "Evidence gate", sourceLimit: "Matching source text does not certify its interpretation or search completeness.",
+    COMPLETE: "Declared complete", COUNTEREXAMPLE: "Counterexample", FULL: "Full coverage reported", PARTIAL: "Partial result", DIFFERENT: "Different statement", KERNEL_REPLAYED: "Kernel replay passed", UNAVAILABLE: "Unavailable", ERROR: "Execution error", TIMEOUT: "Time limit", OUTPUT_LIMIT: "Output limit", SUPPORTED: "Supported", CONTRADICTED: "Contradicted", UNRESOLVED: "Unresolved",
     noProgress: "No visible output has been saved yet. A long native turn can be quiet while tools are running.", truncated: "Preview truncated; the full artifact remains in the local run directory.", noReport: "The report is not available yet.",
     launched: "Task started. Progress is saved locally.", resumed: "Research resumed.", stopSent: "Stop requested. Waiting for the background task to stop; saved progress is preserved.", requestError: "Request failed. Check research history before retrying.",
     workerInterrupted: "The background worker exited without recording completion. Resume to recover the checkpoint.",
@@ -44,6 +54,12 @@ const words = {
     OPEN: "Open", SOLVED: "Solved", PARTIALLY_SOLVED: "Partially solved", DISPUTED: "Disputed", UNKNOWN: "Unknown", NO_ISSUES_FOUND: "Agent found no issues", ISSUES_FOUND: "Issues found", INCONCLUSIVE: "Inconclusive", CANDIDATE: "Candidate proof", SELF_CHECKED: "Agent checked", PARTIALLY_VERIFIED: "Partially verified", FORMALLY_VERIFIED: "Formally verified", EXPERT_REVIEWED: "Expert reviewed", REJECTED: "Rejected", KNOWN: "Known result", SPECIAL_CASE: "Special case", POTENTIALLY_NEW: "Potentially new",
   },
   zh: {
+    chooseStep: "找题 → 用户选题 → 求解", chooseHint: "比较候选列表，选择你想研究的问题。Find 不会自动启动求解。", estimateHint: "难度和 Lean 可行性是有理由的估计，并非成功概率。问题是否仍开放，请结合来源证据判断。",
+    yourChoice: "你选择的题目", chooseProblem: "选择这道题", chosen: "已选择", recommended: "Agent 推荐", clearChoice: "清除选题", discoveryCarry: "将携带这次找题的资料、笔记和来源。确认题目与设置后，点击开始求解。",
+    difficulty: "求解难度", leanFeasibility: "Lean 可行性", prerequisites: "所需知识", obstacles: "主要障碍", initialApproach: "可尝试的起点", findNotReady: "请等待 Find 结束后再选题。",
+    discoveryOrigin: "选题来自 Find", contextFiles: "已携带的研究文件", contextOmitted: "未携带的文件", contextScope: "在新求解会话中使用冻结的找题资料；不包含隐藏推理，也不代表资料中的结论已获认证。",
+    specialistAgents: "辅助子 agent", researchMemories: "研究长期记忆", nativeInherit: "继承独立 Codex 配置", enabled: "开启", disabled: "关闭", capabilitiesHint: "仅作用于 MathLottery 独立账号环境。验真始终关闭长期记忆。子 agent 共用研究预算，可能增加 token 消耗。",
+
     localLab: "本地数学研究工作台", workflows: "研究流程", find: "找题", solve: "求解", verify: "验真",
     sideNote: "一个 agent，一点好奇心，一份值得检验的结果。", connecting: "正在连接…", connected: "已连接本地工作区", disconnected: "服务连接已断开",
     workspace: "数学研究工作台", eyebrow: "从一个问题开始，给发现一次机会", heroCopy: "找一个值得尝试的问题，认真探索，再检查结论是否成立。",
@@ -53,7 +69,7 @@ const words = {
     accountConfirmSwitch: "切换 MathLottery 账号？\n\n会先退出当前工作区的登录，再启动新的 ChatGPT 登录。如果取消或新登录失败，MathLottery 将保持退出状态。本地 Codex CLI / IDE 的登录不受影响。\n\n继续切换？",
     accountConfirmLogout: "退出 MathLottery 登录？\n\n当前工作区之后需要重新登录。本地 Codex CLI / IDE 的登录不受影响。\n\n继续退出？",
     accountNote: "当前工作区独立保存登录，切换或退出不影响本地 Codex CLI / IDE。可以使用同一个 ChatGPT 账号，订阅额度仍按账号共用。Chat API 仍需单独的 API Key，使用 API 计费。", accountApiKey: "API Key", accountPlan: "订阅",
-    totalRuns: "研究任务", activeRuns: "正在运行", savedProblems: "已存题目", candidates: "候选证明", newAttempt: "开启一次尝试",
+    totalRuns: "执行记录", activeRuns: "正在运行", savedProblems: "已存题目", candidates: "候选证明", newAttempt: "开启一次尝试",
     findDescription: "搜索公开来源，比较值得尝试的问题，保留开放状态的证据。", solveDescription: "给研究 agent 一个明确的问题，让它自主选择方法、探索与推导。", verifyDescription: "由独立审查会话检查证明、前提与新颖性，记录依据和疑点。",
     criteria: "想找什么样的问题？", criteriaPlaceholder: "例如：找一个陈述简洁、范围较小、有希望用 Lean 验证的组合数学开放问题。",
     source: "优先检索的来源 · 可选", shortlistSize: "候选题数", reviewInput: "准备检查哪份证明？", savedCandidate: "已有任务的最新候选证明", pasteProof: "粘贴自己的证明",
@@ -67,14 +83,18 @@ const words = {
     codexHint: "使用当前 MathLottery 工作区独立的 Codex 登录与工具配置。", chatHint: "使用 Chat API 及其 API 额度，需要在服务环境中配置 API Key。",
     readinessChecking: "正在检查 MathLottery 账号，完成后即可启动 Codex…", readinessSignIn: "请先在上方账号区域使用 ChatGPT 登录，再启动 Codex 研究。已填写的内容会保留。", readinessPending: "请在官方页面完成登录后回到这里，已填写的内容会保留。", readinessUnavailable: "Codex 当前不可用，请安装或完成配置，再刷新上方的账号状态。", readinessUnknown: "暂时无法确认账号状态，请刷新上方的账号状态后再启动 Codex。", readinessApiKey: "请通过上方「切换账号」登录 ChatGPT，再使用订阅额度启动 Codex 研究。",
     backgroundHint: "任务在后台运行，关闭页面后也可以随时回来查看。", notebook: "研究记录", recentRuns: "任务历史",
+    historyHint: "每次 Find 保留独立候选列表；求解与验真按题目分组，同阶段多次执行单独编号。调用回合包含中断后续接。",
+    stageFind: "找题", stageSolve: "求解", stageVerify: "验真", stagePipeline: "完整流程", runRecords: "条执行记录", lastUpdated: "最近更新", startedAt: "开始于", attempt: "第 {n} 次执行",
     startFind: "开始找题", startSolve: "开始求解", startVerify: "开始验真", starting: "正在启动…", emptyRuns: "下一个问题，从这里开始。", emptyRunsHint: "启动一次任务，积累题目、证明尝试和审查证据。",
-    rounds: "轮", tokens: "tokens", elapsed: "活动耗时", unknown: "未知", stop: "停止任务", stopping: "正在停止…", resume: "继续 / 补充方向", verifyLatest: "验真最新候选", download: "下载报告 ↓",
+    rounds: "调用回合", tokens: "tokens", elapsed: "活动耗时", unknown: "未知", stop: "停止任务", stopping: "正在停止…", resume: "继续 / 补充方向", verifyLatest: "验真最新候选", download: "下载报告 ↓",
     direction: "补充研究方向 · 可选", directionPlaceholder: "提示一种方法、要求检查边界条件，或补充新的研究方向。", newTotalBudget: "新的总时间预算 · 分钟", newTotalRounds: "新的总轮数上限",
     resumeHint: "这里设置的是新的总上限，不是追加额度；沿用该任务保存的模型配置。", continue: "继续研究", results: "结果", activity: "运行动态", report: "报告",
     visibleProgress: "最近的可见输出", events: "最近的检查点事件", footer: "好奇心开启尝试，证据决定结论。", noCandidates: "还没有候选证明，请先求解或选择粘贴证明。",
     noResults: "还没有提交研究结果。", waitingResults: "可以在「运行动态」查看检查点与已保存的 agent 输出。", shortlist: "找到的题目", solveThis: "求解这道题 →", statementDetails: "问题陈述与来源", sourceEvidence: "状态证据", selection: "选题理由", feasibility: "验证可行性",
     fullProof: "阅读完整证明", claim: "结论", review: "独立审查", novelty: "新颖性", unreviewed: "等待独立审查", assessmentLimit: "任务完成、证明证据和新颖性是不同结论。Agent 审查未发现问题，不代表首次解决了一个仍未解决的问题。", proofLevel: "记录的证明等级", latestReview: "最近一次 Agent 审查", problemStatus: "记录的问题状态", levelCandidate: "提出的证明，尚待独立检查。", levelSelfChecked: "Agent 审查未发现问题；这一等级尚未确立完整形式验证或专家认可。", levelPartial: "部分证据已核验，这一等级不代表原始命题已有完整形式证明。", levelFormal: "记录为已形式验证，请检查验证证据与原始命题的对应关系。", levelExpert: "记录为已获专家审查，请查看审查证据与适用范围。", levelRejected: "记录的审查指出了有证据支持的问题。",
     proofEvidence: "证据与参考资料", leanFiles: "Lean 文件", leanFilesNote: "这些是 agent 生成的源文件。文件存在不代表已编译通过，也不代表完整证明了原始命题。", leanFileTooLarge: "文件过大，无法在此下载", leanFilesTruncated: "这里只显示部分文件，其余文件仍保存在本地任务目录中。",
+    declaredScope: "求解者声明的范围", originalCoverage: "审查者判断的原题覆盖", obligations: "尚待证明的内容", evidenceGaps: "证据核对与缺口", notAssessed: "尚未按新证据规则评估", excerptMatched: "原文摘录已核对", excerptMissing: "原文摘录未核实", searchObserved: "已记录的检索", proofChecks: "具体证明检查", formalReceipt: "独立 Lean 执行记录", formalScope: "仅检查指定定理；与原始问题的等价性尚未认证。", evidenceGate: "证据规则", sourceLimit: "原文匹配不代表引用解释正确，也不代表文献检索完整。",
+    COMPLETE: "声明为完整结果", COUNTEREXAMPLE: "反例", FULL: "审查报告完整覆盖", PARTIAL: "部分结果", DIFFERENT: "不同命题", KERNEL_REPLAYED: "内核重放通过", UNAVAILABLE: "不可用", ERROR: "执行失败", TIMEOUT: "达到时间限制", OUTPUT_LIMIT: "达到输出限制", SUPPORTED: "有支持", CONTRADICTED: "发现矛盾", UNRESOLVED: "未解决",
     noProgress: "尚无保存的可见输出。原生 agent 使用工具的长回合中可能暂时没有文字更新。", truncated: "预览已截断，完整内容保留在本地任务目录。", noReport: "报告尚未生成。",
     launched: "任务已启动，进度保存在本地。", resumed: "已继续研究。", stopSent: "已请求停止，正在等待后台任务结束；已有进度会保留。", requestError: "请求失败，请先查看任务历史再重试。",
     workerInterrupted: "后台进程退出时未记录完成状态，可以继续任务以恢复检查点。",
@@ -87,7 +107,7 @@ function preference(key, value) {
   try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { /* Storage can be disabled. */ }
   return null;
 }
-const state = { language: preference("mathlottery.language") || (navigator.language.startsWith("zh") ? "zh" : "en"), workflow: "find", settings: null, runs: [], problems: [], csrf: "", selected: preference("mathlottery.run"), detail: null, resultsKey: "", polling: false, submitting: false, resuming: false };
+const state = { language: preference("mathlottery.language") || (navigator.language.startsWith("zh") ? "zh" : "en"), workflow: "find", settings: null, runs: [], problems: [], csrf: "", selected: preference("mathlottery.run"), detail: null, resultsKey: "", discoveryChoice: null, polling: false, submitting: false, resuming: false };
 // Account identity and device codes stay in memory, separate from saved UI preferences.
 const accountState = { data: null, busy: false, operation: "status", error: "" };
 // This form snapshot changes only on an explicit source choice/refresh, never a background poll.
@@ -288,14 +308,70 @@ function updateForm() {
   $("#saved-review").hidden = !savedReview; $("#problem-fields").hidden = flow === "find" || savedReview;
   $("#proof-fields").hidden = flow !== "verify" || savedReview;
   $("#new-problem").hidden = Boolean($("#problem-id").value);
-  const problem = state.problems.find((item) => item.id === $("#problem-id").value);
+  const choice = flow === "solve" ? state.discoveryChoice : null;
+  const problem = choice?.problem.id === $("#problem-id").value ? choice.problem : state.problems.find((item) => item.id === $("#problem-id").value);
+  $("#discovery-choice").hidden = !choice;
+  text("#discovery-choice-title", choice ? `${choice.problem.title} · ${choice.runId.slice(-6)}` : "");
   $("#selected-problem").hidden = !problem; text("#selected-problem", problem?.statement || "");
   $$("#task-form input, #task-form textarea, #task-form select").forEach((input) => { if (!input.closest("#source-file-list")) input.disabled = Boolean(input.closest("[hidden]")); });
   const backend = $("#backend").value || state.settings?.backend;
   $("#reasoning-mode").disabled = backend !== "chat";
+  $("#native-capabilities").hidden = backend !== "codex";
+  $("#multi-agent").disabled = $("#memories").disabled = backend !== "codex";
   text("#backend-hint", t(backend === "chat" ? "chatHint" : "codexHint"));
   renderReviewSource();
   updateExecutionControls();
+}
+function workflowLabel(workflow) {
+  return t({ find: "stageFind", solve: "stageSolve", verify: "stageVerify", pipeline: "stagePipeline" }[workflow] || workflow);
+}
+function groupRuns(runs) {
+  const groups = new Map();
+  for (const run of runs) {
+    // An unfinished search has no problem identity yet; keep it as its own group.
+    const key = run.problem_key ? `problem:${run.problem_key}` : `run:${run.id}`;
+    if (!groups.has(key)) groups.set(key, { key, latest: run, runs: [] });
+    const group = groups.get(key); group.runs.push(run);
+    if (run.updated_at > group.latest.updated_at) group.latest = run;
+  }
+  for (const group of groups.values()) group.runs.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+  return [...groups.values()].sort((a, b) => b.latest.updated_at.localeCompare(a.latest.updated_at) || a.key.localeCompare(b.key));
+}
+function renderHistory() {
+  const signature = JSON.stringify([state.language, state.selected, state.runs]);
+  if (renderHistory.signature === signature) return;
+  renderHistory.signature = signature;
+  const list = $("#run-list"), scrollTop = list.scrollTop;
+  const focusedId = list.contains(document.activeElement) ? document.activeElement.dataset.runId : null;
+  let focusedButton;
+  const content = document.createDocumentFragment();
+  if (!state.runs.length) { const empty = node("div", "empty"); empty.append(node("div", "empty-symbol", "∅"), node("p", "", t("emptyRuns")), node("p", "", t("emptyRunsHint"))); content.append(empty); }
+  for (const group of groupRuns(state.runs)) {
+    const card = node("article", "run-group"); card.dataset.problemKey = group.key;
+    card.append(node("h3", "run-title", group.latest.title), node("p", "group-meta", `${group.runs.length} ${t("runRecords")} · ${t("lastUpdated")} ${date(group.latest.updated_at)}`));
+    const counts = new Map(), attempts = new Map();
+    for (const run of group.runs) counts.set(run.workflow, (counts.get(run.workflow) || 0) + 1);
+    for (const run of group.runs) {
+      attempts.set(run.workflow, (attempts.get(run.workflow) || 0) + 1);
+      const attempt = counts.get(run.workflow) > 1 ? ` · ${t("attempt").replace("{n}", attempts.get(run.workflow))}` : "";
+      const label = `${workflowLabel(run.workflow)}${attempt}`;
+      const button = node("button", `run-item${run.id === state.selected ? " active" : ""}`);
+      button.type = "button"; button.dataset.runId = run.id;
+      button.setAttribute("aria-label", `${group.latest.title} · ${label} · ${t(run.state)}`);
+      button.setAttribute("aria-pressed", String(run.id === state.selected));
+      const top = node("div", "run-top"), stage = node("span", "run-stage");
+      stage.append(node("strong", "run-workflow", label), node("span", "", run.mode));
+      top.append(stage, badge(run.state));
+      const bottom = node("div", "run-bottom");
+      bottom.append(node("span", "", `${t("startedAt")} ${date(run.created_at)}`), node("span", "", `${run.iteration} ${t("rounds")} · ${compact(run.usage.input_tokens)} in`));
+      button.append(top, bottom); button.addEventListener("click", () => selectRun(run.id, true)); card.append(button);
+      if (run.id === focusedId) focusedButton = button;
+    }
+    content.append(card);
+  }
+  list.replaceChildren(content);
+  focusedButton?.focus({ preventScroll: true });
+  list.scrollTop = scrollTop;
 }
 function renderOverview() {
   text("#count-runs", state.runs.length); text("#count-active", state.runs.filter((run) => run.busy).length);
@@ -304,38 +380,99 @@ function renderOverview() {
     text("#model-chip", `${state.settings.backend} · ${state.settings.model || t("inherited")}`);
     for (const [id, value] of [["model", state.settings.model], ["effort", state.settings.reasoning_effort], ["budget", state.settings.budget_minutes], ["iterations", state.settings.max_iterations]]) $("#" + id).placeholder = value ?? t("inherited");
   }
-  options("#problem-id", state.problems.map((problem) => [problem.id, problem.title]), t("newProblem"));
-  options("#from-run", state.runs.filter((run) => run.candidate_count).map((run) => [run.id, `${run.title} · ${run.id.slice(-6)}`]), t(state.runs.some((run) => run.candidate_count) ? "sourceRun" : "noCandidates"));
-  const list = $("#run-list");
-  list.replaceChildren();
-  if (!state.runs.length) { const empty = node("div", "empty"); empty.append(node("div", "empty-symbol", "∅"), node("p", "", t("emptyRuns")), node("p", "", t("emptyRunsHint"))); list.append(empty); }
-  for (const run of state.runs) {
-    const button = node("button", `run-item${run.id === state.selected ? " active" : ""}`); button.type = "button"; button.dataset.runId = run.id;
-    const top = node("div", "run-top"); top.append(node("span", "", `${run.workflow.toUpperCase()} · ${run.mode}`), badge(run.state));
-    const bottom = node("div", "run-bottom"); bottom.append(node("span", "", date(run.created_at)), node("span", "", `${run.iteration} ${t("rounds")} · ${compact(run.usage.input_tokens)} in`));
-    button.append(top, node("span", "run-title", run.title), bottom); button.addEventListener("click", () => selectRun(run.id, true)); list.append(button);
-  }
+  const availableProblems = state.problems.map((problem) => [problem.id, state.discoveryChoice?.problem.id === problem.id ? state.discoveryChoice.problem.title : problem.title]);
+  if (state.discoveryChoice && !availableProblems.some(([id]) => id === state.discoveryChoice.problem.id)) availableProblems.push([state.discoveryChoice.problem.id, state.discoveryChoice.problem.title]);
+  options("#problem-id", availableProblems, t("newProblem"));
+  options("#from-run", state.runs.filter((run) => run.candidate_count).map((run) => [run.id, `${run.title} · ${workflowLabel(run.workflow)} · ${run.id.slice(-6)}`]), t(state.runs.some((run) => run.candidate_count) ? "sourceRun" : "noCandidates"));
+  renderHistory();
 }
-function renderProblem(problem, selectable = true) {
+function chooseDiscovery(run, problem) {
+  const hash = run.shortlist_bindings?.[problem.id];
+  if (run.busy || !hash || state.submitting) return;
+  state.discoveryChoice = { runId: run.id, problem: structuredClone(problem), sha256: hash };
+  renderOverview(); $("#problem-id").value = problem.id;
+  state.resultsKey = ""; renderResults(run); setWorkflow("solve", true);
+}
+function renderProblem(problem, selectable = true, discoveryRun = null) {
   const card = node("article", "problem-card"), heading = node("div", "card-heading");
   heading.append(node("h3", "", problem.title), badge(problem.status)); card.append(heading);
+  if (discoveryRun) {
+    card.dataset.discoveryProblem = problem.id;
+    if (discoveryRun.problem?.id === problem.id) card.append(node("p", "recommendation", t("recommended")));
+    card.classList.toggle("chosen-problem", state.discoveryChoice?.runId === discoveryRun.id && state.discoveryChoice.problem.id === problem.id);
+  }
+  const metrics = node("dl", "problem-metrics");
+  for (const [label, value] of [["difficulty", problem.difficulty_estimate], ["feasibility", problem.verification_feasibility], ["leanFeasibility", problem.lean_feasibility]]) {
+    const item = node("div"); item.append(node("dt", "", t(label)), node("dd", "", !value || value === "unknown" ? t("unknown") : value)); metrics.append(item);
+  }
+  card.append(metrics);
   if (problem.selection_reason) card.append(node("p", "", `${t("selection")}: ${problem.selection_reason}`));
   const details = node("details"), summary = node("summary", "", t("statementDetails")); details.append(summary, node("pre", "", problem.statement));
   if (problem.source_url) { const p = node("p"); p.append(safeLink(problem.source_url)); details.append(p); }
-  if (problem.verification_feasibility && problem.verification_feasibility !== "unknown") details.append(node("p", "", `${t("feasibility")}: ${problem.verification_feasibility}`));
+  appendEvidenceList(details, t("prerequisites"), problem.prerequisites);
+  appendEvidenceList(details, t("obstacles"), problem.known_obstacles);
+  if (problem.initial_approach) details.append(node("p", "", `${t("initialApproach")}: ${problem.initial_approach}`));
   if (problem.status_evidence.length) { details.append(node("h3", "", t("sourceEvidence"))); const list = node("ul"); for (const item of problem.status_evidence) { const li = node("li"); li.append(safeLink(item)); list.append(li); } details.append(list); }
   for (const reference of problem.references) { const p = node("p"); p.append(safeLink(reference.url, reference.title || reference.url)); details.append(p); }
   card.append(details);
-  if (selectable) { const button = node("button", "secondary", t("solveThis")); button.type = "button"; button.addEventListener("click", () => { $("#problem-id").value = problem.id; if (!$("#problem-id").value) { $("#title").value = problem.title; $("#statement").value = problem.statement; } setWorkflow("solve", true); }); card.append(button); }
+  card.append(renderSourceAssessment(problem.evidence_assessment));
+  if (selectable) {
+    const chosen = discoveryRun && state.discoveryChoice?.runId === discoveryRun.id && state.discoveryChoice.problem.id === problem.id;
+    const button = node("button", "secondary", t(chosen ? "chosen" : discoveryRun ? "chooseProblem" : "solveThis")); button.type = "button";
+    button.disabled = state.submitting || Boolean(discoveryRun && (discoveryRun.busy || !discoveryRun.shortlist_bindings?.[problem.id]));
+    button.setAttribute("aria-pressed", String(Boolean(chosen)));
+    button.addEventListener("click", () => {
+      if (discoveryRun) chooseDiscovery(discoveryRun, problem);
+      else { state.discoveryChoice = null; $("#problem-id").value = problem.id; if (!$("#problem-id").value) { $("#title").value = problem.title; $("#statement").value = problem.statement; } setWorkflow("solve", true); }
+    }); card.append(button);
+  }
   return card;
 }
 function candidateAssessment(candidate, problem) {
   const summary = node("dl", "assessment-summary"), latest = candidate.reviews.at(-1);
-  for (const [label, value] of [["proofLevel", candidate.level], ["latestReview", latest?.verdict || "unreviewed"], ["problemStatus", problem?.status || "UNKNOWN"], ["novelty", latest?.novelty || "UNKNOWN"]]) {
+  for (const [label, value] of [["proofLevel", candidate.level], ["latestReview", latest?.verdict || "unreviewed"], ["declaredScope", candidate.scope || "UNKNOWN"], ["originalCoverage", latest?.original_problem_coverage || "UNKNOWN"], ["problemStatus", problem?.status || "UNKNOWN"], ["novelty", latest?.novelty || "UNKNOWN"]]) {
     const item = node("div"); item.dataset.assessment = label;
     item.append(node("dt", "", t(label)), node("dd", "", t(value))); summary.append(item);
   }
   return summary;
+}
+function appendEvidenceList(parent, label, items) {
+  if (!items?.length) return;
+  parent.append(node("h4", "", label));
+  const list = node("ul"); for (const item of items) list.append(node("li", "", item)); parent.append(list);
+}
+function renderSourceAssessment(assessment) {
+  const section = node("details", "evidence-assessment");
+  const label = assessment?.policy_version ? `${t("evidenceGaps")}${assessment.reasons?.length ? ` (${assessment.reasons.length})` : ""}` : t("notAssessed");
+  section.append(node("summary", "", label));
+  if (!assessment?.policy_version) { section.append(node("p", "field-hint", t("notAssessed"))); return section; }
+  section.append(node("p", "field-hint", `${assessment.policy_version} · ${assessment.assessed_at || ""}`));
+  appendEvidenceList(section, t("evidenceGate"), assessment.reasons);
+  for (const citation of assessment.checked_citations || []) {
+    const p = node("p"); p.append(safeLink(citation.url), document.createTextNode(` · ${citation.locator} · ${t(citation.verified_excerpt ? "excerptMatched" : "excerptMissing")}`)); section.append(p);
+  }
+  appendEvidenceList(section, t("searchObserved"), assessment.observed_queries);
+  section.append(node("p", "field-hint", t("sourceLimit")));
+  return section;
+}
+function renderReviewChecks(review) {
+  const section = node("div", "review-checks");
+  section.append(node("p", "", `${t("originalCoverage")}: ${t(review.original_problem_coverage || "UNKNOWN")}\n${review.coverage_explanation || ""}`));
+  appendEvidenceList(section, t("obligations"), review.remaining_obligations);
+  appendEvidenceList(section, t("evidenceGate"), review.validation_notes);
+  if (review.checks?.length) {
+    const details = node("details"); details.append(node("summary", "", t("proofChecks")));
+    for (const check of review.checks) {
+      details.append(node("h4", "", `${check.method} · ${t(check.result)} · ${check.claim}`), node("pre", "", check.reasoning));
+      appendEvidenceList(details, t("proofEvidence"), check.evidence);
+    }
+    section.append(details);
+  }
+  section.append(renderSourceAssessment(review.evidence_assessment));
+  if (review.formal_receipt) {
+    const details = node("details", "formal-receipt"); details.append(node("summary", "", `${t("formalReceipt")}: ${t(review.formal_receipt.status)}`), node("p", "field-hint", t("formalScope")), node("pre", "", JSON.stringify(review.formal_receipt, null, 2))); section.append(details);
+  }
+  return section;
 }
 function renderReviewEvidence(manifest) {
   const section = node("section", "review-evidence");
@@ -352,13 +489,28 @@ function renderReviewEvidence(manifest) {
   return section;
 }
 function renderResults(run) {
-  const key = JSON.stringify([state.language, run.id, run.problem, run.shortlist, run.candidates, run.formal_artifacts, run.review_evidence]);
+  const key = JSON.stringify([state.language, run.id, run.problem, run.shortlist, run.candidates, run.formal_artifacts, run.review_evidence, run.discovery_context, run.shortlist_bindings, run.busy, state.submitting, state.discoveryChoice]);
   if (state.resultsKey === key) return;
   state.resultsKey = key;
   const open = new Set($$("#results details[open]").map((item) => item.dataset.key).filter(Boolean));
   const results = $("#results"); results.replaceChildren();
-  if (run.shortlist.length) { results.append(node("h3", "", t("shortlist"))); for (const problem of run.shortlist) results.append(renderProblem(problem)); }
-  else if (run.problem) results.append(renderProblem(run.problem, false));
+  if (run.shortlist.length) {
+    const selection = node("section", "discovery-selection");
+    selection.append(node("h3", "", t("chooseStep")), node("p", "", t("chooseHint")), node("p", "field-hint", t("estimateHint")));
+    if (run.busy) selection.append(node("p", "notice", t("findNotReady")));
+    for (const problem of run.shortlist) selection.append(renderProblem(problem, true, run.workflow === "find" ? run : null));
+    results.append(selection);
+  }
+  if (run.discovery_context) {
+    const context = run.discovery_context, section = node("section", "discovery-context");
+    section.append(node("h3", "", t("discoveryOrigin")));
+    const link = node("button", "text-button", context.source_run_id); link.type = "button"; link.addEventListener("click", () => selectRun(context.source_run_id, true)); section.append(link);
+    section.append(node("p", "field-hint", t("contextScope")));
+    const details = node("details"); details.append(node("summary", "", `${t("contextFiles")}: ${context.files.length}`));
+    const files = node("ul"); for (const file of context.files) files.append(node("li", "", `${file.path} · ${compact(file.size)} B`)); details.append(files);
+    appendEvidenceList(details, t("contextOmitted"), context.omitted); section.append(details); results.append(section);
+  }
+  if (!run.shortlist.length && run.problem) results.append(renderProblem(run.problem, false));
   if (!run.shortlist.length && !run.candidates.length) { const empty = node("div", "empty"); empty.append(node("p", "", t("noResults")), node("p", "", t("waitingResults"))); results.append(empty); }
   if (run.review_evidence) results.append(renderReviewEvidence(run.review_evidence));
   if (run.candidates.length) results.append(node("p", "field-hint", t("assessmentLimit")));
@@ -367,6 +519,7 @@ function renderResults(run) {
     const levelNote = { CANDIDATE: "levelCandidate", SELF_CHECKED: "levelSelfChecked", PARTIALLY_VERIFIED: "levelPartial", FORMALLY_VERIFIED: "levelFormal", EXPERT_REVIEWED: "levelExpert", REJECTED: "levelRejected" }[candidate.level];
     if (levelNote) card.append(node("p", "proof-level-note", t(levelNote)));
     card.append(node("p", "", candidate.claim));
+    appendEvidenceList(card, t("obligations"), candidate.remaining_obligations);
     const details = node("details"); details.dataset.key = candidate.id; details.open = open.has(candidate.id); details.append(node("summary", "", t("fullProof")), node("pre", "", candidate.proof)); card.append(details);
     if (candidate.assumptions.length) card.append(node("p", "", candidate.assumptions.join("\n")));
     const evidence = Array.isArray(candidate.evidence) ? candidate.evidence.filter((item) => typeof item === "string") : [];
@@ -389,6 +542,7 @@ function renderResults(run) {
       const section = node("div", "review"), row = node("div", "card-heading"); row.append(node("h3", "", t("review")), badge(review.verdict)); section.append(row, node("p", "", review.truth_assessment), node("p", "", review.proof_assessment));
       if (review.issues.length) { const list = node("ul"); for (const issue of review.issues) list.append(node("li", "", issue)); section.append(list); }
       section.append(node("p", "", `${t("novelty")}: ${t(review.novelty)}\n${review.novelty_notes}`));
+      section.append(renderReviewChecks(review));
       for (const evidence of review.evidence) { const p = node("p"); p.append(safeLink(evidence)); section.append(p); }
       card.append(section);
     }
@@ -467,10 +621,15 @@ function overrides() {
     const input = $("#" + id), value = input.value.trim();
     if (value && !input.disabled) values[key] = ["budget", "iterations"].includes(id) ? Number(value) : value;
   }
+  for (const [id, key] of [["multi-agent", "native_multi_agent"], ["memories", "native_memories"]]) {
+    const input = $("#" + id); if (input.value && !input.disabled) values[key] = input.value === "inherit" ? null : input.value === "true";
+  }
   return values;
 }
 $$("[data-workflow]").forEach((button) => button.addEventListener("click", () => setWorkflow(button.dataset.workflow, button.classList.contains("nav-item"))));
-for (const selector of ["#verify-mode", "#problem-id", "#backend"]) $(selector).addEventListener("change", updateForm);
+for (const selector of ["#verify-mode", "#backend"]) $(selector).addEventListener("change", updateForm);
+$("#problem-id").addEventListener("change", () => { state.discoveryChoice = null; state.resultsKey = ""; if (state.detail) renderResults(state.detail); updateForm(); });
+$("#clear-discovery").addEventListener("click", () => { state.discoveryChoice = null; $("#problem-id").value = ""; state.resultsKey = ""; if (state.detail) renderResults(state.detail); updateForm(); });
 $("#from-run").addEventListener("change", loadReviewSource);
 $("#source-refresh").addEventListener("click", loadReviewSource);
 $("#language").addEventListener("click", () => { state.language = state.language === "en" ? "zh" : "en"; preference("mathlottery.language", state.language); applyLanguage(); text("#connection", t(state.csrf ? "connected" : "connecting")); });
@@ -503,6 +662,9 @@ $("#task-form").addEventListener("submit", async (event) => {
     if ($("#problem-id").value) body.problem_id = $("#problem-id").value;
     else { body.statement = $("#statement").value; if ($("#title").value.trim()) body.title = $("#title").value.trim(); }
     if (state.workflow === "verify") body.proof = $("#proof").value;
+    if (state.workflow === "solve" && state.discoveryChoice && body.problem_id === state.discoveryChoice.problem.id) {
+      body.from_discovery = state.discoveryChoice.runId; body.discovery_problem_sha256 = state.discoveryChoice.sha256;
+    }
   }
   state.submitting = true; updateForm(); notice("#form-error", "");
   try { const run = await api("/api/runs", body); await refresh(); await selectRun(run.id, true); toast(t("launched")); }

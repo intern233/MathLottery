@@ -6,12 +6,13 @@ from pathlib import Path
 
 import yaml
 
-from mathlottery import __version__, budget
+from mathlottery import __version__, budget, discovery
 from mathlottery.backends import AgentBackend
 from mathlottery.candidates import CandidateStore
 from mathlottery.config import Config
 from mathlottery.models import (
     CandidateInput,
+    DiscoveryContext,
     Phase,
     Problem,
     Run,
@@ -42,8 +43,12 @@ class Orchestrator:
         discovery_request: str | None = None,
         discovery_count: int = 5,
         candidate: CandidateInput | None = None,
+        discovery_context: DiscoveryContext | None = None,
+        discovery_files: dict[str, bytes] | None = None,
     ) -> Run:
         workflow = Workflow(workflow)
+        if discovery_context is not None and (workflow != Workflow.SOLVE or discovery_files is None):
+            raise ValueError("Discovery context is only attached to a selected Solve task")
         if workflow == Workflow.FIND and (problem or proof or candidate):
             raise ValueError("Finding takes selection criteria, not a problem or proof")
         if workflow == Workflow.SOLVE and (not problem or proof or candidate):
@@ -73,6 +78,7 @@ class Orchestrator:
             discovery_count=discovery_count,
             execution="structured" if mode == "demo" else config.backend.execution,
             problem=problem,
+            discovery_context=discovery_context,
             source=source,
             config=config.model_dump(mode="json"),
             environment={
@@ -95,10 +101,23 @@ class Orchestrator:
             self._candidate(run, candidate or CandidateInput(claim=problem.statement, proof=proof))
             run.phase = Phase.VERIFY
             run.native.review_only = True
+        if discovery_context is not None:
+            root = self.store.run_dir(run.id)
+            root.mkdir(parents=True, exist_ok=True)
+            discovery.save(root, discovery_context, discovery_files)
         self.store.save(run, "created")
         atomic_write(self.store.run_dir(run.id) / "config.yaml", yaml.safe_dump(run.config))
         report(self.store, run)
         return run
+
+    def solve_discovered(self, config: Config, source_run_id: str, problem_id: str, expected_sha256=None):
+        """A user choice starts an independent solver with an immutable Find dossier."""
+        with self.store.lock(source_run_id):
+            source = self.store.load(source_run_id)
+            problem = discovery.choose(source, problem_id, expected_sha256)
+            context, files = discovery.capture(self.store, source, problem, config)
+        return self.create(config, problem=problem, workflow=Workflow.SOLVE,
+                           discovery_context=context, discovery_files=files)
 
     def _cancelled(self, run: Run, config: Config) -> bool:
         return self._stop_file(run).exists() or budget.remaining(run, config) <= 0

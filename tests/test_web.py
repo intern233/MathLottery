@@ -15,7 +15,7 @@ from typer.testing import CliRunner
 
 from mathlottery.cli import app
 from mathlottery.config import Config
-from mathlottery.models import CandidateInput, Problem, Workflow
+from mathlottery.models import CandidateInput, FormalCheckRequest, Problem, Review, Workflow
 from mathlottery.orchestrator import Orchestrator
 from mathlottery.web.jobs import BusyError
 from mathlottery.web.server import LocalServer
@@ -84,6 +84,34 @@ def finished(web, run_id):
     return web.detail(run_id)
 
 
+def test_api_exposes_partial_coverage_missing_sources_and_formal_failures(web):
+    engine = Orchestrator(web.store)
+    run = engine.create(web.config(), Problem(id="coverage-fixture", title="Coverage fixture", statement="All n"),
+                        candidate=CandidateInput(claim="Only n=0", proof="By substitution", scope="PARTIAL",
+                                                 remaining_obligations=["All positive n"]))
+    run.iteration = 1
+    engine.candidates.review(run, Review(
+        verdict="NO_ISSUES_FOUND", truth_assessment="Base case holds", proof_assessment="Substitution checked",
+        checks=[{"claim": "Base case", "method": "DERIVATION", "result": "SUPPORTED", "reasoning": "Substitute zero"}],
+        original_problem_coverage="FULL", coverage_explanation="An unsupported completeness claim",
+        novelty="POTENTIALLY_NEW", formal_check=FormalCheckRequest(files=["workspace/Main.lean"], declarations=["target"]),
+    ))
+    engine._finish(run, "Scripted coverage fixture, not a mathematical success")
+    with serving(web, account_status=SIGNED_IN) as (client, _):
+        data = client.get(f"/api/runs/{run.id}").json()
+        candidate = data["candidates"][-1]
+        review = candidate["reviews"][-1]
+        assert candidate["level"] == "SELF_CHECKED"
+        assert review["original_problem_coverage"] == "PARTIAL"
+        assert review["remaining_obligations"] == ["All positive n"]
+        assert review["novelty"] == "UNKNOWN"
+        assert review["evidence_assessment"]["reasons"]
+        assert review["formal_receipt"]["status"] == "UNAVAILABLE"
+        report = client.get(f"/api/runs/{run.id}/report").text
+        assert "Original-problem coverage: **PARTIAL**" in report
+        assert "All positive n" in report and "UNAVAILABLE" in report
+
+
 def test_http_find_solve_verify_uses_shared_checkpoints_and_independent_review(web, monkeypatch):
     personal_home = web.store.root / "scripted-codex-home"
     personal_home.mkdir()
@@ -103,7 +131,9 @@ def test_http_find_solve_verify_uses_shared_checkpoints_and_independent_review(w
         assert found["state"] == "COMPLETED"
         assert found["shortlist"][0]["status"] == "UNKNOWN"
         problem_id = found["shortlist"][0]["id"]
-        response = client.post("/api/runs", json={"workflow": "solve", "problem_id": problem_id})
+        response = client.post("/api/runs", json={"workflow": "solve", "problem_id": problem_id,
+                                                  "from_discovery": found["id"],
+                                                  "discovery_problem_sha256": found["shortlist_bindings"][problem_id]})
         assert response.status_code == 202, response.text
         solved = finished(web, response.json()["id"])
         assert solved["state"] == "COMPLETED"
@@ -112,6 +142,13 @@ def test_http_find_solve_verify_uses_shared_checkpoints_and_independent_review(w
         assert response.status_code == 202, response.text
         reviewed = finished(web, response.json()["id"])
         assert reviewed["workflow"] == "verify"
+        assert found["problem_id"] is None and found["problem_key"] is None
+        assert solved["problem_id"] == reviewed["problem_id"] == problem_id
+        assert solved["problem_key"] == reviewed["problem_key"]
+        assert len(solved["problem_key"]) == 64
+        assert solved["discovery_context"]["source_run_id"] == found["id"]
+        assert solved["discovery_context"]["files"]
+        assert reviewed["discovery_context"] is None
         assert reviewed["candidates"][0]["reviews"][0]["verdict"] == "INCONCLUSIVE"
         assert reviewed["candidates"][0]["level"] != "FORMALLY_VERIFIED"
         assert web.store.load(reviewed["id"]).native.reviewer_session_id != web.store.load(solved["id"]).native.solver_session_id
@@ -133,6 +170,103 @@ def test_http_find_solve_verify_uses_shared_checkpoints_and_independent_review(w
         assert list(personal_home.iterdir()) == [personal_home / "auth.json"]
         assert (personal_home / "auth.json").read_bytes() == sentinel
         assert os.environ["CODEX_HOME"] == str(personal_home)
+
+
+def test_history_identity_separates_same_titles_and_changed_statements(web):
+    problem = Problem(id="sample-problem", title="A shared title", statement="For all n > 0, P(n).")
+    run = Orchestrator(web.store).create(web.config(), problem=problem, workflow=Workflow.SOLVE)
+    original = web.summary(run)
+    run.problem.title = "A more descriptive title"
+    run.problem.status = "SOLVED"
+    assert web.summary(run)["problem_key"] == original["problem_key"]
+
+    run.problem.title = original["title"]
+    run.problem.id = "different-problem"
+    assert web.summary(run)["problem_key"] != original["problem_key"]
+    run.problem.id = "sample-problem"
+    run.problem.statement = "For all n >= 0, P(n)."
+    assert web.summary(run)["problem_key"] != original["problem_key"]
+    # Grouping metadata is a projection; reading it does not change saved checkpoints.
+    assert web.summary(web.store.load(run.id)) == original
+
+
+def test_http_choose_second_find_problem_rejects_stale_selection(web):
+    from mathlottery.models import Phase, State
+
+    engine = Orchestrator(web.store)
+    source = engine.create(web.config(), workflow=Workflow.FIND, discovery_request="Prefer elementary proofs")
+    source.shortlist = [Problem(id=f"choice-{i}", title=f"Choice {i}", statement=f"Statement {i}",
+                                lean_feasibility="Finite sum lemmas") for i in (1, 2)]
+    source.problem = source.shortlist[0]
+    source.state, source.phase = State.COMPLETED, Phase.REPORT
+    web.store.save(source, "fixture_shortlist")
+    with serving(web, account_status=SIGNED_IN) as (client, _):
+        client.headers["X-MathLottery-Token"] = client.get("/api/bootstrap").json()["csrf_token"]
+        found = client.get(f"/api/runs/{source.id}").json()
+        assert found["shortlist_count"] == 2 and found["problem_id"] is None
+        request = {"workflow": "solve", "problem_id": "choice-2", "from_discovery": source.id,
+                   "discovery_problem_sha256": "0" * 64}
+        assert client.post("/api/runs", json=request).status_code == 400
+        assert len(web.store.list_runs()) == 1
+        request["discovery_problem_sha256"] = found["shortlist_bindings"]["choice-2"]
+        response = client.post("/api/runs", json=request)
+        assert response.status_code == 202, response.text
+        solved = finished(web, response.json()["id"])
+        assert solved["problem"]["statement"] == "Statement 2"
+        assert solved["discovery_run_id"] == source.id
+        assert web.store.load(source.id).problem.id == "choice-1"
+        assert len(web.store.list_runs()) == 2
+
+
+@pytest.mark.parametrize("fields", [
+    {"workflow": "find", "from_discovery": "run-aaaaaaaaaaaa", "problem_id": "p"},
+    {"workflow": "solve", "problem_id": "p", "discovery_problem_sha256": "0" * 64},
+    {"workflow": "solve", "problem_id": "p", "from_discovery": "run-aaaaaaaaaaaa"},
+])
+def test_discovery_selection_requires_explicit_valid_binding(fields):
+    with pytest.raises(ValueError):
+        StartRequest(**fields)
+
+
+def test_history_unselected_searches_keep_individual_run_identities(web):
+    engine = Orchestrator(web.store)
+    searches = [
+        engine.create(web.config(), workflow=Workflow.FIND, discovery_request="Small problems")
+        for _ in range(2)
+    ]
+    records = web.bootstrap()["runs"]
+    assert {record["id"] for record in records} == {run.id for run in searches}
+    assert all(record["problem_id"] is None and record["problem_key"] is None for record in records)
+
+
+@pytest.mark.parametrize("title", ["A custom problem", None])
+def test_http_custom_problem_starts_at_solve_and_keeps_review_in_same_group(web, title):
+    statement = "For every positive integer n, determine whether P(n) holds."
+    with serving(web, account_status=SIGNED_IN) as (client, _):
+        client.headers["X-MathLottery-Token"] = client.get("/api/bootstrap").json()["csrf_token"]
+        response = client.post("/api/runs", json={
+            "workflow": "solve", "statement": statement, "title": title,
+        })
+        assert response.status_code == 202, response.text
+        solved = finished(web, response.json()["id"])
+        expected_title = title or statement[:100]
+        assert solved["title"] == expected_title
+        assert solved["problem"]["statement"] == statement
+        assert solved["problem"]["status"] == "UNKNOWN"
+        assert solved["shortlist"] == []
+        bootstrap = client.get("/api/bootstrap").json()
+        assert [run["workflow"] for run in bootstrap["runs"]] == ["solve"]
+        assert bootstrap["problems"][0]["id"] == solved["problem_id"]
+
+        response = client.post("/api/runs", json={"workflow": "verify", "from_run": solved["id"]})
+        assert response.status_code == 202, response.text
+        reviewed = finished(web, response.json()["id"])
+        assert reviewed["problem"] == solved["problem"]
+        assert reviewed["problem_key"] == solved["problem_key"]
+        records = client.get("/api/bootstrap").json()["runs"]
+        assert sorted(run["workflow"] for run in records) == ["solve", "verify"]
+        assert {run["title"] for run in records} == {expected_title}
+        assert len({run["problem_key"] for run in records}) == 1
 
 
 def test_http_boundaries_reject_cross_site_mutations_and_file_access(web):

@@ -1,5 +1,6 @@
 """The three mathematical tasks, independent of the agent transport."""
 
+from mathlottery.literature import collect_sources
 from mathlottery.models import NativeCheckpoint, Phase, Run, State, Workflow
 from mathlottery.sources import conservative_status
 from mathlottery.storage import Store, atomic_write, json_text
@@ -21,13 +22,20 @@ def task_instructions(run: Run) -> str:
             + (run.source or "Public problem lists and original papers")
             + "\nFor each problem record id, title, exact statement, source_url, field, status, "
             "status_evidence (URLs actually consulted), references, difficulty_estimate, "
-            "verification_feasibility and selection_reason. Explain the ranking, existing partial "
+            "verification_feasibility, lean_feasibility, prerequisites, known_obstacles, "
+            "initial_approach and selection_reason. Give concrete reasons for difficulty and "
+            "verification estimates, including likely Lean libraries or missing formalizations. "
+            "Explain the ranking, existing partial "
             "results, and remaining uncertainty; ranking is not a probability of success. Do not "
             "infer OPEN merely from not finding a solution. Use UNKNOWN when evidence is lacking. "
             "Finish discovery with kind: selection, an ordered shortlist of Problem objects and "
-            "problem equal to the recommended shortlist entry. Use progress while searching, or "
-            "stop with an honest explanation if no suitable problem was found. Do not start solving "
-            "in this turn."
+            "problem equal to the recommended shortlist entry. This is a recommendation, not the "
+            "user's choice. Prefer publicly stated, still-open questions; label uncertain status "
+            "explicitly and return fewer candidates rather than inventing open problems. "
+            "You may test examples, explore proof routes, or check Lean libraries to assess "
+            "tractability; save those notes and sources for the eventual solver. Use progress "
+            "while searching, or stop honestly if no suitable problem was found. A standalone "
+            "Find ends with the list and waits for the user to choose; do not launch Solve."
         )
     if run.phase == Phase.SOLVE:
         ending = (
@@ -46,15 +54,19 @@ def task_instructions(run: Run) -> str:
         "and use INCONCLUSIVE when appropriate. Submit kind: review with your verdict. "
         + (
             "This standalone audit ends after the review, including ISSUES_FOUND or INCONCLUSIVE. "
-            "Do not take over solving or rewrite the candidate."
+            "You may investigate repairs and explain possible fixes, but review the submitted "
+            "candidate as it stands. A proposed repair does not validate the original proof; "
+            "leave any revised candidate to a separate solve task."
             if run.workflow == Workflow.VERIFY or run.native.review_only
             else "The harness will return your findings to the original research session."
         )
     )
 
 
-def record_selection(store: Store, run: Run, milestone: NativeCheckpoint):
+def record_selection(store: Store, run: Run, milestone: NativeCheckpoint, *, prepared=False):
     """Save a ranked result and reusable problems; retain unsupported claims only as raw evidence."""
+    if not prepared:
+        collect_sources(store, run, [c for p in milestone.shortlist for c in p.citations])
     retrieved = [o["result"] for o in run.observations if o.get("phase") == "FIND"]
     shortlist = []
     selected = None

@@ -86,7 +86,9 @@ else:
                 'verdict':verdict, 'truth_assessment':'A precise claim',
                 'proof_assessment':'Need another step' if verdict == 'INCONCLUSIVE' else 'No gap found',
                 'issues':['Missing step'] if verdict == 'INCONCLUSIVE' else [],
-                'evidence':['Independent algebra check']})
+                'evidence':['Independent algebra check'],
+                'checks':[{'claim':'Scripted fixture claim', 'method':'DERIVATION',
+                           'result':'SUPPORTED', 'reasoning':'Scripted algebra check, not a model evaluation'}]})
         else:
             checkpoint.update(kind='candidate', conclude=behavior != 'partial',
                               candidate={'claim':'Sum of odd numbers', 'proof':f'candidate-{count}'})
@@ -105,6 +107,9 @@ else:
                           candidate={'claim':'A precise claim', 'proof':'A self-contained proof'})
         answer.write_text('Full proof\n```mathlottery\n' + json.dumps(checkpoint) + '\n```\n')
     print(json.dumps({'type':'item.completed','item':{'type':'command_execution','command':'python research.py','exit_code':0}}))
+    if behavior == 'search_trace':
+        print(json.dumps({'type':'item.completed','item':{'type':'web_search','action':{
+            'query':'exact conjecture solution erratum'}, 'results':[{'url':'https://example.org/paper'}]}}))
     event = {'type':'turn.completed'}
     if behavior != 'no_usage':
         sessions = Path(os.environ['CODEX_HOME']) / 'sessions'
@@ -159,6 +164,30 @@ def test_native_defaults_inherit_model_and_remove_microstep_restrictions(tmp_pat
     assert 'sandbox_mode="workspace-write"' in cmd
     assert "--dangerously-bypass-approvals-and-sandbox" not in cmd
     assert "features.apps=false" not in cmd and "features.plugins=false" not in cmd
+    assert not any(c.startswith(("features.multi_agent=", "features.memories=")) for c in cmd)
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_configured_capabilities_and_reviewer_memory_isolation(tmp_path, enabled):
+    backend = NativeWorkBackend(BackendConfig(native_multi_agent=enabled, native_memories=enabled), root=tmp_path)
+    backend.executable = "codex"
+    command = backend.native_command(tmp_path, tmp_path / "workspace", None)
+    assert f"features.multi_agent={str(enabled).lower()}" in command
+    assert f"features.memories={str(enabled).lower()}" in command
+    review = backend.native_command(tmp_path, tmp_path / "review", None, reviewer=True)
+    assert "features.memories=false" in review and "features.memories=true" not in review
+
+
+def test_native_search_trace_is_recorded_without_certifying_the_source(store, native_config, monkeypatch):
+    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "search_trace")
+    native_config.budget.max_iterations = 1
+    engine = Orchestrator(store)
+    run = engine.drive(engine.create(native_config, demo_problem()).id)
+    runtime = run.native.history[0]["runtime"]
+    assert runtime["search_queries"] == ["exact conjecture solution erratum"]
+    assert runtime["source_urls"] == ["https://example.org/paper"]
+    assert any(o["tool"] == "native_search" for o in run.observations)
+    assert not any(o.get("result", {}).get("record_kind") == "source_snapshot" for o in run.observations)
 
 
 def test_native_resume_keeps_session_files_tools_and_usage(store, native_config):
@@ -216,6 +245,29 @@ def test_inconclusive_review_returns_to_same_solver_then_uses_fresh_reviewer(
         prompt = (store.run_dir(run.id) / entry["answer"]).with_name("prompt.md").read_text()
         assert "Full ordinary Markdown" not in prompt
         assert "Independently review" in prompt
+
+
+def test_interrupted_independent_checks_do_not_repeat_a_model_turn(store, native_config, monkeypatch):
+    from mathlottery.candidates import CandidateStore
+
+    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "lifecycle")
+    native_config.budget.max_iterations = 8
+    engine = Orchestrator(store)
+    original = CandidateStore.prepare_review
+
+    def interrupt_checks(*args):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(CandidateStore, "prepare_review", interrupt_checks)
+    run = engine.drive(engine.create(native_config, demo_problem()).id)
+    assert run.state == State.PAUSED
+    assert run.iteration == 2 and len(run.native.history) == 1
+    assert run.native.pending_result is not None
+    monkeypatch.setattr(CandidateStore, "prepare_review", original)
+    resumed = engine.resume(run.id)
+    assert resumed.state == State.COMPLETED
+    assert resumed.iteration == 4 and len(resumed.native.history) == 4
+    assert len({item["task_id"] for item in resumed.native.history}) == 4
 
 
 def test_passing_partial_candidate_does_not_end_research(store, native_config, monkeypatch):

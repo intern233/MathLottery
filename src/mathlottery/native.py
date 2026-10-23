@@ -10,6 +10,7 @@ from mathlottery import budget
 from mathlottery.agent_backend import research_backend
 from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
+from mathlottery.literature import collect_sources
 from mathlottery.milestones import answer_milestone, validate_milestone
 from mathlottery.models import Phase, Run, State, Workflow, now, uid
 from mathlottery.native_attempts import NativeAttempts
@@ -52,6 +53,15 @@ class NativeRunner:
         answer = directory / "answer.md"
         if not answer.exists():
             atomic_write(answer, result.text)
+        milestone = None
+        if result.status == BackendStatus.COMPLETED and receipt.get("milestone"):
+            milestone = self.validate_milestone(run, receipt["milestone"])
+            # Long independent checks precede receipt consumption/history mutation.
+            # An interrupt retains the queued model result and must not repeat a model call.
+            if milestone.kind == "selection":
+                collect_sources(self.store, run, [c for p in milestone.shortlist for c in p.citations])
+            elif milestone.kind == "review":
+                self.engine.candidates.prepare_review(run, milestone.review)
         role = "review" if run.phase == Phase.VERIFY else "research"
         run.native.history.append(
             {
@@ -72,6 +82,7 @@ class NativeRunner:
                 "usage": result.usage,
                 "invocation_seconds": receipt.get("invocation_seconds"),
                 "checkpoint_error": receipt.get("checkpoint_error"),
+                "source_observed_at": receipt.get("source_observed_at"),
             }
         )
         run.native.pending_result = None
@@ -97,9 +108,6 @@ class NativeRunner:
                 return False
             self.engine._pause(run, reason, state)
             return True
-        milestone = (
-            self.validate_milestone(run, receipt["milestone"]) if receipt.get("milestone") else None
-        )
         run.native.checkpoint_error = receipt.get("checkpoint_error")
         if receipt.get("steering") == run.native.steering:
             run.native.steering = None
@@ -112,12 +120,19 @@ class NativeRunner:
                     "iteration": run.iteration,
                     "tool": "native_source",
                     "artifact": run.native.history[-1]["events"],
-                    "result": {"status": "OK", "url": url, "retrieved_at": now()},
+                    "result": {"status": "OK", "url": url, "retrieved_at": receipt.get("source_observed_at"),
+                               "scope": "Backend-reported URL, not independently fetched source text"},
                 }
             )
+        if result.runtime.get("search_queries"):
+            run.observations.append({
+                "phase": run.phase.value, "iteration": run.iteration, "tool": "native_search",
+                "artifact": run.native.history[-1]["events"],
+                "result": {"status": "OK", "queries": result.runtime["search_queries"], "retrieved_at": receipt.get("source_observed_at")},
+            })
         if milestone:
             if milestone.problem and run.phase == Phase.FIND:
-                record_selection(self.store, run, milestone)
+                record_selection(self.store, run, milestone, prepared=True)
                 if run.workflow == Workflow.FIND:
                     finish = "Discovery complete; ranked problems saved for a separate solve task"
                 else:
@@ -134,7 +149,7 @@ class NativeRunner:
                 else:
                     run.phase = Phase.VERIFY
             elif milestone.kind == "review":
-                self.engine.candidates.review(
+                candidate = self.engine.candidates.review(
                     run,
                     milestone.review,
                     [
@@ -145,9 +160,10 @@ class NativeRunner:
                             "result": {"status": "OK"},
                         }
                     ],
+                    prepared=True,
                 )
                 if run.native.review_only or (
-                    milestone.review.verdict == "NO_ISSUES_FOUND" and run.native.candidate_conclude
+                    candidate.reviews[-1].verdict == "NO_ISSUES_FOUND" and run.native.candidate_conclude
                 ):
                     finish = "Independent review recorded; see proof status and verification limits"
                 else:

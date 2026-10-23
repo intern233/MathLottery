@@ -5,7 +5,6 @@ import re
 import socket
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urljoin, urlsplit
 from urllib.robotparser import RobotFileParser
@@ -14,7 +13,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from mathlottery.config import ToolConfig
-from mathlottery.models import OpenStatus, Problem, Reference, digest, now
+from mathlottery.models import Problem, Reference, digest, now
 from mathlottery.storage import atomic_write, json_text
 
 USER_AGENT = "MathLottery/0.1 (+local mathematical research; Python httpx)"
@@ -115,7 +114,13 @@ class WebTools:
         self.last_request[host] = time.monotonic()
 
     def _request(self, url: str, *, check_robots=True) -> tuple[str, str]:
+        data, final_url, _ = self.download(url, check_robots=check_robots)
+        return data.decode("utf-8", errors="replace"), final_url
+
+    def download(self, url: str, *, check_robots=True, allow_pdf=False) -> tuple[bytes, str, str]:
         for _ in range(5):
+            if self.cancelled():
+                raise ValueError("Run interrupted before web request")
             public_url(url)
             parts = urlsplit(url)
             origin = f"{parts.scheme}://{parts.netloc}"
@@ -144,7 +149,9 @@ class WebTools:
                         continue
                     response.raise_for_status()
                     kind = response.headers.get("content-type", "")
-                    if kind and not any(x in kind for x in ("text", "xml", "json")):
+                    if kind and not any(x in kind for x in ("text", "xml", "json")) and not (
+                        allow_pdf and "application/pdf" in kind
+                    ):
                         raise ValueError(f"Unsupported content type {kind}; provide text/Markdown")
                     chunks = []
                     size = 0
@@ -155,7 +162,7 @@ class WebTools:
                         if size > self.config.max_download_bytes:
                             raise ValueError("Download exceeds configured size limit")
                         chunks.append(chunk)
-                    return b"".join(chunks).decode("utf-8", errors="replace"), url
+                    return b"".join(chunks), url, kind
         raise ValueError("Too many HTTP redirects")
 
     def fetch(self, url: str) -> dict:
@@ -204,38 +211,6 @@ class WebTools:
 
 
 def conservative_status(problem: Problem, retrieved: list[dict]) -> Problem:
-    """Evidence is collected by the harness; model timestamps/URLs alone are insufficient."""
-    known = {}
-    for result in retrieved:
-        if result.get("status") != "OK":
-            continue
-        for record in [result, *result.get("results", [])]:
-            if record.get("url") and record.get("retrieved_at"):
-                known[record["url"]] = record
-    evidence = [url for url in problem.status_evidence if url in known]
-    recent = []
-    for url in evidence:
-        try:
-            date = datetime.fromisoformat(known[url]["retrieved_at"].replace("Z", "+00:00"))
-            if (datetime.now(timezone.utc) - date).total_seconds() < 7 * 86400:
-                recent.append(url)
-        except (ValueError, TypeError):
-            pass
-    # Even two sources are an agent assessment, never a certification of open status.
-    distinct_sources = {urlsplit(url).hostname.removeprefix("www.") for url in recent}
-    supported = len(distinct_sources) >= 2 and problem.source_url in recent
-    return problem.model_copy(
-        update={
-            "status": problem.status if supported else OpenStatus.UNKNOWN,
-            "status_checked_at": now() if evidence else None,
-            "status_evidence": evidence,
-            "references": [
-                Reference.model_validate(
-                    {k: v for k, v in known[r.url].items() if k in Reference.model_fields}
-                )
-                if r.url in known
-                else r.model_copy(update={"retrieved_at": None, "artifact": None, "sha256": None})
-                for r in problem.references
-            ],
-        }
-    )
+    from mathlottery.evidence_policy import assess_problem
+
+    return assess_problem(problem, retrieved)

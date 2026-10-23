@@ -52,10 +52,12 @@ def milestone(prompt, verdict="NO_ISSUES_FOUND"):
                 "verdict": verdict,
                 "truth_assessment": "Scripted assessment",
                 "proof_assessment": "Scripted proof check",
-                "issues": ["Fixture gap"],
+                "issues": [] if verdict == "NO_ISSUES_FOUND" else ["Fixture gap"],
                 "evidence": ["Fixture algebra"],
                 "novelty": "POTENTIALLY_NEW",
                 "novelty_references": [{"url": "https://example.net/paper"}],
+                "checks": [{"claim": "Scripted fixture claim", "method": "DERIVATION",
+                            "result": "SUPPORTED", "reasoning": "Scripted proof check, not model quality"}],
             },
         )
     return dict(
@@ -79,8 +81,10 @@ def response(identifier, prompt, *, status="completed", checkpoint=None, verdict
         "output": [
             {
                 "type": "web_search_call",
+                "status": "completed",
                 "action": {
                     "type": "search",
+                    "query": "fixture prior theorem erratum",
                     "sources": [
                         {"url": "https://example.org/problem"},
                         {"url": "https://example.net/paper"},
@@ -169,7 +173,8 @@ def test_three_tasks_use_automatic_chat_api(store, chat_config, api, workflow):
     ]
     if workflow == Workflow.FIND:
         assert len(run.shortlist) == 2 and not run.candidates
-        assert run.problem.status == OpenStatus.OPEN
+        assert run.problem.status == OpenStatus.UNKNOWN
+        assert run.problem.evidence_assessment.observed_queries == ["fixture prior theorem erratum"]
         assert store.load_problem(run.shortlist[1].id).selection_reason
         assert (store.run_dir(run.id) / "literature/selection.json").exists()
     elif workflow == Workflow.SOLVE:
@@ -195,7 +200,26 @@ def test_pipeline_chains_research_but_starts_fresh_review(store, chat_config, ap
     assert "previous_response_id" not in payloads[2]
     assert run.native.solver_response_id == "resp_test_2"
     assert run.native.reviewer_response_id == "resp_test_3"
-    assert run.candidates[0].reviews[0].novelty == "POTENTIALLY_NEW"
+    assert run.candidates[0].reviews[0].novelty == "UNKNOWN"
+    assert run.candidates[0].reviews[0].reported_novelty == "POTENTIALLY_NEW"
+
+
+def test_pipeline_does_not_finish_on_a_positive_verdict_without_checks(store, chat_config, api):
+    chat_config.budget.max_iterations = 3
+
+    def serve(request):
+        prompt = json.loads(request.content)["input"]
+        checkpoint = milestone(prompt)
+        if checkpoint["kind"] == "review":
+            checkpoint["review"]["checks"] = []
+        return httpx.Response(200, json=response("resp_test", prompt, checkpoint=checkpoint))
+
+    api(serve)
+    run = Orchestrator(store).create(chat_config)
+    run = Orchestrator(store).drive(run.id)
+    assert run.state == State.PAUSED
+    assert run.phase == "SOLVE"
+    assert run.candidates[-1].reviews[-1].verdict == "INCONCLUSIVE"
 
 
 @pytest.mark.parametrize(

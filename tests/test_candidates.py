@@ -67,6 +67,8 @@ def test_review_does_not_rewrite_candidate_or_leak_previous_verdict(candidate_ru
             truth_assessment="PREVIOUS_VERDICT",
             proof_assessment="PREVIOUS_VERDICT",
             evidence=["PREVIOUS_CHECK"],
+            checks=[{"claim": "Exact claim", "method": "DERIVATION", "result": "SUPPORTED",
+                     "reasoning": "PREVIOUS_CHECK: explicit mathematical derivation"}],
         ),
     )
     assert candidate.level == Level.SELF_CHECKED

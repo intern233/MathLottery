@@ -1,7 +1,9 @@
 """Immutable candidate content and review projections, shared by both runners."""
 
 from mathlottery.auditor import audit
+from mathlottery.literature import collect_sources
 from mathlottery.models import Candidate, CandidateInput, Review, Run, digest, uid
+from mathlottery.native_formal import record_formal_check
 from mathlottery.storage import Store, atomic_write, json_text, safe_path
 
 
@@ -49,7 +51,14 @@ class CandidateStore:
     def observations(run: Run) -> list[dict]:
         return [o for o in run.observations if o["iteration"] > run.candidates[-1].source_iteration]
 
-    def review(self, run: Run, review: Review, extra_observations=()) -> Candidate:
+    def prepare_review(self, run: Run, review: Review) -> None:
+        self.check(run)
+        collect_sources(self.store, run, review.citations)
+        record_formal_check(self.store, run, review.formal_check)
+
+    def review(self, run: Run, review: Review, extra_observations=(), *, prepared=False) -> Candidate:
+        if not prepared:
+            self.prepare_review(run, review)
         candidate = audit(
             self.check(run), review, self.observations(run) + list(extra_observations)
         )

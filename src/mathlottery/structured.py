@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from mathlottery import budget
 from mathlottery.backends import BackendStatus, ChatInteractiveBackend, WorkBackend
 from mathlottery.config import Config
+from mathlottery.literature import collect_sources
 from mathlottery.models import Action, AgentResponse, MemoryItem, Phase, Run, State, now, uid
 from mathlottery.prompts import build_prompt, output_schema
 from mathlottery.reporting import report
@@ -176,6 +177,9 @@ class StructuredRunner:
             )
         if response.action == Action.SELECT_PROBLEM:
             run.state = State.SELECTING
+            collect_sources(self.store, run, [
+                c for p in [response.problem, *response.shortlist] for c in p.citations
+            ])
             selected = response.problem.model_copy(deep=True)
             selected.formal_target = run.problem.formal_target if run.problem else None
             selected.educational = run.problem.educational if run.problem else False
@@ -201,8 +205,8 @@ class StructuredRunner:
             self.engine._candidate(run, response.candidate)
             run.phase = Phase.VERIFY
         elif response.action == Action.REVIEW:
-            self.engine.candidates.review(run, response.review)
-            if response.review.verdict in ("ISSUES_FOUND", "INCONCLUSIVE"):
+            candidate = self.engine.candidates.review(run, response.review)
+            if candidate.reviews[-1].verdict in ("ISSUES_FOUND", "INCONCLUSIVE"):
                 run.phase = Phase.SOLVE
             else:
                 run.pending_response = None

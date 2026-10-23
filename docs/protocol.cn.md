@@ -57,6 +57,6 @@
 
 记忆条目包含 `kind`、`content`、`status`、`source_iteration`、`dependencies` 和 `evidence`。模型写入的条目标为 `unverified`，验证状态由运行框架控制。没有显式更新记忆时，会保留求解者摘要。
 
-审查区分 `truth_assessment`、`proof_assessment`、`issues`、`evidence`、`novelty`、`novelty_notes` 和 `novelty_references`。`NO_ISSUES_FOUND` 代表 LLM 审查意见，不代表数学证明。缺少具体问题或证据的 `ISSUES_FOUND` 不会使候选成为 `REJECTED`，但仍会让 agent 返回修改。新颖性判断若没有引用审查过程中实际获取的来源，会重置为 `UNKNOWN`。
+审查分别记录证明正确性、`original_problem_coverage`、剩余证明义务与新颖性。新的肯定审查需要具体 `checks`；空泛通过、只有有限实验或关键步骤仍未解决时，结论改为 `INCONCLUSIVE`。`NO_ISSUES_FOUND` 始终是 LLM 判断；拒绝需要具体矛盾检查或带证据的问题。新颖性与开放状态需要独立核对的 `citations` 和 `literature_search` 覆盖，不再仅凭网址列表。详见同样适用于原生阶段成果的[证据规则](evidence.cn.md)。旧记录继续可读，缺失字段默认为未评估。
 
 `examples/chat_response.template.json` 是可编辑的 SOLVE 阶段示例。完整 Schema 及全部嵌套字段应以任务生成的文件为准，无需手工重写协议。

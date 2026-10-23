@@ -12,6 +12,7 @@ from pydantic import Field, model_validator
 from mathlottery import budget
 from mathlottery.candidates import CandidateStore
 from mathlottery.config import Config, load_config
+from mathlottery.discovery import problem_fingerprint
 from mathlottery.metrics import run_metrics
 from mathlottery.models import CandidateInput, Model, Problem, Workflow, digest
 from mathlottery.orchestrator import Orchestrator
@@ -30,6 +31,8 @@ class Overrides(Model):
     reasoning_mode: Literal["standard", "pro"] | None = None
     budget_minutes: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     max_iterations: int | None = Field(default=None, gt=0)
+    native_multi_agent: bool | None = None
+    native_memories: bool | None = None
 
     def apply(self, config):
         config = config.model_copy(deep=True)
@@ -46,6 +49,11 @@ class Overrides(Model):
             config.budget.max_wall_time_minutes = self.budget_minutes
         if self.max_iterations is not None:
             config.budget.max_iterations = self.max_iterations
+        for field in ("native_multi_agent", "native_memories"):
+            if field in self.model_fields_set:
+                if config.backend.mode != "codex":
+                    raise ValueError("Native agent capabilities apply only to Codex")
+                setattr(config.backend, field, getattr(self, field))
         return config
 
 
@@ -60,6 +68,8 @@ class StartRequest(Model):
     proof: str | None = Field(default=None, max_length=100000)
     instructions: str | None = Field(default=None, max_length=30000)
     from_run: str | None = Field(default=None, pattern=r"^run-[a-f0-9]{12}$")
+    from_discovery: str | None = Field(default=None, pattern=r"^run-[a-f0-9]{12}$")
+    discovery_problem_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     from_candidate_id: str | None = Field(default=None, pattern=r"^candidate-[a-f0-9]{12}$")
     from_candidate_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     source_files: list[str] = Field(default_factory=list, max_length=20)
@@ -67,6 +77,13 @@ class StartRequest(Model):
 
     @model_validator(mode="after")
     def inputs(self):
+        if self.from_discovery:
+            if self.workflow != "solve" or not self.problem_id or any((self.from_run, self.statement, self.proof)):
+                raise ValueError("Choose a problem ID from Find for a separate Solve task")
+            if not self.discovery_problem_sha256:
+                raise ValueError("Bind the selected Find problem to its displayed SHA256")
+        elif self.discovery_problem_sha256:
+            raise ValueError("A discovery problem binding requires a Find run")
         if bool(self.from_candidate_id) != bool(self.from_candidate_sha256):
             raise ValueError("Supply both the source candidate ID and SHA256")
         if (self.from_candidate_id or self.source_files) and not (
@@ -113,6 +130,9 @@ def config_summary(config):
         "execution": config.backend.execution,
         "budget_minutes": config.budget.max_wall_time_minutes,
         "max_iterations": config.budget.max_iterations,
+        "native_multi_agent": config.backend.native_multi_agent,
+        "native_memories": config.backend.native_memories,
+        "native_web_search": config.backend.native_web_search,
     }
 
 
@@ -137,7 +157,12 @@ class WebService:
                 "id", "workflow", "mode", "state", "phase", "iteration", "created_at",
                 "updated_at", "stop_reason", "last_error", "usage", "execution",
             }),
-            "title": run.problem.title if run.problem else run.discovery_request or "Find problems",
+            "title": (run.discovery_request or "Find problems") if run.workflow == Workflow.FIND else run.problem.title if run.problem else "Find problems",
+            "problem_id": run.problem.id if run.problem and run.workflow != Workflow.FIND else None,
+            # Group stages without conflating equal titles or revisions of a statement.
+            "problem_key": digest(json.dumps([run.problem.id, run.problem.statement])) if run.problem and run.workflow != Workflow.FIND else None,
+            "shortlist_count": len(run.shortlist),
+            "discovery_run_id": run.discovery_context.source_run_id if run.discovery_context else None,
             "candidate_count": len(run.candidates),
             "busy": self.jobs.running(run.id),
             "elapsed_seconds": round(budget.elapsed(run), 1),
@@ -163,6 +188,16 @@ class WebService:
             raise ValueError("The browser starts native codex/chat tasks; select these in config.yaml")
         if ensure_backend is not None:
             ensure_backend(config.backend.mode, config.backend.execution)
+        if request.from_discovery:
+            self.ensure_review_source_idle(request.from_discovery)
+            run = Orchestrator(self.store).solve_discovered(
+                config, request.from_discovery, request.problem_id, request.discovery_problem_sha256,
+            )
+            if request.instructions and request.instructions.strip():
+                run.native.steering = request.instructions.strip()
+                self.store.save(run, "web_direction_added")
+            self.jobs.launch(run.id, "drive")
+            return self.summary(self.store.load(run.id))
         problem, candidate, evidence = None, None, None
         if request.from_run:
             self.ensure_review_source_idle(request.from_run)
@@ -277,6 +312,8 @@ class WebService:
             **self.summary(run),
             "problem": run.problem.model_dump(mode="json") if run.problem else None,
             "shortlist": [p.model_dump(mode="json") for p in run.shortlist],
+            "shortlist_bindings": {p.id: problem_fingerprint(p) for p in run.shortlist},
+            "discovery_context": run.discovery_context.model_dump(mode="json") if run.discovery_context else None,
             "candidates": [c.model_dump(mode="json") for c in run.candidates],
             "events": [json.loads(row[0]) for row in rows],
             "metrics": run_metrics(run), "progress": progress,

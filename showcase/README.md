@@ -24,4 +24,4 @@ The collection contains small text files, necessary source code, and counterexam
 
 Guides, case introductions, and review summaries have English and Chinese editions. Proof artifacts retain their original language: English for mesh patterns, Chinese for the triangle inequality and graph counterexample.
 
-Git can track this directory. Its `.gitignore` excludes generated Lean dependencies and build products. Running the Lean reproduction commands downloads toolchains and dependencies separately and may require several GiB; those dependencies are not part of the samples.
+Git can track this directory. Its `.gitignore` excludes generated Lean dependencies and build products. Running the Lean reproduction commands downloads toolchains and dependencies separately and may require several GiB; those dependencies are not part of the samples. Before reproducing a Lean case, read [resource requirements](../docs/resources.md) for memory and disk planning, cache reuse and concurrency controls.

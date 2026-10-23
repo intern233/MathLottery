@@ -35,6 +35,8 @@ Let it search the web, read original papers and problem lists, and check the exa
 
 You can also give it a problem you care about. Start with a small lemma or ask it to “solve Goldbach's conjecture.” You choose the research goal; the reasons for choosing a problem and the evidence for its unsolved status need traceable sources.
 
+**Find → your choice → Solve:** compare the shortlist’s difficulty, verification and Lean feasibility, then choose a problem yourself. The solver receives the selected Find dossier and research notes; the recommendation never starts solving automatically.
+
 ### 2. Solve: one agent is enough to get started
 
 > I do not have the resources for thousands of parallel agents. I can let one agent keep working.
@@ -63,6 +65,7 @@ We want to preserve as much of GPT's native agent capability as possible, leavin
 - **Native tools:** use official Codex search, shell, computation, and file tools, with a dedicated MathLottery login and tool configuration.
 - **Research budgets:** set limits such as time and record the usage actually reported by the backend, giving each attempt a defined scope.
 - **Results and review:** save candidate proof versions, references, review feedback, and research reports, distinguishing progress, conjectures, and verification evidence.
+- **Evidence checks:** independently retrieve quoted sources, record missing evidence and original-problem coverage, and recheck attached Lean sources with bounded execution receipts. See the [evidence policy](docs/evidence.md).
 - **Local browser workspace:** launch `mathlottery serve` to find problems, start solutions, review proofs, and manage research history from your browser.
 
 The code provides three independent workflows: **`find`, `solve`, and `verify`**. The `run` workflow connects them into a full research pipeline. Finding produces reusable problem statements, solving saves candidate proofs, and verification produces a separate review.
@@ -84,6 +87,7 @@ Choose the backend, model, and reasoning mode in `config.yaml`, then specify the
 For the [browser interface](docs/usage.md#local-browser-workspace), run `mathlottery serve` and open the printed local address. It starts on loopback, preferring port `8765` and skipping occupied or Windows-reserved ports; Windows browsers use the printed `localhost` address through WSL forwarding. The **MathLottery account** panel supports official ChatGPT device-code sign-in with login state isolated from your local Codex CLI / IDE. Sign in once in MathLottery; you may use the same account, with the same account usage limits. The interface shares the MathLottery CLI's local problems, checkpoints, and reports.
 
 - [Installation and usage](docs/usage.md): environment setup, the three workflows, Chat API / Codex configuration, and pausing and resuming.
+- [Resource requirements](docs/resources.md): RAM, disk and CPU planning, measured Lean usage, caches, and WSL settings.
 - [Architecture and recovery](docs/architecture.md): persistent sessions, saved state, and separate reviews.
 - [Validation methods and scope](docs/local-validation.md): how to check the system and what those checks establish.
 - [Legacy structured protocol](docs/protocol.md): compatibility with old checkpoints and offline demos.

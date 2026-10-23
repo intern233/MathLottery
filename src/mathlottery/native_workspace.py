@@ -8,6 +8,7 @@ from mathlottery import budget
 from mathlottery.backends import BackendStatus
 from mathlottery.candidates import CandidateStore, review_input
 from mathlottery.config import Config
+from mathlottery.discovery import project as project_discovery
 from mathlottery.models import Phase, Run, uid
 from mathlottery.native_prompts import build_native_prompt, milestone_schema
 from mathlottery.review_evidence import project as project_review_evidence
@@ -56,6 +57,7 @@ class NativeWorkspace:
                         answer.read_text(),
                     )
         prompt = build_native_prompt(run, budget.remaining(run, config))
+        prompt += project_discovery(self.store, run, workspace)
         if run.phase != Phase.VERIFY:
             imported = []
             for entry in reversed(run.native.history):

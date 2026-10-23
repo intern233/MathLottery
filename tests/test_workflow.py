@@ -225,6 +225,10 @@ def test_unknown_novelty_and_kernel_checks_do_not_prove_informal_claim(store, co
         truth_assessment="uncertain",
         proof_assessment="looks fine",
         novelty="POTENTIALLY_NEW",
+        checks=[{"claim": "Pinned Lean lemma only", "method": "FORMAL", "result": "SUPPORTED",
+                 "reasoning": "The trusted check covers True only, not the conjecture."}],
+        original_problem_coverage="PARTIAL",
+        remaining_obligations=["The original conjecture"],
     )
     candidate = audit(
         run.candidates[0],

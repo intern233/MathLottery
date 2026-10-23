@@ -1,6 +1,7 @@
 # MathLottery development
 
-- Preserve one continuous native research agent; review candidates in a separate review session.
+- Preserve a continuous primary native research session; optional specialist agents follow the workspace configuration. Review candidates in a separate review session with memories disabled.
+- Standalone Find returns a shortlist for explicit user selection. Carry the chosen Find dossier into Solve without sharing mutable sessions, credentials, or reviewer memory. Keep estimates and source-status uncertainty visible.
 - Keep find, solve and verify as independent workflows, with run composing the full pipeline. Agent transports must not determine the workflow.
 - Default to native execution: codex uses persistent official Codex sessions; chat uses the official Responses API with hosted tools and persistent response context. Manual handoff is an explicitly named compatibility backend, never the meaning of chat.
 - Keep the legacy structured JSON/tool protocol as an explicit compatibility option, including old checkpoints and offline demos.

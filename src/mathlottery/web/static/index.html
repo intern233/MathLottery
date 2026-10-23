@@ -84,6 +84,7 @@
             <label for="problem-id" data-i18n="problem">Problem</label><select id="problem-id"></select>
             <div id="new-problem"><label for="title" data-i18n="problemTitle">Title · optional</label><input id="title" maxlength="200" data-placeholder="titlePlaceholder"><label for="statement" data-i18n="statement">Problem statement</label><textarea id="statement" rows="5" maxlength="30000" data-placeholder="statementPlaceholder"></textarea></div>
             <div id="selected-problem" class="problem-preview" hidden></div>
+            <div id="discovery-choice" class="discovery-choice" hidden aria-live="polite"><strong data-i18n="yourChoice">Your choice</strong><p id="discovery-choice-title"></p><p class="field-hint" data-i18n="discoveryCarry">The Find dossier, notes and sources will accompany this problem. Review your choice, then start solving.</p><button id="clear-discovery" type="button" class="text-button" data-i18n="clearChoice">Clear choice</button></div>
             <div id="proof-fields" hidden><label for="proof" data-i18n="proof">Proof to review</label><textarea id="proof" rows="7" maxlength="100000" data-placeholder="proofPlaceholder"></textarea></div>
           </div>
           <label for="instructions" data-i18n="instructions">Task instructions · optional</label>
@@ -93,6 +94,8 @@
             <div class="fields-row"><div><label for="backend" data-i18n="backend">Backend</label><select id="backend"><option value="" data-i18n="useConfig">Use configuration</option><option value="codex">Codex</option><option value="chat">Chat API</option></select></div><div><label for="model" data-i18n="model">Model</label><input id="model" maxlength="200" autocomplete="off"></div></div>
             <div class="fields-row"><div><label for="effort" data-i18n="effort">Reasoning effort</label><input id="effort" list="efforts" maxlength="50"><datalist id="efforts"><option value="low"><option value="medium"><option value="high"><option value="xhigh"><option value="max"></datalist></div><div><label for="reasoning-mode" data-i18n="chatMode">Chat reasoning mode</label><select id="reasoning-mode"><option value="" data-i18n="useConfig">Use configuration</option><option value="pro">Pro</option><option value="standard">Standard</option></select></div></div>
             <div class="fields-row"><div><label for="budget" data-i18n="timeBudget">Time budget · minutes</label><input id="budget" type="number" min="0.01" step="any"></div><div><label for="iterations" data-i18n="roundBudget">Maximum rounds</label><input id="iterations" type="number" min="1" step="1"></div></div>
+            <div class="fields-row" id="native-capabilities"><div><label for="multi-agent" data-i18n="specialistAgents">Specialist agents</label><select id="multi-agent"><option value="" data-i18n="useConfig">Use configuration</option><option value="inherit" data-i18n="nativeInherit">Inherit isolated Codex settings</option><option value="true" data-i18n="enabled">Enabled</option><option value="false" data-i18n="disabled">Disabled</option></select></div><div><label for="memories" data-i18n="researchMemories">Research memories</label><select id="memories"><option value="" data-i18n="useConfig">Use configuration</option><option value="inherit" data-i18n="nativeInherit">Inherit isolated Codex settings</option><option value="true" data-i18n="enabled">Enabled</option><option value="false" data-i18n="disabled">Disabled</option></select></div></div>
+            <p class="field-hint" data-i18n="capabilitiesHint">Codex settings apply within MathLottery's separate account. Review sessions always disable memories. Extra agents share the research budget and can use more tokens.</p>
             <p class="field-hint" data-i18n="overrideHint">Overrides apply to this task only. Credentials stay in your environment.</p>
           </details>
           <p id="backend-hint" class="field-hint"></p>
@@ -103,7 +106,7 @@
         </form>
       </section>
 
-      <section class="panel history"><div class="section-heading"><div><p class="eyebrow" data-i18n="notebook">YOUR NOTEBOOK</p><h2 data-i18n="recentRuns">Research history</h2></div><button id="refresh" class="icon-button" type="button" aria-label="Refresh">↻</button></div><div id="run-list" class="run-list"></div></section>
+      <section class="panel history"><div class="section-heading"><div><p class="eyebrow" data-i18n="notebook">YOUR NOTEBOOK</p><h2 data-i18n="recentRuns">Research history</h2></div><button id="refresh" class="icon-button" type="button" aria-label="Refresh">↻</button></div><p class="history-hint" data-i18n="historyHint">Each Find keeps its shortlist. Solve and Verify are grouped by problem; repeated runs are numbered. Agent turns include continuations.</p><div id="run-list" class="run-list"></div></section>
     </div>
 
     <section id="run-detail" class="panel detail" hidden aria-label="Selected run">

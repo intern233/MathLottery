@@ -49,6 +49,9 @@ class BackendConfig(Model):
     native_turn_timeout_seconds: float | None = Field(default=None, gt=0)
     native_web_search: Literal["live", "cached", "disabled"] = "live"
     native_network_access: bool = True
+    # None inherits the isolated Codex configuration; reviews always disable memories.
+    native_multi_agent: bool | None = None
+    native_memories: bool | None = None
     native_max_log_bytes: int = Field(default=100_000_000, ge=100000)
     timeout_seconds: int = Field(default=300, gt=0)
     max_retries: int = Field(default=2, ge=0, le=5)
@@ -73,10 +76,33 @@ class ToolConfig(Model):
     lean_command: str = "lean"
 
 
+class VerificationConfig(Model):
+    fetch_sources: bool = True
+    max_sources: int = Field(default=12, ge=1, le=30)
+    source_timeout_seconds: float = Field(default=60, gt=0, le=300)
+    formal_enabled: bool = True
+    lean_command: str = "lean"
+    # Trusted prebuilt libraries only; no Lake build or dependency download.
+    lean_library_paths: list[str] = Field(default_factory=list, max_length=20)
+    formal_timeout_seconds: float = Field(default=120, gt=0, le=600)
+    formal_memory_mb: int = Field(default=2048, ge=256, le=8192)
+    # Virtual address space includes Lean startup stack reservations and mapped libraries.
+    formal_address_space_mb: int = Field(default=8192, ge=1024, le=32768)
+
+
+class DiscoveryConfig(Model):
+    context_max_files: int = Field(default=300, ge=1, le=3000)
+    context_max_file_bytes: int = Field(default=8_000_000, ge=1000, le=100_000_000)
+    context_max_total_bytes: int = Field(default=32_000_000, ge=1000, le=500_000_000)
+    chat_context_max_bytes: int = Field(default=256_000, ge=1000, le=4_000_000)
+
+
 class Config(Model):
     backend: BackendConfig = Field(default_factory=BackendConfig)
     budget: BudgetConfig = Field(default_factory=BudgetConfig)
     tools: ToolConfig = Field(default_factory=ToolConfig)
+    verification: VerificationConfig = Field(default_factory=VerificationConfig)
+    discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
     memory_context_chars: int = Field(default=16000, ge=1000, le=100000)
 
 

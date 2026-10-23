@@ -11,6 +11,7 @@ import httpx
 
 from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import BackendConfig
+from mathlottery.search_trace import queries_from_call
 from mathlottery.storage import atomic_write, json_text
 
 
@@ -127,6 +128,11 @@ class ChatBackend:
                 }
             ),
             "source_urls": self._sources(response),
+            "search_queries": sorted({
+                query for item in response.get("output", [])
+                if item.get("status") == "completed"
+                for query in queries_from_call(item)
+            }),
         }
         status = response.get("status")
         if status == "completed":

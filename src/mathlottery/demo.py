@@ -81,7 +81,7 @@ class DemoBackend(AgentBackend):
             }[self.case]
             response.update(
                 action="SUBMIT_CANDIDATE",
-                candidate={"claim": problem["statement"], "proof": proof},
+                candidate={"claim": problem["statement"], "proof": proof, "scope": "COMPLETE"},
                 memory=[
                     {
                         "kind": "strategy",
@@ -111,6 +111,14 @@ class DemoBackend(AgentBackend):
                     "evidence": ["Explicit candidate text and recorded Python experiment."],
                     "novelty": "UNKNOWN",
                     "novelty_notes": "Educational demo, no online novelty search.",
+                    "original_problem_coverage": "FULL" if good else "UNKNOWN",
+                    "coverage_explanation": "The candidate has exactly the original n≥0 quantifier." if good else "",
+                    "checks": [{
+                        "claim": problem["statement"], "method": "DERIVATION",
+                        "result": "SUPPORTED" if good else "CONTRADICTED",
+                        "reasoning": "S(0)=0; S(n+1)=S(n)+2n+1=n²+2n+1=(n+1)²." if good else issue,
+                        "evidence": ["Candidate proof and independently recorded calculation"],
+                    }],
                 },
             )
         return BackendResult(BackendStatus.COMPLETED, text=json.dumps(response, ensure_ascii=False))

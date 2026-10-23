@@ -102,6 +102,41 @@ class Reference(Model):
     sha256: str | None = None
 
 
+class Citation(Model):
+    """An agent's source claim, checked against a separate downloaded snapshot."""
+
+    url: str = Field(max_length=2048)
+    role: Literal[
+        "ORIGINAL_STATEMENT", "EXPLICIT_OPEN", "SOLUTION", "CORRECTION", "PRIOR_RESULT"
+    ]
+    locator: str = Field(max_length=1000)
+    excerpt: str = Field(min_length=1, max_length=2000)
+    explanation: str = Field(max_length=5000)
+    source_date: str | None = None
+    relation: Literal["UNKNOWN", "EQUIVALENT", "SPECIAL_CASE", "DIFFERENT"] = Field(
+        default="UNKNOWN", description="Relation of the proposed claim to the cited result. "
+        "SPECIAL_CASE means the proposed claim already follows by restricting the cited result, "
+        "not that the cited result proves only part of the proposed claim.",
+    )
+
+
+class LiteratureSearch(Model):
+    queries: list[str] = Field(default_factory=list, max_length=30)
+    conclusion: str = Field(default="", max_length=10000)
+    unresolved: list[str] = Field(default_factory=list, max_length=30)
+
+
+class EvidenceAssessment(Model):
+    """Harness-owned projection. Inputs with this field are always recomputed."""
+
+    policy_version: str | None = None
+    assessed_at: str | None = None
+    supported: bool = False
+    reasons: list[str] = Field(default_factory=list)
+    checked_citations: list[dict] = Field(default_factory=list)
+    observed_queries: list[str] = Field(default_factory=list)
+
+
 class Problem(Model):
     id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$")
     title: str = Field(min_length=1)
@@ -113,10 +148,17 @@ class Problem(Model):
     status_evidence: list[str] = Field(default_factory=list)
     difficulty_estimate: str = "unknown"
     verification_feasibility: str = "unknown"
+    lean_feasibility: str = "unknown"
+    prerequisites: list[str] = Field(default_factory=list)
+    known_obstacles: list[str] = Field(default_factory=list)
+    initial_approach: str = ""
     selection_reason: str = ""
     references: list[Reference] = Field(default_factory=list)
     formal_target: str | None = None
     educational: bool = False
+    citations: list[Citation] = Field(default_factory=list, max_length=30)
+    literature_search: LiteratureSearch = Field(default_factory=LiteratureSearch)
+    evidence_assessment: EvidenceAssessment = Field(default_factory=EvidenceAssessment)
 
 
 class MemoryItem(Model):
@@ -153,6 +195,23 @@ class CandidateInput(Model):
     proof: str = Field(min_length=1, max_length=100000)
     assumptions: list[str] = Field(default_factory=list)
     references: list[Reference] = Field(default_factory=list)
+    scope: Literal["UNKNOWN", "COMPLETE", "PARTIAL", "COUNTEREXAMPLE"] = "UNKNOWN"
+    remaining_obligations: list[str] = Field(default_factory=list, max_length=50)
+
+
+class ProofCheck(Model):
+    claim: str = Field(min_length=1, max_length=4000)
+    method: Literal["DERIVATION", "COUNTEREXAMPLE", "FINITE_TEST", "FORMAL", "REFERENCE"]
+    result: Literal["SUPPORTED", "CONTRADICTED", "UNRESOLVED"]
+    reasoning: str = Field(min_length=1, max_length=10000)
+    evidence: list[str] = Field(default_factory=list, max_length=30)
+    blocking: bool = True
+
+
+class FormalCheckRequest(Model):
+    # Ordered modules from the explicitly submitted immutable source snapshot.
+    files: list[str] = Field(min_length=1, max_length=20)
+    declarations: list[str] = Field(min_length=1, max_length=30)
 
 
 class Review(Model):
@@ -164,6 +223,19 @@ class Review(Model):
     novelty: Literal["UNKNOWN", "KNOWN", "SPECIAL_CASE", "POTENTIALLY_NEW"] = "UNKNOWN"
     novelty_notes: str = ""
     novelty_references: list[Reference] = Field(default_factory=list)
+    original_problem_coverage: Literal["UNKNOWN", "FULL", "PARTIAL", "DIFFERENT"] = "UNKNOWN"
+    coverage_explanation: str = ""
+    remaining_obligations: list[str] = Field(default_factory=list, max_length=50)
+    checks: list[ProofCheck] = Field(default_factory=list, max_length=100)
+    citations: list[Citation] = Field(default_factory=list, max_length=30)
+    literature_search: LiteratureSearch = Field(default_factory=LiteratureSearch)
+    formal_check: FormalCheckRequest | None = None
+    # The controller overwrites these fields; they never establish evidence by themselves.
+    evidence_assessment: EvidenceAssessment = Field(default_factory=EvidenceAssessment)
+    validation_notes: list[str] = Field(default_factory=list)
+    reported_verdict: str | None = None
+    reported_novelty: str | None = None
+    formal_receipt: dict | None = None
 
 
 class AgentResponse(Model):
@@ -280,6 +352,22 @@ class ReviewEvidence(Model):
     files: list[ReviewSource] = Field(min_length=1, max_length=20)
 
 
+class DiscoveryFile(Model):
+    path: str
+    size: int = Field(ge=0)
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class DiscoveryContext(Model):
+    """Frozen Find material selected by the user, never an inherited reviewer memory."""
+
+    source_run_id: str = Field(pattern=r"^run-[a-f0-9]{12}$")
+    problem_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    captured_at: str
+    files: list[DiscoveryFile] = Field(default_factory=list)
+    omitted: list[str] = Field(default_factory=list)
+
+
 class Run(Model):
     id: str = Field(pattern=r"^run-[a-f0-9]{12}$")
     mode: Literal["chat", "codex", "work", "manual", "demo"]
@@ -305,6 +393,7 @@ class Run(Model):
     next_actions: list[str] = Field(default_factory=list)
     candidates: list[Candidate] = Field(default_factory=list)
     review_evidence: ReviewEvidence | None = None
+    discovery_context: DiscoveryContext | None = None
     observations: list[dict] = Field(default_factory=list)
     task_id: str | None = None
     prompt_path: str | None = None

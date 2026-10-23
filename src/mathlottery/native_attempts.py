@@ -13,7 +13,7 @@ from mathlottery.agent_backend import research_backend
 from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
 from mathlottery.milestones import read_milestone
-from mathlottery.models import Phase, Run, uid
+from mathlottery.models import Phase, Run, now, uid
 from mathlottery.native_backend import NativeWorkBackend
 from mathlottery.native_workspace import NativeWorkspace
 from mathlottery.storage import atomic_write, json_text, safe_path
@@ -30,7 +30,7 @@ class NativeAttempts:
         directory = self.store.run_dir(run.id) / "tasks" / run.task_id / uid("attempt")
         run.native.active_attempt = str(directory.relative_to(self.store.run_dir(run.id)))
         self.store.save(run, "native_attempt_started", attempt=run.native.active_attempt)
-        atomic_write(directory / "turn.json", json_text({"steering": run.native.steering}))
+        atomic_write(directory / "turn.json", json_text({"steering": run.native.steering, "started_at": now()}))
         timeout = budget.remaining(run, config)
         if config.backend.native_turn_timeout_seconds is not None:
             timeout = min(timeout, config.backend.native_turn_timeout_seconds)
@@ -52,6 +52,8 @@ class NativeAttempts:
 
     def capture(self, run: Run, result: BackendResult, directory: Path) -> dict:
         milestone, error = None, None
+        turn_path = directory / "turn.json"
+        turn = json.loads(turn_path.read_text()) if turn_path.exists() else {}
         if result.status == BackendStatus.COMPLETED:
             try:
                 milestone = read_milestone(run, self.workspaces.path(run), result.text)
@@ -61,11 +63,9 @@ class NativeAttempts:
             "result": asdict(result),
             "milestone": milestone,
             "checkpoint_error": error,
-            "steering": (
-                json.loads((directory / "turn.json").read_text()).get("steering")
-                if (directory / "turn.json").exists()
-                else run.native.steering
-            ),
+            "steering": turn.get("steering") if turn_path.exists() else run.native.steering,
+            # Use original turn time, not recovery time, for search freshness.
+            "source_observed_at": turn.get("started_at"),
             "directory": str(directory.relative_to(self.store.run_dir(run.id))),
         }
 

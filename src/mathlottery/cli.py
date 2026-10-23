@@ -129,8 +129,11 @@ def show_run(store: Store, run: Run):
             typer.echo(f"Chat review response: {run.native.reviewer_response_id}")
     for number, problem in enumerate(run.shortlist, 1):
         typer.echo(f"{number}. {problem.id} [{problem.status}] {problem.title}")
+        typer.echo(f"   Difficulty: {problem.difficulty_estimate}; Verification: {problem.verification_feasibility}; Lean: {problem.lean_feasibility}")
     if run.shortlist:
         typer.echo(f"Selection: {store.run_dir(run.id) / 'literature/selection.json'}")
+        if run.workflow == Workflow.FIND:
+            typer.echo(f"Choose a problem: mathlottery solve --from-find {run.id} --problem <problem-id>")
     if run.stop_reason:
         typer.echo(f"Reason: {run.stop_reason}")
     if run.last_error:
@@ -313,9 +316,9 @@ def research_problem(store, problem, prompt):
     return None if problem == "auto" else store.load_problem(problem)
 
 
-def start_task(store, config, **kwargs):
+def start_task(store, config, *, task=None, **kwargs):
     engine = Orchestrator(store)
-    task = engine.create(config, **kwargs)
+    task = task or engine.create(config, **kwargs)
     typer.echo(
         f"Starting {task.id} ({task.workflow}, {task.mode}); artifacts: {store.run_dir(task.id)}"
     )
@@ -398,6 +401,7 @@ def solve(
     ctx: typer.Context,
     problem: Annotated[str, typer.Option(help="Imported or discovered problem ID")] = "auto",
     prompt: Annotated[str | None, typer.Option(help="Direct mathematical research request")] = None,
+    from_find: Annotated[str | None, typer.Option(help="Find run whose selected problem and research dossier to carry forward")] = None,
     mode: BackendOption = None,
     model: ModelOption = None,
     reasoning_effort: EffortOption = None,
@@ -411,9 +415,13 @@ def solve(
         config, mode, model, reasoning_effort, budget_time, max_iterations,
         reasoning_mode=reasoning_mode,
     )
-    start_task(
-        store, config, workflow=Workflow.SOLVE, problem=research_problem(store, problem, prompt)
-    )
+    if from_find:
+        if prompt is not None or problem == "auto":
+            raise ValueError("Use --from-find with an explicit --problem from its shortlist")
+        task = Orchestrator(store).solve_discovered(config, from_find, problem)
+        start_task(store, config, task=task)
+    else:
+        start_task(store, config, workflow=Workflow.SOLVE, problem=research_problem(store, problem, prompt))
 
 
 @app.command()
