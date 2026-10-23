@@ -9,6 +9,7 @@ from pathlib import Path
 
 from mathlottery.config import Config
 from mathlottery.demo import DemoBackend
+from mathlottery.local_network import apply_network_environment
 from mathlottery.models import now
 from mathlottery.orchestrator import Orchestrator
 from mathlottery.storage import Store, atomic_write, json_text
@@ -29,6 +30,7 @@ def execute(store, run_id, request):
     watcher.start()
     atomic_write(directory / "status.json", json_text({"state": "running", "time": now()}))
     try:
+        apply_network_environment(store.root)
         run = store.load(run_id)
         backend = DemoBackend(run.environment.get("demo_case", "correct")) if run.mode == "demo" else None
         engine = Orchestrator(store, backend)

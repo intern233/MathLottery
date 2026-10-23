@@ -6,13 +6,15 @@ from pathlib import Path
 
 import yaml
 
-from mathlottery import __version__, budget, discovery
+from mathlottery import __version__, budget, discovery, organization
 from mathlottery.backends import AgentBackend
 from mathlottery.candidates import CandidateStore
 from mathlottery.config import Config
 from mathlottery.models import (
+    Candidate,
     CandidateInput,
     DiscoveryContext,
+    OrganizationContext,
     Phase,
     Problem,
     Run,
@@ -45,8 +47,18 @@ class Orchestrator:
         candidate: CandidateInput | None = None,
         discovery_context: DiscoveryContext | None = None,
         discovery_files: dict[str, bytes] | None = None,
+        organization_context: OrganizationContext | None = None,
+        organization_files: dict[str, bytes] | None = None,
+        organization_candidates: list[Candidate] | None = None,
     ) -> Run:
         workflow = Workflow(workflow)
+        if workflow == Workflow.ORGANIZE:
+            if not (problem and organization_context and organization_files and organization_candidates):
+                raise ValueError("Organize requires a frozen reviewed source; use organize(config, source_run_id)")
+            if proof or candidate or discovery_context:
+                raise ValueError("Organize cannot submit a new candidate or change research context")
+        elif any(value is not None for value in (organization_context, organization_files, organization_candidates)):
+            raise ValueError("Organization context belongs only to an Organize task")
         if discovery_context is not None and (workflow != Workflow.SOLVE or discovery_files is None):
             raise ValueError("Discovery context is only attached to a selected Solve task")
         if workflow == Workflow.FIND and (problem or proof or candidate):
@@ -68,7 +80,7 @@ class Orchestrator:
                 "Chat API uses native execution; use manual for old structured handoffs"
             )
         if workflow != Workflow.PIPELINE and config.backend.execution != "native":
-            raise ValueError("Independent find/solve/verify workflows require native execution")
+            raise ValueError("Independent find/solve/verify/organize workflows require native execution")
         run = Run(
             id=uid("run"),
             mode=chosen_mode,
@@ -79,6 +91,7 @@ class Orchestrator:
             execution="structured" if mode == "demo" else config.backend.execution,
             problem=problem,
             discovery_context=discovery_context,
+            organization_context=organization_context,
             source=source,
             config=config.model_dump(mode="json"),
             environment={
@@ -105,6 +118,12 @@ class Orchestrator:
             root = self.store.run_dir(run.id)
             root.mkdir(parents=True, exist_ok=True)
             discovery.save(root, discovery_context, discovery_files)
+        if organization_context is not None:
+            root = self.store.run_dir(run.id)
+            root.mkdir(parents=True, exist_ok=True)
+            run.phase = Phase.ORGANIZE
+            run.candidates = [value.model_copy(deep=True) for value in organization_candidates]
+            organization.save(root, organization_context, organization_files)
         self.store.save(run, "created")
         atomic_write(self.store.run_dir(run.id) / "config.yaml", yaml.safe_dump(run.config))
         report(self.store, run)
@@ -118,6 +137,31 @@ class Orchestrator:
             context, files = discovery.capture(self.store, source, problem, config)
         return self.create(config, problem=problem, workflow=Workflow.SOLVE,
                            discovery_context=context, discovery_files=files)
+
+    def organize(self, config: Config, source_run_id: str, language="zh", instructions=None) -> Run:
+        """Start a fresh editorial session from an immutable, explicitly reviewed source."""
+        if config.backend.execution != "native":
+            raise ValueError("Organize requires native execution")
+        with self.store.lock(source_run_id):
+            source = self.store.load(source_run_id)
+            context, files = organization.capture(self.store, source, config, language, instructions)
+            problem = source.problem.model_copy(deep=True)
+            candidates = [value.model_copy(deep=True) for value in source.candidates]
+        return self.create(config, problem=problem, workflow=Workflow.ORGANIZE,
+                           organization_context=context, organization_files=files,
+                           organization_candidates=candidates)
+
+    def export_organized(self, run_id: str) -> Run:
+        """Retry local exports without invoking a model or changing verification."""
+        with self.store.lock(run_id):
+            run = self.store.load(run_id)
+            if run.workflow != Workflow.ORGANIZE or run.organization_report is None:
+                raise ValueError("This task has no organized report to export")
+            if run.active_since or run.native.active_attempt or run.native.pending_result:
+                raise ValueError("Wait for the organization task to finish before exporting")
+            organization.export(self.store, run)
+            report(self.store, run)
+            return run
 
     def _cancelled(self, run: Run, config: Config) -> bool:
         return self._stop_file(run).exists() or budget.remaining(run, config) <= 0
@@ -137,6 +181,7 @@ class Orchestrator:
         run.stop_reason = reason
         budget.settle(run)
         self.store.save(run, "reporting")
+        organization.export(self.store, run)
         run.state = State.COMPLETED
         self.store.save(run, "completed")
         report(self.store, run)
@@ -237,6 +282,8 @@ class Orchestrator:
                         run.phase = Phase.FIND
                     elif run.workflow == Workflow.VERIFY:
                         run.phase = Phase.VERIFY
+                    elif run.workflow == Workflow.ORGANIZE:
+                        run.phase = Phase.ORGANIZE
                     else:
                         run.phase = Phase.SOLVE if run.problem else Phase.FIND
                         run.native.review_only = False

@@ -9,6 +9,7 @@ import tomllib
 import webbrowser
 from pathlib import Path
 
+from mathlottery.local_network import apply_network_environment
 from mathlottery.web.network import detect_access, is_wsl, windows_excluded_ports
 from mathlottery.web.service import WebService, workspace_key
 
@@ -89,6 +90,7 @@ def start_server(root, config_path, preferred_port, access, excluded_ports=()):
 def serve(root, config_path=None, port=8765, open_browser=False, loopback_only=False, wsl_direct=False):
     if loopback_only and wsl_direct:
         raise ValueError("Choose either --loopback-only or --wsl-direct")
+    apply_network_environment(root)
     access = detect_access(loopback_only, wsl_direct)
     excluded = windows_excluded_ports() if access.bind == "127.0.0.1" else ()
     server, actual_port = start_server(root, config_path, port, access, excluded_ports=excluded)

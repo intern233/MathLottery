@@ -33,6 +33,47 @@ def test_lists_only_sources_and_project_files(tmp_path):
     assert not result["truncated"]
 
 
+def test_lists_and_reads_small_proof_materials_but_not_general_workspace_files(tmp_path):
+    permitted = [
+        "workspace/proof/Proof.md", "workspace/formal/check.py",
+        "workspace/proof/certificates.json", "workspace/proof/data/table.csv",
+        "workspace/proof/notes.txt",
+        "review-workspaces/candidate-example/submitted-evidence/proof/Proof.md",
+    ]
+    excluded = [
+        "workspace/notes.md", "workspace/auth.json", "workspace/research/history.json",
+        "workspace/proof/.env", "workspace/proof/Proof.olean",
+        "workspace/proof/.lake/manifest.json", "workspace/proof/build/table.json",
+    ]
+    for relative in permitted + excluded:
+        write(tmp_path, relative, "small proof material\n")
+    result = list_formal_artifacts(tmp_path)
+    assert [item["path"] for item in result["items"]] == sorted(permitted)
+    for relative in permitted:
+        assert read_formal_artifact(tmp_path, relative) == b"small proof material\n"
+    for relative in excluded:
+        with pytest.raises(ValueError):
+            read_formal_artifact(tmp_path, relative)
+
+
+@pytest.mark.parametrize("variant", ["binary", "large", "symlink", "hardlink"])
+def test_proof_materials_keep_download_guards(tmp_path, variant):
+    path = write(tmp_path, "workspace/proof/certificate.json", "{}")
+    if variant == "binary":
+        path.write_bytes(b"\0not text")
+    elif variant == "large":
+        path.write_text("x" * (MAX_SOURCE_BYTES + 1))
+    else:
+        other = write(tmp_path, "private/certificate.json", "must not be exposed")
+        path.unlink()
+        if variant == "symlink":
+            path.symlink_to(other)
+        else:
+            path.hardlink_to(other)
+    with pytest.raises(ValueError):
+        read_formal_artifact(tmp_path, "workspace/proof/certificate.json")
+
+
 @pytest.mark.parametrize("relative", ["../outside.lean", "/tmp/outside.lean", "workspace/../outside.lean", "workspace/.lake/Dep.lean", "workspace//Proof.lean", "workspace/./Proof.lean", "workspace\\Proof.lean", "workspace/auth.json", "workspace/build/Proof.lean"])
 def test_rejects_unapproved_paths(tmp_path, relative):
     with pytest.raises(ValueError):

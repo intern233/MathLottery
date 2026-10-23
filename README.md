@@ -57,6 +57,14 @@ When it finds a problem, send specific feedback back to the original research se
 
 **Passing an agent review is only preliminary evidence.** Finite experiments and model approval cannot replace a mathematical proof. Calling a candidate a reliable new result requires stronger proof checking, with formal verification where suitable and review by mathematics experts.
 
+### 4. Organize: make the result readable by an expert
+
+> The proof, experiments and review are scattered across files. How can someone assess the whole argument?
+
+After Verify, optionally ask **Organize** to assemble a readable account of the original problem, assumptions, proof strategy, detailed argument, supporting materials and review findings. It produces **Markdown and PDF reports**, with a source manifest and compact materials for inspection.
+
+The report keeps missing steps, failed checks and uncertain novelty visible. Organizing a result does not raise its verification level; it prepares the record for human review.
+
 ## What the harness provides
 
 We want to preserve as much of GPT's native agent capability as possible, leaving research methods and tool choices to the agent. MathLottery organizes each attempt into a research record that can be resumed, revisited, and checked:
@@ -66,11 +74,11 @@ We want to preserve as much of GPT's native agent capability as possible, leavin
 - **Research budgets:** set limits such as time and record the usage actually reported by the backend, giving each attempt a defined scope.
 - **Results and review:** save candidate proof versions, references, review feedback, and research reports, distinguishing progress, conjectures, and verification evidence.
 - **Evidence checks:** independently retrieve quoted sources, record missing evidence and original-problem coverage, and recheck attached Lean sources with bounded execution receipts. See the [evidence policy](docs/evidence.md).
-- **Local browser workspace:** launch `mathlottery serve` to find problems, start solutions, review proofs, and manage research history from your browser.
+- **Local browser workspace:** launch `mathlottery serve` to find problems, start solutions, review proofs, organize expert reports, and manage research history from your browser.
 
-The code provides three independent workflows: **`find`, `solve`, and `verify`**. The `run` workflow connects them into a full research pipeline. Finding produces reusable problem statements, solving saves candidate proofs, and verification produces a separate review.
+The code provides four independent workflows: **`find`, `solve`, `verify`, and `organize`**. The `run` workflow connects finding, solving and verification; organizing is an explicit, optional follow-up. Finding produces reusable problem statements, solving saves candidate proofs, verification produces a separate review, and organizing prepares an expert reading report.
 
-Each workflow supports two ways to connect an agent: **`codex`** uses persistent official Codex sessions and native tools; **`chat`** automatically calls the OpenAI Responses API with persistent context, web search, and code execution. The Chat API requires separate credential and model configuration; available capabilities depend on the account and tool setup.
+Choose an entry point independently of the agent connection: use the **browser** or **terminal** with either **`codex`** (official Codex sessions and native tools) or **`chat`** (the Responses API with persistent context and configured hosted tools). API connections require their own credentials. Compatible Responses providers can be configured separately; other native protocols require an adapter. See [backend and model configuration](docs/configuration.md).
 
 Contributions to the harness are welcome: improve problem selection, reduce repeated exploration, strengthen reviews, or try your own research strategy.
 
@@ -82,11 +90,12 @@ Each case states its formal verification scope and novelty status. The mesh-patt
 
 ## Take your first shot
 
-Choose the backend, model, and reasoning mode in `config.yaml`, then specify the research task when you run the system. Installation, configuration, and commands are covered in separate guides:
+Start with the [browser quickstart](docs/usage.md#local-browser-workspace): install MathLottery, run `mathlottery serve`, and open the printed address. Sign in through the **MathLottery account** panel for Codex, choose a model, then **Find → choose a problem → Solve → Verify**. Follow with [**Organize**](docs/usage.md#organize) when you want an expert reading report. This workspace's login is separate from your ordinary Codex CLI / IDE login.
 
-For the [browser interface](docs/usage.md#local-browser-workspace), run `mathlottery serve` and open the printed local address. It starts on loopback, preferring port `8765` and skipping occupied or Windows-reserved ports; Windows browsers use the printed `localhost` address through WSL forwarding. The **MathLottery account** panel supports official ChatGPT device-code sign-in with login state isolated from your local Codex CLI / IDE. Sign in once in MathLottery; you may use the same account, with the same account usage limits. The interface shares the MathLottery CLI's local problems, checkpoints, and reports.
+In the terminal, use [`find`, `solve`, `verify`, `organize`, or `run`](docs/usage.md#cli) with the same workspace and configuration. `run` automatically connects the research stages; separate commands let you choose the problem between Find and Solve and request a report after Verify.
 
-- [Installation and usage](docs/usage.md): environment setup, the three workflows, Chat API / Codex configuration, and pausing and resuming.
+- [Installation and usage](docs/usage.md): browser quickstart, terminal workflows, and stop/resume.
+- [Backend and model configuration](docs/configuration.md): Codex login, API credentials, providers, models, and budgets.
 - [Resource requirements](docs/resources.md): RAM, disk and CPU planning, measured Lean usage, caches, and WSL settings.
 - [Architecture and recovery](docs/architecture.md): persistent sessions, saved state, and separate reviews.
 - [Validation methods and scope](docs/local-validation.md): how to check the system and what those checks establish.

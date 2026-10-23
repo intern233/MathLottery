@@ -1,4 +1,4 @@
-"""Bounded access to Lean sources produced inside a research or review workspace."""
+"""Bounded access to proof sources produced inside a research or review workspace."""
 
 from __future__ import annotations
 
@@ -12,22 +12,31 @@ MAX_ENTRIES = 2000
 MAX_DEPTH = 12
 WORKSPACES = {"workspace", "review-workspaces"}
 SKIP_DIRECTORIES = {"node_modules", "__pycache__", "build"}
+PROOF_TEXT_SUFFIXES = {".md", ".txt", ".json", ".csv", ".py"}
 
 
 def _allowed(relative: str) -> bool:
     parts = relative.split("/")
+    proof_parts = parts[1:] if parts[0] == "workspace" else parts[2:]
+    if proof_parts and proof_parts[0] == "submitted-evidence":
+        proof_parts = proof_parts[1:]
+    proof_text = (
+        len(proof_parts) >= 2 and proof_parts[0] in {"proof", "formal"}
+        and PurePosixPath(relative).suffix in PROOF_TEXT_SUFFIXES
+    )
     return (
         len(parts) >= 2
         and parts[0] in WORKSPACES
         and all(part and not part.startswith(".") and "\\" not in part and "\0" not in part for part in parts)
         and not any(part in SKIP_DIRECTORIES for part in parts[:-1])
-        and (PurePosixPath(relative).suffix == ".lean" or parts[-1] in {"lean-toolchain", "lakefile.toml"})
+        and (PurePosixPath(relative).suffix == ".lean" or parts[-1] in {"lean-toolchain", "lakefile.toml"}
+             or proof_text)
     )
 
 
 def _source_path(root: Path, relative: str) -> Path:
     if not _allowed(relative):
-        raise ValueError("Choose a Lean source or project file inside this run's workspace")
+        raise ValueError("Choose a permitted proof source or project file inside this run's workspace")
     path = root
     for part in relative.split("/"):
         path /= part

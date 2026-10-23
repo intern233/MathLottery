@@ -7,13 +7,23 @@ GUIDANCE = {
 number), a short verbatim excerpt, explanation of relevance, source_date when known, and relation
 (UNKNOWN/EQUIVALENT/SPECIAL_CASE/DIFFERENT). Roles: ORIGINAL_STATEMENT, EXPLICIT_OPEN, SOLUTION,
 CORRECTION, PRIOR_RESULT. Quote the exact original statement and explicit open-status evidence;
+use ORIGINAL_STATEMENT for a published conjecture and EXPLICIT_OPEN for an open-status statement.
+PRIOR_RESULT and SOLUTION refer to established results, not merely a previously stated problem.
 check quantifiers, parameter ranges, versions, errata, later solutions and equivalent formulations.
 Use short excerpts sufficient for the point, not large copied passages. Include literature_search:
-{queries: [...], conclusion: search scope and comparison of findings, unresolved: [specific gaps]}.
-Queries must be actual searches made with available search tools. Describe inaccessible full texts
-and unclear equivalences as unresolved, never silently omit them. A recent download date does not
+{queries: [...], conclusion: search scope and comparison of findings, unresolved: [material gaps],
+limitations: [general coverage limits]}. Queries must be actual searches made with available search
+tools. A specific inaccessible potential solution, conflicting status, or unclear comparison belongs
+in unresolved and blocks support. General limits (searched databases/languages/dates, possible
+unindexed work) belong in limitations and remain visible; never move a material gap there just to
+obtain OPEN. An OPEN label is a bounded literature assessment, not proof of worldwide absence.
+A recent download date does not
 make an old open-status statement current. One maintained primary source can be useful; counting
 websites proves nothing. The harness will independently retrieve cited URLs and check excerpts.
+Copy excerpt text literally: do not replace printed formulas with LaTeX, add underscores, translate,
+or paraphrase inside excerpt. Put formula transcriptions and interpretation in statement/explanation.
+If PDF text extraction cannot faithfully preserve the needed passage, use an accessible primary
+HTML/text version with an exact locator, or report the retrieval gap. Do not evade site access rules.
 Retain UNKNOWN if the evidence cannot support an open-status assessment. These fields structure
 the final selection only; choose your research steps and tools freely.""",
     Phase.SOLVE: """For each candidate, declare scope: COMPLETE, PARTIAL, COUNTEREXAMPLE or UNKNOWN,
@@ -34,18 +44,31 @@ remaining_obligations. Distinguish a correct partial result from a complete solu
 when the comparison cannot be established. Do not accept the solver's scope label without checking.
 
 For novelty include citations: [{url, role, locator, excerpt, explanation, source_date, relation}],
-using roles PRIOR_RESULT/SOLUTION/CORRECTION and a short verbatim excerpt from the relevant result.
+using roles ORIGINAL_STATEMENT/EXPLICIT_OPEN/PRIOR_RESULT/SOLUTION/CORRECTION and a short verbatim
+excerpt. A source stating the original conjecture is ORIGINAL_STATEMENT; a source explicitly
+reporting it open is EXPLICIT_OPEN. Do not classify these as PRIOR_RESULT or SOLUTION merely
+because their mathematical statements match the candidate. Those two roles denote established
+results: an EQUIVALENT or SPECIAL_CASE relation to them tells the harness the candidate was
+already proved. Explain conjecture provenance separately from prior proof comparisons.
 Compare the closest results' assumptions and conclusions explicitly, including equivalent
 formulations and special cases (relation: EQUIVALENT, SPECIAL_CASE, DIFFERENT, UNKNOWN).
 SPECIAL_CASE means the candidate is already covered by restricting the cited theorem; if the
 cited result proves only part of a stronger candidate, use DIFFERENT and explain what is new.
 Include literature_search: {queries: actual search-tool queries, conclusion: coverage and findings,
-unresolved: inaccessible sources or unresolved comparisons}. No search hit is not proof of novelty.
+unresolved: specific inaccessible relevant sources or unresolved comparisons,
+limitations: general search coverage limits}. Keep material gaps in unresolved; limitations do not
+override missing citations, conflicting results, or unclear comparisons. No search hit is not proof
+of novelty. Copy short excerpts literally from the cited source; formula transcriptions and
+paraphrases belong in explanation, not excerpt. Prefer primary HTML/text if PDF extraction is lossy.
 The harness re-fetches cited sources; URL lists and model-provided timestamps are insufficient.
 
 If immutable Lean sources were explicitly attached, you may request formal_check:
 {files: ordered workspace/Module.lean paths from the supplied manifest, declarations: qualified
-theorem names}. This requests an independent harness check after your review. The checker uses
+theorem names, module_root: optional directory relative to workspace}. The default module_root is
+empty. For workspace/proof/Main.lean importing Lemmas from workspace/proof/Lemmas.lean, set
+module_root to "proof" and attach both files in dependency order. For imports proof.Lemmas, keep
+the default root. This only changes module resolution; no source bytes are rewritten and only
+explicitly attached files are available. This requests an independent harness check after your review. The checker uses
 configured prebuilt dependencies, no Lake hooks/downloads, one thread and bounded memory/time.
 It checks only the requested declarations; explain their relation to the entire original problem.
 Never fill formal_receipt, evidence_assessment, validation_notes or reported_* fields yourself;

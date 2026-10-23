@@ -17,7 +17,13 @@ EXCLUDED = {"node_modules", "__pycache__", "build", "dist", "target", "sessions"
 
 
 def problem_fingerprint(problem):
-    return digest(json_text(problem))
+    payload = problem.model_dump(mode="json")
+    # Empty fields added in evidence-v2 must not invalidate older frozen dossiers.
+    # Nonempty disclosures still participate in revision and integrity checks.
+    for field in ("literature_search", "evidence_assessment"):
+        if not payload[field]["limitations"]:
+            payload[field].pop("limitations")
+    return digest(json_text(payload))
 
 
 def choose(source, problem_id, expected_sha256=None):

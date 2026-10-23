@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+from mathlottery.local_network import network_environment
+
 
 class CodexIdentity:
     def __init__(self, root: Path | None = None):
@@ -46,7 +48,7 @@ class CodexIdentity:
         env = {key: value for key, value in os.environ.items() if key not in excluded}
         env["CODEX_HOME"] = str(home)
         env["CODEX_SQLITE_HOME"] = str(home)
-        return env
+        return network_environment(self.root, env)
 
     def overrides(self):
         home = self.prepare()

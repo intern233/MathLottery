@@ -4,7 +4,7 @@
 
 [项目介绍](../README.cn.md) · [安装与使用](usage.cn.md) · [结果样本](../showcase/README.cn.md)
 
-MathLottery 将 **agent 做什么**与 **如何调用 agent** 分开。找题、求解和验真是独立功能，Chat API 和 Codex 都能执行任意一项。
+MathLottery 将**使用入口**（浏览器或终端）、**研究功能**（找题、求解、验真、整理或研究流程）和 **agent 接入方式**（Codex 或配置的 Responses 提供方）分开。两种入口共用同一套研究调度与工作区状态。实际安装和接入步骤见[使用指南](usage.cn.md)与[配置说明](configuration.cn.md)。
 
 ## 研究功能
 
@@ -13,9 +13,12 @@ MathLottery 将 **agent 做什么**与 **如何调用 agent** 分开。找题、
 | find | 选题条件、优先来源、候选数量 | 带来源和状态证据的可复用题目排序；求解前结束 |
 | solve | 已登记题目或直接研究请求 | 研究进展及不可变候选；最终候选结束求解，不自行认可证明 |
 | verify | 题目及证明或候选 | 独立的真假、证明与新颖性判断；任何审查结论都结束本次验真 |
+| organize | 空闲任务及至少一份候选审查、报告语言与可选要求 | 专家阅读 Markdown、PDF 导出与材料快照清单；不提升证据等级 |
 | pipeline | 可选题目或直接请求 | 必要时找题，随后求解、独立审查，并将意见交回同一研究者 |
 
-CLI 命令 find、solve、verify 为运行设置明确的 Workflow，run 组成完整流程。Workflow 与 Phase 分开：前者是用户要求的功能，后者是当前阶段。续接任务保留原有功能。
+CLI 命令 find、solve、verify、organize 为运行设置明确的 Workflow，run 串联 Find/Solve/Verify，不自动整理。Workflow 与 Phase 分开：前者是用户要求的功能，后者是当前阶段。续接任务保留原有功能。
+
+独立 Find 在候选列表处结束，由用户选择问题。CLI 的 `run` 命令表示自动串联研究阶段，不增加此选题停顿。浏览器分别提供 Find、Solve、Verify，以及可选的 Organize。
 
 ## 组件
 
@@ -26,17 +29,20 @@ CLI 命令 find、solve、verify 为运行设置明确的 Workflow，run 组成�
 | web/jobs.py、web/worker.py | 独立后台执行、进程所有权锁与停止信号传递 |
 | web/startup.py、web/network.py | 工作区定位、端口复用与递增、Windows 保留端口及显式 WSL 访问策略 |
 | web/account.py | 通过私有 stdio 调用官方 Codex 账号 RPC，提供脱敏状态、设备码登录与显式账号切换 |
+| model_catalog.py、web/model_directory.py | 提供方元数据、有界模型目录获取、能力检查与独立 Codex 模型列表 RPC |
 | codex_identity.py | 工作区独立的 Codex 目录、子进程环境和文件凭据存储 |
 | workflows.py | 各功能的指令及排序后的找题结果 |
 | agent_backend.py | 通用研究调用接口与后端选择 |
 | chat_backend.py | 自动调用 Responses API、托管工具、上下文续接、轮询与取消 |
 | native_backend.py | 官方 Codex CLI、精确续接会话、原生工具与事件日志 |
 | codex_metadata.py | 白名单运行元数据与会话累计 token 的核对 |
-| native.py | 原生研究循环及找题、求解、审查之间的转换 |
+| native.py | 原生研究循环及找题、求解、审查、整理之间的转换 |
 | native_attempts.py | 调用日志、持久化回执、会话 ID、记账与恢复 |
-| native_workspace.py | 研究/审查工作区、提示准备及完整回答导入 |
+| native_workspace.py | 研究/审查/整理工作区、提示准备及完整回答导入 |
 | milestones.py | 与后端无关的阶段成果解析和验证 |
 | candidates.py | 不可变候选文件、完整性检查和独立审查产物 |
+| organization.py | 来源资料快照、整理报告接收与可复现导出 |
+| organized_reports.py、report_pdf.py | 安全的报告下载投影与可选本地 PDF 渲染 |
 | native_prompts.py | 研究目标与阶段成果登记，不规定逐动作协议 |
 | orchestrator.py | 运行生命周期、执行分派、暂停续接与停止 |
 | structured.py | 旧版 JSON/工具循环、已接收响应重放与手动提交 |
@@ -64,9 +70,11 @@ flowchart TD
     Milestone --> Find[选题: 保存排序题库]
     Milestone --> Solve[候选: 保存不可变内容]
     Milestone --> Review[审查: 单独保存评估]
+    Milestone --> Organize[整理: 保存专家阅读说明]
     Find --> Native
     Solve --> Native
     Review --> Native
+    Organize --> Native
     Native --> Report[检查点、报告与指标]
 ```
 
@@ -86,7 +94,7 @@ flowchart TD
 
 浏览器通过 JSON 接口创建、停止、续接和查看任务。服务检查客户端地址、Host、Origin 和写操作令牌，限制请求体大小，只提供明确列出的资源和接口，不提供通用文件浏览器。不可信的题目、证明和 agent 输出通过 DOM 文本节点显示。
 
-`web/account.py` 通过有界、私有的 stdio RPC 连接官方 `codex app-server`。独立账号接口读取状态、发起设备码授权、取消待完成的登录，以及切换或退出账号。它们只调用账号方法：检查登录不会创建研究线程或启动模型回合。状态读取和普通登录复用已有的 MathLottery 账号，不自动切换。显式切换和退出请求除了满足普通浏览器写入检查，还必须携带 `confirm_account_change: true`；界面说明操作作用于当前 MathLottery 工作区。
+`web/account.py` 通过有界、私有的 stdio RPC 连接官方 `codex app-server`。独立账号接口读取状态、发起设备码授权、取消待完成的登录，以及切换或退出账号。账号操作不会创建研究线程或启动模型回合。状态读取和普通登录复用已有的 MathLottery 账号，不自动切换。显式切换和退出请求除了满足普通浏览器写入检查，还必须携带 `confirm_account_change: true`；界面说明操作作用于当前 MathLottery 工作区。
 
 每个 MathLottery Codex 子进程都使用独立的 `CODEX_HOME`，固定为 `<workspace>/.mathlottery/codex-home`，并显式覆盖 `cli_auth_credentials_store="file"`。账号 RPC、原生研究、旧版结构化调用、会话元数据读取与后台进程使用同一工作区身份。此目录由 Git 忽略，在 POSIX 系统上以仅当前用户可访问的权限创建。不修改父进程环境，不复制个人 Codex 凭据、配置和会话，也不回退到个人目录。平时使用的 Codex CLI / IDE 与 ChatGPT 网页保留各自的登录状态。依据见官方[环境变量](https://learn.chatgpt.com/docs/config-file/environment-variables)、[认证说明](https://learn.chatgpt.com/docs/auth)与 [app-server 文档](https://learn.chatgpt.com/docs/app-server)。
 
@@ -98,9 +106,21 @@ flowchart TD
 
 `WebService` 用 Pydantic 校验输入，通过 `Orchestrator.create` 保存配置快照，在导入候选进行独立审查前调用 `CandidateStore.check`。`web.worker` 进程执行 `drive` 或 `resume`，不引入第二套研究循环。SQLite 仍为权威状态，CLI 任务也会显示在同一界面中。
 
-`review_evidence.py` 在持有空闲源任务所有权锁时，捕获明确选定的形式证明源码。浏览器请求绑定页面显示的候选 ID 和 SHA256。新审查的检查点保存有大小限制的源码内容、来源及哈希，与不可变候选分开存储；页面轮询只返回清单。原生 Codex 通过目录描述符投影文件，拒绝跟随软链接，续接时恢复检查点中的字节内容。原生 Chat 在更小的大小限制下直接收到提示内的源码文本。两种附件方式都不包含求解历史和旧审查结论。仅附加文件不会执行代码或提高证明等级；审查者可以请求下文介绍的独立形式检查。
+`review_evidence.py` 在持有空闲源任务所有权锁时，捕获明确选定的证明附件，包括 Lean 源码及允许的小型证明文本、证书和脚本。浏览器请求绑定页面显示的候选 ID 和 SHA256。新审查的检查点保存有大小限制的源码内容、来源及哈希，与不可变候选分开存储；页面轮询只返回清单。原生 Codex 通过目录描述符投影文件，拒绝跟随软链接，续接时恢复检查点中的字节内容。原生 Chat 在更小的大小限制下直接收到提示内的源码文本。两种附件方式都不包含求解历史和旧审查结论。仅附加文件不会执行代码或提高证明等级；详见[附件范围与独立 Lean 检查](evidence.cn.md#独立-lean-执行记录)。
+
+浏览器按题目归组 Solve/Verify/Organize 尝试，Find 单独保留候选列表。历史支持搜索与任务状态筛选，较早尝试按需展开。进程运行完成与证明成立分别显示，结果单列证明检查、原题覆盖和新颖性。数据轮询保留已展开区域和当前表单选择。
 
 后台进程继承覆盖启动和执行阶段的操作系统锁，界面服务重启后仍能识别正在运行的任务，防止浏览器重复续接，同时遵守 CLI 使用的核心运行锁。启动和续接过程中会传递停止标记，避免排队中的续接丢弃浏览器停止请求。进程状态与日志位于被忽略的任务目录。关闭界面后后台继续运行；显式停止仍走原有检查点恢复路径。退出的进程不会自动重新启动。
+
+## 提供方与模型选择
+
+提供方配置与研究功能、调用协议分开。内置 `codex` 配置使用官方 Codex 会话，`chat` 使用现有 Responses 配置。可选的 `model_providers` 配置使用 Responses 协议，显式指定接口地址、API Key 环境变量名、工具，以及可选的模型能力声明。`backend.provider` 记录所选 ID，Find、Solve、Verify 和 Organize 共用这套选择机制。
+
+`GET /api/models?provider=<id>` 返回公开目录投影：提供方名称和调用协议、模型 ID、描述及声明的思考选项。`refresh=1` 跳过短期缓存。Codex 目录通过工作区独立 app-server 调用官方 `model/list`；Responses 目录请求所选接口的 `/models`。两者都不创建研究线程或发起推理请求。自定义提供方已配置模型条目时直接使用该目录，不进行远端目录获取；未知模型 ID 仍可使用。缺失的能力元数据保持未知，不会被转换成不支持。目录也不代表账户权限、余额或工具兼容性检查。
+
+网页只提交所选配置 ID 和任务覆盖参数。服务端解析提供方、检查已声明的能力，并在调用现有后台进程前将有效设置保存到新任务。接口地址及密钥变量配置留在服务端，API Key 值只从环境变量读取，不保存进任务配置。网页续接保留原任务设置，因此后来编辑配置不会静默将已有远端会话转向其他接口。选择不会修改全局配置或任何 Codex 登录。
+
+模型目录适配器负责能力信息；研究调用适配器负责请求、工具、会话续接、取消及恢复。兼容现有 Responses 合约的提供方只需添加配置；其他协议需要显式增加调用适配器和目录适配器。普通 `/chat/completions` 接口不等于当前 Responses 生命周期，尚未实现 Anthropic/Gemini 原生协议。提供方错误不会触发模型、思考强度、工具、认证或计费方式的自动切换。
 
 ## Agent 调用后端
 
@@ -108,7 +128,7 @@ Codex 使用 codex exec 启动，通过 codex exec resume 在 MathLottery 独立
 
 Chat 使用配置的模型与托管工具创建 Responses API 后台请求。默认工具为 web_search 和 Code Interpreter；普通 Markdown 回答末尾可附一条机器可读的阶段成果记录。请求使用 previous_response_id 保留研究上下文，审查回答形成独立的上下文链，不涉及浏览器、提取 Cookie 或人工复制。
 
-Chat API 凭据从环境变量读取，绝不读取 Codex 登录存储或请求文件中的凭据。API 错误不会触发后端或计费方式切换。Chat 模型必须通过配置、命令行参数或 OPENAI_MODEL 明确指定。API 原生工具在服务端运行，尚未实现需要客户端执行的自定义函数工具。
+Chat API 凭据从环境变量读取，绝不读取 Codex 登录存储或请求文件中的凭据。API 错误不会触发后端或计费方式切换。模型通过配置或命令行参数指定；只有内置 `chat` 配置还可以读取 `OPENAI_MODEL`，自定义提供方必须另行选择模型。API 原生工具在服务端运行，尚未实现需要客户端执行的自定义函数工具。
 
 Python 框架在本地保存回答与响应元数据。托管容器和远端响应历史受服务商保留期限限制，本地检查点不能重建过期的远端上下文。Codex 的精确续接同样需要原始会话存储。保存在个人 Codex 目录中的旧原生会话不会迁移；已有 MathLottery 检查点与结果仍可读取，但缺少原始会话时可能需要新建任务。
 
@@ -129,6 +149,16 @@ Python 框架在本地保存回答与响应元数据。托管容器和远端响�
 导入候选进行新审查时保留 claim、assumptions 和 references。历史校验和仍覆盖命题与证明；完整性检查还会将假设、引用、身份等全部不可变字段与权威检查点逐项比较。审查提示和 `candidate.json` 都排除既有结论与验证等级。审查结果单独保存，原候选文件保持不变。模型认可和有限实验不会转化为 FORMALLY_VERIFIED 或 EXPERT_REVIEWED。
 
 候选范围与剩余证明义务同样不可变。`auditor.py` 要求肯定审查有明确检查项，原题覆盖与正确性、新颖性分别记录；两种运行器都依据经过规则处理的结论决定是否返回求解。`native_formal.py` 对明确附加的冻结源码进行 bubblewrap 隔离编译、提交模块的内核重放及可信定理/公理检查，限制时间和资源，不执行提交的 Lake 配置，也不接受自称编译成功。回执将源码绑定到候选与原题，但不认证命题等价性。旧记录缺失的新增字段默认为未评估，不追溯改写结论。
+
+## 专家报告整理
+
+Organize 是独立的 native 工作流，使用新会话和 `organization-workspace/`；Codex 整理会话禁用记忆。它接受任何已有审查结论，包括尚无定论或发现问题的记录，并保留原题、候选版本、审查与验证等级。选择来源只准备表单；明确创建任务才调用模型，使用该任务自己的配置快照与预算。
+
+`organization.py` 持有来源任务所有权锁，在来源空闲时记录版本与哈希，冻结精确的问题/候选/审查资料，以及允许的可见回答、笔记、证明源码和文献回执。只有审查来源或附件来源记录明确指向、且候选匹配时，才收集较早 Solve 的材料；不会根据标题猜测历史记录。完整 Find 工作区、二进制依赖和缓存不会复制；清单保留限制与遗漏文件。
+
+快照最多 150 个文件，普通文件最多 1,000,000 字节，总计最多 16,000,000 字节；必需的精确资料包可达 4,000,000 字节。Chat 的完整内联快照限 512,000 字节；必要证明超限时拒绝提交，不静默截断。恢复来源副本时检查文件哈希。整理者根据可见证据写说明，不暴露隐藏思维过程，也不改写来源任务。
+
+框架在生成的说明前附加已记录的审查结论、覆盖范围与新颖性判断。输出为 `organized/report.md`、成功时的 `organized/report.pdf`、`organized/manifest.json` 和 `organized/materials/`。浏览器可将这些文件一起下载为保留相对链接的 ZIP。SQLite 保留报告文本及其哈希。PDF 是本地投影，使用内置数学排版资源，不加载远程资源；依赖缺失或导出失败时保留 Markdown，并记录失败。`export --format pdf` 与页面重试根据已保存报告重新导出，不再调用模型。排版、流畅的说明和 PDF 生成成功均不证明数学正确性、形式命题等价性或新颖性。
 
 ## 持久化与恢复
 

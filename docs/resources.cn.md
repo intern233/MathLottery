@@ -6,7 +6,7 @@
 
 MathLottery 调用远程模型，当前后端不需要在本地下载模型权重，也不要求 GPU 或 CUDA。但浏览器工作台、agent 客户端、文件和本地启动的工具仍消耗本机资源。其中，Lean/mathlib 检查和符号、数值实验可能占用最多的内存与磁盘。Chat 的托管 Code Interpreter 使用独立的远程环境，在本地安装 Lean 不会把它安装到远程容器中。
 
-当前实现请使用 Linux 或 WSL 2。环境文件安装 Python 3.12 及项目依赖，软件包要求 Python 3.11 或更新版本。Codex 后端需要官方 CLI；Lean 是需要另外安装的可选工具。前端不需要单独进行 Node.js 构建。
+当前实现请使用 Linux 或 WSL 2。环境文件安装 Python 3.12 及项目依赖，软件包要求 Python 3.11 或更新版本。Codex 后端需要官方 CLI；Lean 和 [PDF 报告渲染器](#reports)均为需要另外安装的可选工具。前端不需要单独进行 Node.js 构建。
 
 认证、模型调用与研究搜索需要出站网络连接。首次配置 Python/Lean/mathlib 时，还需要访问软件包、代码仓库和缓存服务；下载量可能较大，解压后的磁盘占用也会高于传输大小。准备完成、依赖齐全的本地 Lean 检查可以离线运行，模型驱动的研究仍需要后端连接与账号额度。
 
@@ -38,6 +38,25 @@ CPU 核心多不代表构建一定跑得动。多个编译进程、编辑器的 
 | mathlib 工作副本、依赖及已有构建/缓存文件 | 约 7.2 GiB |
 
 这里的内存只统计**一个模块的编译进程**，不包括界面、agent、IDE 和其他任务，不代表整个样本、从零构建 mathlib 或 WSL 的峰值。磁盘数字对应一个已安装版本及当时的缓存状态，不是压缩包下载大小，也不是固定需求。其他实验中，大型多项式归一化曾触发 Lean 的 `-M 2048` 上限；这说明触及了内部限制，不能据此声称实测常驻内存恰好为 2 GiB。配置上限和实际用量需要分别记录。
+
+<a id="reports"></a>
+
+## 可选：配置专家报告 PDF 导出
+
+Organize 使用配置的远程模型撰写专家报告。保存 Markdown 不需要 PDF 渲染器；导出 PDF 会在本地运行 Chromium。激活 MathLottery 环境，在项目目录执行：
+
+```bash
+python -m pip install -e '.[reports]'
+python -m playwright install chromium
+```
+
+Linux 提示缺少浏览器动态库时，可运行 `python -m playwright install-deps chromium`，可能需要管理员权限。中文报告还需要系统 CJK 字体；Debian/Ubuntu/WSL Ubuntu 可使用 `sudo apt-get install fonts-noto-cjk` 安装。浏览器依赖和字体属于本机环境配置，不调用模型。
+
+Chromium 的下载与缓存因平台而异，通常占用数百 MB，需要在基础 Python 环境之外预留磁盘。每次导出都会启动本地浏览器进程组；先一次导出一份，长报告应实测 RAM，没有适用于所有报告的实测最低内存或整个进程组的内存上限。Organize 的模型任务沿用普通研究预算；PDF 导出和本地重试只使用 CPU、内存与磁盘，不再次调用模型，也不编译 Lean。
+
+渲染支持标题、表格、代码、页码，以及 `$…$`、`$$…$$`、`\(…\)`、`\[…\]` 内的常用 TeX 数学公式。数学排版资源随项目提供，不从 CDN 获取脚本或字体。不支持的 TeX 会保留原文并提示警告。图片替换为描述文字，需要另行查看已捕获的原始材料；不执行原始 HTML，也不读取嵌入的远程或本地资源。
+
+缺少依赖、Chromium 或渲染失败时，已保存的 Markdown 仍可用。修复环境后点击**重新导出 PDF**，或运行 `mathlottery export <organize-run-id> --format pdf`。分享前请查看导出警告并检查第一份 PDF，特别是数学符号、长公式和中文字体。PDF 生成成功仅表示排版完成，不代表证明通过验证。[整理操作与保存路径](usage.cn.md#organize)
 
 ## 准备 Lean，避免不必要的完整重建
 
@@ -72,6 +91,7 @@ env LEAN_NUM_THREADS=1 lake env lean -j 1 -M 2048 Proof.lean
 | `tools.memory_mb: 512` | 旧版 structured Python 工作进程的地址空间限制。**不限制**原生 Codex 命令、Lean/Lake、Web 服务或 WSL；旧版 Lean 检查器也没有使用此内存设置。 |
 | `tools.timeout_seconds: 15` | 旧版本地工具的超时，包括旧版 Lean 检查器；不会给原生 shell 命令统一加上 15 秒上限。 |
 | `verification.formal_memory_mb: 2048` | 独立附件检查器的 Lean `-M` 阈值；另有 `formal_address_space_mb: 8192` 限制每进程虚拟地址空间（`RLIMIT_AS`，包括预留栈和映射库，不是实测 RAM）。一个 Lean 工作线程、64 MiB 线程栈，总检查默认限时 120 秒；不是整个进程树或 WSL 的 RSS 限制。 |
+| `verification.formal_max_object_mb: 16` / `formal_max_total_object_mb: 960` | 独立检查器生成对象的单文件大小限制与监测总量，单位 MiB。证明对象可能远大于源码；检查后删除临时编译对象，回执保留限额、大小与哈希。不限制原生研究产物或整个磁盘。 |
 | `verification.max_sources`、`source_timeout_seconds` | 独立引用抓取：每次阶段成果默认最多 12 个网址、60 秒收集预算；正在等待的请求使用 `tools.web_timeout_seconds`。PDF 解析沙箱限额 512 MB，详见[证据配置](evidence.cn.md)。 |
 | `budget.max_wall_time_minutes` / `backend.native_turn_timeout_seconds` | 研究的活跃时间 / 单次原生调用时长，不是内存、CPU 线程数或磁盘上限。 |
 | `budget.max_iterations` | 研究交接次数，不是一轮内的工具调用数或子进程数量。 |
@@ -80,7 +100,7 @@ env LEAN_NUM_THREADS=1 lake env lean -j 1 -M 2048 Proof.lean
 
 MathLottery 会阻止两个工作进程同时执行**同一条 run**，但目前没有跨不同任务的全局资源调度器，也没有按可用内存排队的机制。在测得足够余量前，一次只运行一个本地计算较重的任务。关闭浏览器或 Web 服务不会停止后台研究，需要使用「停止任务」或 `mathlottery stop <run-id>`。
 
-如果需要对整组进程施加硬上限，应使用覆盖其子进程的操作系统或容器资源限制。MathLottery 不会自动配置这些限制，Codex 的工作区沙箱也不是内存配额。同样，时间/token 预算不等于预留了服务商额度；凭据、订阅/API 额度、网络与本机硬件是不同的运行条件，见[配置与用量](usage.cn.md#配置与用量)。
+如果需要对整组进程施加硬上限，应使用覆盖其子进程的操作系统或容器资源限制。MathLottery 不会自动配置这些限制，Codex 的工作区沙箱也不是内存配额。同样，时间/token 预算不等于预留了服务商额度；凭据、订阅/API 额度、网络与本机硬件是不同的运行条件，见[接入配置与预算](configuration.cn.md)。
 
 ## WSL 2 的内存与 swap
 

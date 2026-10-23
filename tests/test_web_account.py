@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -13,7 +14,7 @@ from test_web import serving
 from mathlottery.config import Config
 from mathlottery.models import Workflow
 from mathlottery.orchestrator import Orchestrator
-from mathlottery.web.account import AccountRPC, CodexAccount
+from mathlottery.web.account import AccountRPC, AccountTimeoutError, CodexAccount
 from mathlottery.web.service import WebService
 
 SCRIPT = r'''
@@ -27,6 +28,7 @@ with open(os.environ['ACCOUNT_TEST_LOG'] + '.process', 'w') as saved:
         key: os.environ.get(key) for key in (
             'CODEX_HOME', 'CODEX_SQLITE_HOME', 'OPENAI_API_KEY', 'CODEX_API_KEY',
             'CODEX_AUTH_TOKEN', 'OPENAI_BASE_URL',
+            'HTTPS_PROXY', 'https_proxy', 'NO_PROXY',
         )}}, saved)
 if os.path.exists(state_path):
     with open(state_path) as saved:
@@ -198,8 +200,40 @@ def test_http_account_routes_require_local_origin_and_csrf(tmp_path, account):
 
 def test_missing_cli_returns_safe_status(tmp_path):
     account = CodexAccount(lambda: "not-a-codex-executable", root=tmp_path)
-    assert not account.status()["available"]
+    status = account.status()
+    assert not status["available"]
+    assert status["error_code"] == "CLI_NOT_FOUND"
+    assert "device-code" not in status["error"]
     account.close()
+
+
+@pytest.mark.parametrize("platform_missing", [False, True])
+def test_broken_cli_diagnostic_is_safe_and_preserves_credentials(tmp_path, platform_missing):
+    executable = tmp_path / "broken-codex"
+    message = "private-machine-path private-token-value"
+    if platform_missing:
+        message += " Missing optional dependency @openai/codex-linux-x64"
+    executable.write_text(f"#!{sys.executable}\nimport sys\n"
+                          f"sys.stderr.write({message!r})\nsys.exit(1)\n")
+    executable.chmod(0o755)
+    home = tmp_path / ".mathlottery" / "codex-home"
+    home.mkdir(parents=True)
+    auth = home / "auth.json"
+    auth.write_text('{"fixture":"preserve-existing-login"}')
+    before = auth.read_bytes()
+    account = CodexAccount(lambda: str(executable), root=tmp_path)
+    try:
+        status = account.status()
+        assert not status["available"] and status["login"] is None
+        assert status["error_code"] == (
+            "CLI_PLATFORM_DEPENDENCY_MISSING" if platform_missing else "CLI_UNAVAILABLE"
+        )
+        assert "private-" not in json.dumps(status)
+        assert str(tmp_path) not in json.dumps(status)
+        assert "device-code" not in status["error"]
+        assert auth.read_bytes() == before
+    finally:
+        account.close()
 
 
 def test_rpc_handles_dead_process_and_strips_api_environment(tmp_path, account, monkeypatch):
@@ -225,6 +259,53 @@ def test_rpc_timeout_is_bounded(tmp_path, monkeypatch):
             rpc.call("never", timeout=0.05)
     finally:
         rpc.close()
+
+
+@pytest.mark.parametrize("timeout", [
+    AccountTimeoutError(), subprocess.TimeoutExpired("private-program", 1, output="private-token"),
+])
+def test_account_timeout_explains_service_environment_without_leaking_details(account, monkeypatch, timeout):
+    account.status()
+
+    def timed_out(*args, **kwargs):
+        raise timeout
+
+    monkeypatch.setattr(account.rpc, "call", timed_out)
+    status = account.status()
+    assert not status["available"]
+    assert status["error_code"] == "ACCOUNT_TIMEOUT"
+    assert "network/proxy" in status["error"]
+    assert "private-" not in json.dumps(status)
+    assert account.rpc is None
+
+
+def test_saved_proxy_reaches_account_service_without_replacing_login(account, tmp_path, monkeypatch):
+    monkeypatch.setenv("ACCOUNT_TEST_SIGNED_IN", "1")
+    monkeypatch.delenv("HTTPS_PROXY", raising=False)
+    monkeypatch.delenv("https_proxy", raising=False)
+    folder = tmp_path / ".mathlottery"
+    folder.mkdir()
+    proxy = "http://proxy.example.invalid:8080"
+    (folder / "network.json").write_text(json.dumps({"HTTPS_PROXY": proxy}))
+    status = account.status()
+    assert status["available"] and status["authenticated"]
+    recorded = json.loads((tmp_path / "methods.log.process").read_text())
+    assert recorded["environment"]["HTTPS_PROXY"] == proxy
+    assert recorded["environment"]["https_proxy"] == proxy
+    assert "HTTPS_PROXY" not in os.environ and "https_proxy" not in os.environ
+    assert not {"account/logout", "account/login/start"}.intersection(calls(tmp_path))
+    assert proxy not in json.dumps(status)
+
+
+def test_invalid_network_file_has_distinct_safe_account_error(account, tmp_path):
+    folder = tmp_path / ".mathlottery"
+    folder.mkdir()
+    (folder / "network.json").write_text('{"OPENAI_API_KEY":"private-secret"}')
+    status = account.status()
+    assert status["error_code"] == "NETWORK_CONFIG_INVALID"
+    assert not status["available"] and account.rpc is None
+    assert "private-secret" not in json.dumps(status)
+    assert not (tmp_path / "methods.log").exists()
 
 
 def test_external_cli_sign_in_cancels_our_pending_code(account, tmp_path, monkeypatch):

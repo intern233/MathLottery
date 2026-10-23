@@ -23,15 +23,19 @@ class ChatBackend:
         return {
             "automatic": True,
             "persistent_sessions": True,
-            "billing": "OpenAI API",
+            "billing": "Provider API" if self.config.provider not in {None, "chat"} else "OpenAI API",
             "tools": self.config.chat.tools,
         }
 
     def check(self):
-        model = self.config.model or os.environ.get("OPENAI_MODEL")
+        model = self.config.model
+        if not model and self.config.provider in {None, "chat"}:
+            model = os.environ.get("OPENAI_MODEL")
         if not os.environ.get(self.config.chat.api_key_env):
             raise ValueError(f"Chat API requires {self.config.chat.api_key_env} in the environment")
         if not model:
+            if self.config.provider not in {None, "chat"}:
+                raise ValueError("The selected API provider requires a model ID in backend.model or --model")
             raise ValueError("Chat API requires --model, backend.model or OPENAI_MODEL")
         return {
             "configured": True,

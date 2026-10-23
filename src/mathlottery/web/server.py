@@ -13,10 +13,12 @@ from urllib.parse import parse_qs, quote, urlsplit
 
 from pydantic import ValidationError
 
+from mathlottery.model_catalog import ModelCatalog
 from mathlottery.models import Model
 from mathlottery.web.account import AccountChangeRequest, CodexAccount
 from mathlottery.web.artifacts import read_formal_artifact
 from mathlottery.web.jobs import BusyError
+from mathlottery.web.model_directory import codex_models
 from mathlottery.web.network import LocalAccess
 from mathlottery.web.service import ResumeRequest, StartRequest, workspace_key
 
@@ -26,7 +28,7 @@ ASSETS = {
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/mark.svg": ("mark.svg", "image/svg+xml"),
 }
-RUN_ROUTE = re.compile(r"/api/runs/(run-[a-f0-9]{12})(?:/(resume|stop|report|artifact))?")
+RUN_ROUTE = re.compile(r"/api/runs/(run-[a-f0-9]{12})(?:/(resume|stop|report|artifact|organized))?")
 
 
 class LocalServer(ThreadingHTTPServer):
@@ -40,6 +42,10 @@ class LocalServer(ThreadingHTTPServer):
         self.account = CodexAccount(
             lambda: self.service.config().backend.codex_command,
             root=lambda: self.service.store.root,
+        )
+        self.catalog = ModelCatalog(
+            lambda: self.service.config(),
+            lambda: codex_models(self.service.config().backend.codex_command, self.service.store.root),
         )
         self.mutation_lock = threading.RLock()
         super().__init__((self.access.bind, port), Handler)
@@ -165,6 +171,17 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(200, {**self.server.service.bootstrap(), "csrf_token": self.server.csrf_token})
         elif path == "/api/account":
             self.respond(200, self.server.account.status())
+        elif path == "/api/models":
+            query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+            if set(query) - {"provider", "refresh"} or any(len(v) != 1 for v in query.values()):
+                raise ValueError("Supply one provider and optional refresh=1")
+            provider = query.get("provider", [None])[0]
+            if provider is not None and (not provider or len(provider) > 100):
+                raise ValueError("Invalid model provider ID")
+            refresh = query.get("refresh", ["0"])[0]
+            if refresh not in {"0", "1"}:
+                raise ValueError("Use refresh=0 or refresh=1")
+            self.respond(200, self.server.catalog.get(provider, refresh=refresh == "1"))
         elif match := RUN_ROUTE.fullmatch(path):
             run_id, action = match.groups()
             if action is None:
@@ -178,6 +195,21 @@ class Handler(BaseHTTPRequestHandler):
                     200, report["text"].encode(), "text/markdown; charset=utf-8",
                     Content_Disposition=f'attachment; filename="{run_id}.md"',
                 )
+            elif action == "organized":
+                from mathlottery.organized_reports import read_report
+
+                query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+                if set(query) != {"format"} or len(query["format"]) != 1:
+                    raise ValueError("Supply exactly one report format: markdown, pdf or bundle")
+                format = query["format"][0]
+                data = read_report(self.server.service.store, run_id, format)
+                extension, content_type = {
+                    "pdf": ("pdf", "application/pdf"),
+                    "markdown": ("md", "text/markdown; charset=utf-8"),
+                    "bundle": ("zip", "application/zip"),
+                }[format]
+                self.respond(200, data, content_type,
+                             Content_Disposition=f'attachment; filename="{run_id}-expert-report.{extension}"')
             elif action == "artifact":
                 service = self.server.service
                 service.store.load(run_id)
@@ -217,17 +249,22 @@ class Handler(BaseHTTPRequestHandler):
             with self.server.mutation_lock:
                 self.respond(202, self.server.service.start(
                     StartRequest.model_validate(data), ensure_backend=self.ensure_backend_ready,
+                    validate_model=self.server.catalog.validate_selection,
                 ))
         elif path in {"/api/account/login", "/api/account/cancel"}:
             Model.model_validate(data)
             operation = self.server.account.start if path.endswith("/login") else self.server.account.cancel
-            self.respond(200, operation())
+            result = operation()
+            self.server.catalog.clear()
+            self.respond(200, result)
         elif path in {"/api/account/switch", "/api/account/logout"}:
             AccountChangeRequest.model_validate(data)
             with self.server.mutation_lock:
                 self.server.service.ensure_account_change_allowed()
                 operation = self.server.account.switch if path.endswith("/switch") else self.server.account.logout
-                self.respond(200, operation())
+                result = operation()
+                self.server.catalog.clear()
+                self.respond(200, result)
         elif match := RUN_ROUTE.fullmatch(path):
             run_id, action = match.groups()
             if action == "resume":
@@ -239,6 +276,10 @@ class Handler(BaseHTTPRequestHandler):
             elif action == "stop":
                 Model.model_validate(data)
                 self.respond(202, self.server.service.stop(run_id))
+            elif action == "organized":
+                Model.model_validate(data)
+                with self.server.mutation_lock:
+                    self.respond(200, self.server.service.export_organized(run_id))
             else:
                 self.respond(405, {"error": "Unsupported task action"})
         else:

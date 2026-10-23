@@ -31,12 +31,24 @@ Tests cover both native and structured execution, including:
 - Offline mathematical experiments, literature source adapters, and missing optional formal verification tools.
 - Local browser HTTP boundaries, background find/solve/verify, candidate integrity, temporary model overrides, worker recovery across server restarts, and stop/resume.
 - Loopback startup, Windows-reserved ports, explicit WSL direct access, and Codex account status, device-code login and explicit account-change boundaries.
+- Provider profiles and model directories, supported reasoning options, manual model IDs, configuration snapshots and bounded concurrent catalog requests.
 
 Automated backend tests use explicitly identified fake CLIs and `httpx.MockTransport`; they do not consume real model usage. Isolation tests do run real subprocesses. Manual handoff tests cover only the `manual` compatibility backend and do not describe how `chat` works. Use the current command output for test counts and timings. Save any raw test output in ignored directories such as `.mathlottery/`.
 
 ## Browser checks
 
-Run `pytest -q tests/test_web.py tests/test_web_startup.py tests/test_web_account.py tests/test_web_artifacts.py tests/test_review_evidence.py` for local HTTP, startup, account, proof-source downloads and background-worker integration checks. They use fake account RPC responses, a scripted Codex executable and real subprocesses, without model calls. Startup checks cover instance reuse, conflicting ports/workspaces, Windows-reserved TCP ranges, runtime project discovery, default loopback access and the explicit WSL direct-access policy.
+Run the focused suites for HTTP, accounts, model selection, proof attachments and worker integration:
+
+```bash
+pytest -q tests/test_web*.py tests/test_review_evidence.py
+pytest -q tests/test_model_catalog*.py
+```
+
+They use fake account/catalog responses, a scripted Codex executable and real subprocesses, without model calls. Startup checks cover instance reuse, conflicting ports/workspaces, Windows-reserved TCP ranges, runtime project discovery, default loopback access and the explicit WSL direct-access policy.
+
+In both languages, exercise **Provider → Model → Reasoning effort**, manual entry and a failed directory load. Switching provider/model must clear incompatible settings; late responses from the previous provider must not replace the current list. Check that new tasks retain their selected settings while configuration files, saved tasks and login state remain unchanged. The directory must expose no endpoint credentials or account details, and a listing must not be presented as guaranteed model access.
+
+Check Find's shortlist and explicit problem selection, a direct Solve without Find, and Verify of a saved candidate. Search/filter history and expand older attempts; polling must preserve these choices and the current form. Finished task status, proof assessment, original-problem coverage and novelty must remain separate in both languages. Repeat at a narrow viewport.
 
 When using WSL, request the printed Windows `localhost` address from an actual Windows process, such as Windows PowerShell or `curl.exe`. Check the page and an API response using the actual selected port. A Linux-local HTTP success alone does not establish Windows browser reachability. Check `--wsl-direct` separately if using it; it must not be enabled implicitly or alter system networking settings.
 
@@ -44,7 +56,7 @@ For the **MathLottery account** panel, check signed-out, pending, authenticated,
 
 Check that Codex submission and continuation require an available ChatGPT login, including after a status refresh fails. The HTTP preflight must reject unsigned, pending, unavailable, API-key-only and unsupported accounts before saving a problem, creating a run or launching a worker. Exercise per-task backend overrides, continuation with a saved backend that differs from current defaults, and a login that disappears between rendering and submission. Chat API tasks must not query Codex authentication. A rejected submission should retain its error, refresh account status and never automatically repeat the request. Existing task records and personal Codex credentials must remain unchanged.
 
-Create synthetic `.lean`, `lean-toolchain` and `lakefile.toml` files under a research or review workspace and verify they appear in **Results** and download as plain text. Check the 1 MB read limit, bounded listing, UTF-8 validation, and rejection of hidden/cache/build paths, traversal, symbolic links and hard links. Swap a parent directory for a symlink between validation and opening to verify that the reader still refuses access. The endpoint must not expose arbitrary run files or change proof levels. Source presence alone is not a Lean result or a certificate of statement equivalence or novelty; a real mathematical audit must separately record the exact formal statement, compiler outcome and trust assumptions.
+Create synthetic `.lean`, `lean-toolchain` and `lakefile.toml` files under a research or review workspace and verify they appear in **Results** and download as plain text. Include `.md`, `.txt`, `.json`, `.csv` and `.py` files inside that workspace's `proof/` or `formal/` directory; the same extensions elsewhere must not be downloadable. Check the 1 MB read limit, bounded listing, UTF-8 validation, and rejection of hidden/cache/build paths, traversal, symbolic links and hard links. Swap a parent directory for a symlink between validation and opening to verify that the reader still refuses access. Downloads must not execute scripts, expose arbitrary run files or change proof levels. Source presence alone is not a Lean result or a certificate of statement equivalence or novelty; a real mathematical audit must separately record the exact formal statement, compiler outcome and trust assumptions.
 
 For review-source handoff, verify that the form selects no files by default and keeps its candidate ID/checksum stable during polling. Submissions must reject a changed candidate, busy source, disallowed path, duplicated selection or oversized bundle before creating a review. After capture, edit or delete the original files and resume the review: its checkpointed contents and hashes must remain unchanged. Test symbolic-link parents during projection, metadata-only HTTP responses, Codex file delivery and actual Chat inline content with its 128 KB limit. A manifest or favorable agent review must not imply complete formal verification or current open status in either language.
 
@@ -69,7 +81,7 @@ These cases cover a correct proof, division by zero, missing assumptions, and re
 
 ## Real Codex integration checks
 
-Start with `mathlottery doctor` to check the executable, ChatGPT login, and local tools. Diagnostic output is for local troubleshooting and should not be copied into public documentation.
+Complete the [Codex configuration and workspace login](configuration.md), then run `mathlottery doctor` to check the executable, ChatGPT login, and local tools. Diagnostic output is for local troubleshooting and should not be copied into public documentation.
 
 Import the educational example and run it with an explicit budget:
 
@@ -105,7 +117,7 @@ Reports and raw events are in `runs/<run-id>/`; the database is in `.mathlottery
 
 ## Validation limits
 
-Real Chat API checks require an API key and model configuration; see [installation and usage](usage.md). Change the backend in the commands above to `chat`, then use `find` to inspect selection results and status evidence. Automated HTTP contract tests do not establish that a real account has access to a model, search, or code execution.
+Real Chat API checks require an API key and model configuration; see [backend configuration](configuration.md). Select `chat` and an API model before running the examples above, then use `find` to inspect selection results and status evidence. A Codex model ID or reasoning option may not be valid for the API. Automated HTTP contract tests do not establish that a real account has access to a model, search, or code execution.
 
 Historical integration checks covered native shell, file persistence, exact session continuation, web search, candidate submission, and separate review. They establish that the execution path works. They are not comparative evaluations of mathematical ability against ChatGPT Pro or native Codex, and do not establish that an open conjecture was solved.
 

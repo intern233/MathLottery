@@ -18,7 +18,7 @@ from mathlottery.models import (
     digest,
     now,
 )
-from mathlottery.native_formal import _run, check_snapshot
+from mathlottery.native_formal import _output_budget_error, _run, check_snapshot
 from mathlottery.orchestrator import Orchestrator
 
 
@@ -80,6 +80,40 @@ def test_request_cannot_select_unattached_paths_or_inject_commands(store, formal
     assert result["status"] == "UNAVAILABLE"
 
 
+@pytest.mark.parametrize("root", ["/proof", "../proof", "proof/..", "proof//src", "proof\\src", "."])
+def test_module_root_cannot_escape_or_change_path_interpretation(store, formal_run, root, monkeypatch):
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: pytest.fail("Must not execute"))
+    result = check_snapshot(store, formal_run, request(module_root=root))
+    assert result["status"] == "UNAVAILABLE"
+    assert "Module root" in result["reason"]
+
+
+def test_module_root_requires_every_requested_file_inside_it(store, formal_run):
+    result = check_snapshot(store, formal_run, request(module_root="proof"))
+    assert result["status"] == "UNAVAILABLE"
+    assert "inside the selected module root" in result["reason"]
+
+
+def test_module_root_does_not_grant_access_to_unattached_sources(store, formal_run):
+    formal_run.review_evidence.files[0].path = "workspace/proof/Example.lean"
+    result = check_snapshot(store, formal_run, FormalCheckRequest(
+        files=["workspace/proof/Missing.lean"], declarations=["target"], module_root="proof",
+    ))
+    assert result["status"] == "UNAVAILABLE"
+    assert "attached Lean files" in result["reason"]
+
+
+@pytest.mark.parametrize("module", ["Init", "Lean", "Std", "Mathlib", "Mathlib/Injected", "MathLotteryInspector"])
+def test_module_root_cannot_hide_trusted_module_shadowing(store, formal_run, module):
+    path = f"workspace/proof/{module}.lean"
+    formal_run.review_evidence.files[0].path = path
+    result = check_snapshot(store, formal_run, FormalCheckRequest(
+        files=[path], declarations=["target"], module_root="proof",
+    ))
+    assert result["status"] == "UNAVAILABLE"
+    assert "shadow a trusted library or inspector" in result["reason"]
+
+
 @pytest.fixture
 def scripted_tools(tmp_path, monkeypatch):
     toolchain = tmp_path / "trusted"
@@ -90,6 +124,51 @@ def scripted_tools(tmp_path, monkeypatch):
         stdout=str(toolchain) if command[-1] == "--print-prefix" else "Lean scripted fixture",
     ))
     return toolchain
+
+
+def test_explicit_module_root_preserves_bytes_and_module_dependencies(store, formal_run, scripted_tools, monkeypatch):
+    contents = {
+        "Lib/Lemmas.lean": "namespace Lemmas\ntheorem helper : True := True.intro\nend Lemmas\n",
+        "Main.lean": "import Lib.Lemmas\nnamespace Main\ntheorem target : True := Lemmas.helper\nend Main\n",
+    }
+    formal_run.review_evidence.files = [
+        ReviewSource(path="workspace/proof/" + path, size=len(text.encode()), content=text, sha256=digest(text))
+        for path, text in contents.items()
+    ]
+    calls = []
+
+    def scripted_run(command, directory, label, *args):
+        calls.append(label)
+        assert "--unshare-all" in command
+        inputs = Path(command[command.index("/src") - 1])
+        assert not (inputs / "proof").exists()
+        for path, text in contents.items():
+            assert (inputs / path).read_bytes() == text.encode()
+        if label.startswith("compile"):
+            relative = command[-1]
+            assert relative in contents
+            output = Path(command[command.index("--bind") + 1])
+            (output / relative.removesuffix(".lean")).with_suffix(".olean").write_bytes(b"fixture")
+            text = ""
+        elif label == "inspect":
+            assert "Lib.Lemmas" in command and "Main" in command
+            text = json.dumps([{"name": "Main.target", "module": "Main", "type": "True", "axioms": []}])
+        else:
+            assert command[-1] in {"Lib.Lemmas", "Main"}
+            text = ""
+        return {"status": "OK", "returncode": 0, "output": text}
+
+    monkeypatch.setattr("mathlottery.native_formal._run", scripted_run)
+    result = check_snapshot(store, formal_run, FormalCheckRequest(
+        files=[item.path for item in formal_run.review_evidence.files],
+        declarations=["Main.target"], module_root="proof",
+    ))
+    assert result["status"] == "KERNEL_REPLAYED"
+    assert calls == ["compile-0", "compile-1", "replay-0", "replay-1", "inspect"]
+    assert result["request"]["module_root"] == "proof"
+    assert [source["module"] for source in result["sources"]] == ["Lib.Lemmas", "Main"]
+    assert [source["path"] for source in result["sources"]] == [source.path for source in formal_run.review_evidence.files]
+    assert [source["sha256"] for source in result["sources"]] == [digest(text) for text in contents.values()]
 
 
 @pytest.mark.parametrize("axioms,expected", [([], "KERNEL_REPLAYED"), (["sorryAx"], "REJECTED"), (["fake"], "REJECTED")])
@@ -152,6 +231,99 @@ def test_replay_failure_cannot_be_overridden_by_compiler_success(store, formal_r
 
     monkeypatch.setattr("mathlottery.native_formal._run", failed_replay)
     assert check_snapshot(store, formal_run, request())["status"] == "ERROR"
+
+
+@pytest.mark.parametrize("kind", ["single", "total"])
+def test_oversized_objects_interrupt_compilation_before_replay(store, formal_run, scripted_tools, monkeypatch, kind):
+    limits = formal_run.config["verification"]
+    limits["formal_max_object_mb"] = 1 if kind == "single" else 2
+    limits["formal_max_total_object_mb"] = 4 if kind == "single" else 1
+    calls = []
+
+    def oversized_output(command, directory, label, deadline, interrupted):
+        calls.append(label)
+        assert label == "compile-0"
+        output = Path(command[command.index("--bind") + 1])
+        size = 1_048_577 if kind == "single" else 786_432
+        with (output / "Example.olean").open("wb") as stream:
+            stream.truncate(size)
+        if kind == "total":
+            with (output / "temporary.bin").open("wb") as stream:
+                stream.truncate(size)
+        assert interrupted(), "Output limits must be checked while the compiler is running"
+        return {"status": "CANCELLED", "returncode": -9, "output": ""}
+
+    monkeypatch.setattr("mathlottery.native_formal._run", oversized_output)
+    result = check_snapshot(store, formal_run, request())
+    assert calls == ["compile-0"]
+    assert result["status"] == "OUTPUT_LIMIT"
+    assert "total size limit" in result["reason"] if kind == "total" else "object exceeds" in result["reason"]
+    assert result["steps"][0]["status"] == "OUTPUT_LIMIT"
+
+
+def test_configured_large_objects_are_hashed_and_replayed(store, formal_run, scripted_tools, monkeypatch):
+    formal_run.config["verification"].update(formal_max_object_mb=20, formal_max_total_object_mb=20)
+    size = 17 * 1024 * 1024
+    calls = []
+
+    def large_output(command, directory, label, deadline, interrupted):
+        calls.append(label)
+        assert "--fsize=20971520" in command
+        if label.startswith("compile"):
+            output = Path(command[command.index("--bind") + 1])
+            with (output / "Example.olean").open("wb") as stream:
+                stream.truncate(size)
+            assert not interrupted()
+        text = json.dumps([{"name": "target", "module": "Example", "type": "True", "axioms": []}]) if label == "inspect" else ""
+        return {"status": "OK", "returncode": 0, "output": text}
+
+    monkeypatch.setattr("mathlottery.native_formal._run", large_output)
+    result = check_snapshot(store, formal_run, request())
+    assert result["status"] == "KERNEL_REPLAYED"
+    assert calls == ["compile-0", "replay-0", "inspect"]
+    assert result["limits"]["max_object_mb"] == 20
+    assert result["objects"][0]["size"] == size
+    assert len(result["objects"][0]["sha256"]) == 64
+
+
+def test_long_formal_timeout_still_shares_remaining_run_budget(store, formal_run, scripted_tools, monkeypatch):
+    formal_run.config["verification"]["formal_timeout_seconds"] = 1800
+    formal_run.config["budget"]["max_wall_time_minutes"] = 0.1
+    calls = []
+
+    def bounded_check(command, directory, label, deadline, interrupted):
+        calls.append(label)
+        assert 0 < deadline - time.monotonic() <= 6
+        if label.startswith("compile"):
+            output = Path(command[command.index("--bind") + 1])
+            (output / "Example.olean").write_bytes(b"fixture")
+        text = json.dumps([{"name": "target", "module": "Example", "type": "True", "axioms": []}]) if label == "inspect" else ""
+        return {"status": "OK", "returncode": 0, "output": text}
+
+    monkeypatch.setattr("mathlottery.native_formal._run", bounded_check)
+    result = check_snapshot(store, formal_run, request())
+    assert result["status"] == "KERNEL_REPLAYED"
+    assert result["limits"]["seconds"] == 1800
+    assert calls == ["compile-0", "replay-0", "inspect"]
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink", "entry_count"])
+def test_output_monitor_bounds_links_and_directory_entries(tmp_path, kind):
+    output = tmp_path / "output"
+    output.mkdir()
+    original = tmp_path / "outside"
+    original.write_bytes(b"outside")
+    if kind == "symlink":
+        (output / "object").symlink_to(original)
+    elif kind == "hardlink":
+        (output / "object").hardlink_to(original)
+    else:
+        for number in range(257):
+            (output / f"file-{number}").touch()
+    failure = _output_budget_error(output, 1024, 1024)
+    assert failure is not None
+    assert failure[0] == ("OUTPUT_LIMIT" if kind == "entry_count" else "ERROR")
+    assert original.read_bytes() == b"outside"
 
 
 @pytest.mark.parametrize("cancelled,expected", [(lambda: False, "TIMEOUT"), (lambda: True, "CANCELLED")])

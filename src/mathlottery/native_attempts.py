@@ -41,7 +41,7 @@ class NativeAttempts:
             self.workspaces.path(run),
             timeout,
             session_id=getattr(run.native, self.session_field(run)),
-            reviewer=run.phase == Phase.VERIFY,
+            reviewer=run.phase in {Phase.VERIFY, Phase.ORGANIZE},
             cancelled=lambda: self.engine._cancelled(run, config),
             on_session=lambda value: self.remember_session(run, value),
         )
@@ -80,7 +80,8 @@ class NativeAttempts:
             run,
             "native_session_started",
             backend=run.mode,
-            role="review" if run.phase == Phase.VERIFY else "research",
+            role=("organization" if run.phase == Phase.ORGANIZE
+                  else "review" if run.phase == Phase.VERIFY else "research"),
             session_id=value,
         )
 

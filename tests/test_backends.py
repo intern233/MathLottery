@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from mathlottery.backends import BackendStatus, WorkBackend
+from mathlottery.backends import BackendStatus, CodexCLIError, WorkBackend, resolve_codex
 from mathlottery.config import BackendConfig
 from mathlottery.demo import demo_problem
 from mathlottery.models import State
@@ -98,6 +98,29 @@ def test_work_missing_installation_has_clear_error(tmp_path):
     result = backend.invoke("prompt", {}, tmp_path, 2)
     assert result.status == BackendStatus.UNSUPPORTED
     assert not result.invoked
+
+
+def test_codex_lookup_uses_child_path(fake_codex, tmp_path, monkeypatch):
+    monkeypatch.setenv("PATH", str(tmp_path / "unrelated"))
+    env = {**os.environ, "PATH": str(tmp_path)}
+    assert resolve_codex("codex", env=env) == fake_codex
+
+
+def test_codex_lookup_skips_broken_platform_launcher(fake_codex, tmp_path):
+    shim_dir = tmp_path / "windows-npm"
+    shim_dir.mkdir()
+    shim = shim_dir / "codex"
+    shim.write_text(f"#!{sys.executable}\nimport sys\n"
+                    "sys.stderr.write('Missing optional dependency @openai/codex-linux-x64')\n"
+                    "sys.exit(1)\n")
+    shim.chmod(0o755)
+    env = {**os.environ, "PATH": os.pathsep.join([str(shim_dir), str(tmp_path)])}
+    assert resolve_codex("codex", env=env) == fake_codex
+    # An explicit executable remains authoritative, even when PATH has a working alternative.
+    with pytest.raises(CodexCLIError) as caught:
+        resolve_codex(str(shim), env=env)
+    assert caught.value.code == "CLI_PLATFORM_DEPENDENCY_MISSING"
+    assert str(shim) not in str(caught.value)
 
 
 def test_rate_limit_preserves_run_without_backend_switch(store, config, fake_codex, monkeypatch):

@@ -71,6 +71,59 @@ def test_one_checked_primary_source_can_support_a_limited_open_assessment():
     assert len(checked.status_evidence) == 1  # Counting domains is not the policy.
 
 
+def test_general_search_limits_remain_visible_without_claiming_exhaustiveness():
+    from mathlottery.reporting import source_assessment
+
+    p = problem()
+    p.literature_search.limitations = ["English-language indexed sources checked; unindexed work may exist."]
+    checked = assess_problem(p, records())
+    assert checked.status == "OPEN"
+    assert checked.evidence_assessment.supported
+    assert checked.evidence_assessment.limitations == p.literature_search.limitations
+    assert p.literature_search.limitations[0] in source_assessment(checked.evidence_assessment)
+
+
+@pytest.mark.parametrize("missing", ["quote", "search", "specific_gap"])
+def test_declaring_search_limits_never_overrides_missing_evidence(missing):
+    p, observed = problem(), records()
+    p.literature_search.limitations = ["Search is not exhaustive."]
+    if missing == "quote":
+        p.citations[1].excerpt = "The model's paraphrase, absent from the source"
+    elif missing == "search":
+        observed = observed[:-1]
+    else:
+        p.literature_search.unresolved = ["A possible later solution has not been read."]
+    checked = assess_problem(p, observed)
+    assert checked.status == "UNKNOWN"
+    assert checked.evidence_assessment.reasons
+    assert checked.evidence_assessment.limitations == ["Search is not exhaustive."]
+
+
+def test_uncompared_prior_result_blocks_open_even_without_a_declared_gap():
+    p = problem()
+    p.literature_search.limitations = ["Some equivalent terminology may be missing."]
+    p.citations.append(Citation(
+        url="https://example.org/related", role="PRIOR_RESULT", locator="Theorem 3",
+        excerpt="A related theorem.", explanation="Its implication for this question is unclear.",
+        relation="UNKNOWN",
+    ))
+    checked = assess_problem(p, records(p.citations))
+    assert checked.status == "UNKNOWN"
+    assert any("unresolved relationship" in reason for reason in checked.evidence_assessment.reasons)
+
+
+def test_old_unresolved_gaps_are_not_reclassified_as_general_limits():
+    p = problem()
+    p.literature_search = LiteratureSearch.model_validate({
+        "queries": p.literature_search.queries, "conclusion": "Previous limited search.",
+        "unresolved": ["Unindexed work may exist."],
+    })
+    checked = assess_problem(p, records())
+    assert checked.status == "UNKNOWN"
+    assert not checked.evidence_assessment.limitations
+    assert checked.evidence_assessment.reasons == ["Unresolved literature gap: Unindexed work may exist."]
+
+
 def test_primary_source_redirect_and_fragment_do_not_erase_verified_evidence():
     p = problem()
     p.source_url = "https://example.org/current#question-1"
@@ -214,6 +267,21 @@ def test_checked_equivalent_prior_result_overrides_claimed_novelty():
     proposed = review(novelty="POTENTIALLY_NEW", citations=[prior])
     result = audit(candidate(), proposed, [{"phase": "VERIFY", "result": r} for r in records([prior])])
     assert result.reviews[-1].novelty == "KNOWN"
+
+
+def test_matching_published_conjectures_are_not_classified_as_existing_proofs():
+    original = [c.model_copy(update={"relation": "EQUIVALENT"}) for c in citations()]
+    prior = Citation(url="https://example.org/prior", role="PRIOR_RESULT", locator="Theorem 2",
+                     excerpt="Result for even n.", explanation="Only the even case is proved.",
+                     relation="DIFFERENT")
+    cites = [*original, prior]
+    proposed = review(novelty="POTENTIALLY_NEW", citations=cites,
+                      literature_search=problem().literature_search)
+    observed = [{"phase": "VERIFY", "result": r} for r in records(cites)]
+    accepted = audit(candidate(), proposed, observed).reviews[-1]
+    assert accepted.novelty == "POTENTIALLY_NEW"
+    assert accepted.evidence_assessment.supported
+    assert len(accepted.evidence_assessment.checked_citations) == 3
 
 
 def test_novelty_requires_comparisons_with_checked_prior_results_and_recent_search():

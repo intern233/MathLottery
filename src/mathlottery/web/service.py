@@ -11,11 +11,13 @@ from pydantic import Field, model_validator
 
 from mathlottery import budget
 from mathlottery.candidates import CandidateStore
-from mathlottery.config import Config, load_config
+from mathlottery.config import ChatConfig, Config, load_config
 from mathlottery.discovery import problem_fingerprint
 from mathlottery.metrics import run_metrics
-from mathlottery.models import CandidateInput, Model, Problem, Workflow, digest
+from mathlottery.model_catalog import effective_provider, validate_configured_selection
+from mathlottery.models import CandidateInput, Model, Problem, ReviewProvenance, Workflow, digest
 from mathlottery.orchestrator import Orchestrator
+from mathlottery.organized_reports import summary as organization_summary
 from mathlottery.review_evidence import capture as capture_review_evidence
 from mathlottery.review_evidence import manifest as evidence_manifest
 from mathlottery.review_evidence import selectable_source
@@ -26,6 +28,7 @@ from mathlottery.web.jobs import BusyError, Jobs
 
 class Overrides(Model):
     backend: Literal["codex", "chat"] | None = None
+    provider: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     model: str | None = Field(default=None, min_length=1, max_length=200)
     reasoning_effort: str | None = Field(default=None, min_length=1, max_length=50)
     reasoning_mode: Literal["standard", "pro"] | None = None
@@ -35,16 +38,42 @@ class Overrides(Model):
     native_memories: bool | None = None
 
     def apply(self, config):
-        config = config.model_copy(deep=True)
+        original_provider = effective_provider(config)
+        provider = self.provider or self.backend or original_provider
+        mode = provider if provider in {"codex", "chat", "work", "manual"} else "chat"
+        unchanged_legacy = (
+            provider in {"work", "manual"} and not self.provider and not self.backend
+        )
+        if provider not in {"codex", "chat"} and provider not in config.model_providers and not unchanged_legacy:
+            raise ValueError("Unknown model provider; configure it before selecting it")
+        if self.backend and self.backend != mode:
+            raise ValueError("Model provider and backend override conflict")
+        data = config.model_dump()
+        backend = data["backend"]
+        provider_changed = provider != original_provider
+        model_changed = "model" in self.model_fields_set and self.model != backend["model"]
+        if provider_changed:
+            backend["provider"] = provider
+            backend["mode"] = mode
+            backend["model"] = None
+            # Switching away from a custom profile must never inherit its endpoint/key/tools.
+            if provider in config.model_providers:
+                backend["chat"] = config.model_providers[provider].chat.model_dump()
+            elif original_provider in config.model_providers:
+                backend["chat"] = ChatConfig().model_dump()
+        elif self.provider:
+            backend["provider"] = provider
+        if provider_changed or model_changed:
+            backend["reasoning_effort"] = None
+            backend["chat"]["reasoning_mode"] = None
         for field in ("model", "reasoning_effort"):
-            if getattr(self, field) is not None:
-                setattr(config.backend, field, getattr(self, field))
-        if self.backend:
-            config.backend.mode = self.backend
-        if self.reasoning_mode is not None:
-            if config.backend.mode != "chat":
+            if field in self.model_fields_set:
+                backend[field] = getattr(self, field)
+        if "reasoning_mode" in self.model_fields_set:
+            if mode != "chat" and self.reasoning_mode is not None:
                 raise ValueError("Pro/standard reasoning mode applies only to the chat backend")
-            config.backend.chat.reasoning_mode = self.reasoning_mode
+            backend["chat"]["reasoning_mode"] = self.reasoning_mode
+        config = Config.model_validate(data)
         if self.budget_minutes is not None:
             config.budget.max_wall_time_minutes = self.budget_minutes
         if self.max_iterations is not None:
@@ -54,11 +83,13 @@ class Overrides(Model):
                 if config.backend.mode != "codex":
                     raise ValueError("Native agent capabilities apply only to Codex")
                 setattr(config.backend, field, getattr(self, field))
+        validate_configured_selection(config)
         return config
 
 
 class StartRequest(Model):
-    workflow: Literal["find", "solve", "verify"]
+    workflow: Literal["find", "solve", "verify", "organize"]
+    language: Literal["en", "zh"] | None = None
     query: str | None = Field(default=None, max_length=30000)
     source: str | None = Field(default=None, max_length=2048)
     count: int = Field(default=5, ge=1, le=50)
@@ -77,6 +108,16 @@ class StartRequest(Model):
 
     @model_validator(mode="after")
     def inputs(self):
+        if self.language is not None and self.workflow != "organize":
+            raise ValueError("Report language applies only to organize")
+        if self.workflow == "organize":
+            if not self.from_run or any((
+                self.problem_id, self.statement, self.proof, self.query, self.source,
+                self.from_discovery, self.discovery_problem_sha256,
+                self.from_candidate_id, self.from_candidate_sha256, self.source_files,
+            )):
+                raise ValueError("Organize requires only a reviewed source run, optional language and instructions")
+            return self
         if self.from_discovery:
             if self.workflow != "solve" or not self.problem_id or any((self.from_run, self.statement, self.proof)):
                 raise ValueError("Choose a problem ID from Find for a separate Solve task")
@@ -119,11 +160,15 @@ class ResumeRequest(Model):
     message: str | None = Field(default=None, max_length=30000)
     budget_minutes: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     max_iterations: int | None = Field(default=None, gt=0)
+    formal_memory_mb: int | None = Field(default=None, ge=256, le=32768)
+    formal_address_space_mb: int | None = Field(default=None, ge=1024, le=32768)
+    formal_timeout_seconds: float | None = Field(default=None, ge=1, le=1800, allow_inf_nan=False)
 
 
 def config_summary(config):
     return {
         "backend": config.backend.mode,
+        "provider": effective_provider(config),
         "model": config.backend.model,
         "reasoning_effort": config.backend.reasoning_effort,
         "reasoning_mode": config.backend.chat.reasoning_mode,
@@ -133,6 +178,9 @@ def config_summary(config):
         "native_multi_agent": config.backend.native_multi_agent,
         "native_memories": config.backend.native_memories,
         "native_web_search": config.backend.native_web_search,
+        "formal_limits": config.verification.model_dump(include={
+            "formal_memory_mb", "formal_address_space_mb", "formal_timeout_seconds",
+        }),
     }
 
 
@@ -152,18 +200,26 @@ class WebService:
         return load_config(self.store.root, self.config_path)
 
     def summary(self, run):
+        title = run.problem.title if run.problem else "Find problems"
+        if run.workflow == Workflow.FIND:
+            title = (run.discovery_request or "").strip().partition("\n")[0] or "Find problems"
+            if len(title) > 120:
+                title = title[:119].rstrip() + "…"
         return {
             **run.model_dump(mode="json", include={
                 "id", "workflow", "mode", "state", "phase", "iteration", "created_at",
                 "updated_at", "stop_reason", "last_error", "usage", "execution",
             }),
-            "title": (run.discovery_request or "Find problems") if run.workflow == Workflow.FIND else run.problem.title if run.problem else "Find problems",
+            "title": title,
             "problem_id": run.problem.id if run.problem and run.workflow != Workflow.FIND else None,
             # Group stages without conflating equal titles or revisions of a statement.
             "problem_key": digest(json.dumps([run.problem.id, run.problem.statement])) if run.problem and run.workflow != Workflow.FIND else None,
             "shortlist_count": len(run.shortlist),
             "discovery_run_id": run.discovery_context.source_run_id if run.discovery_context else None,
-            "candidate_count": len(run.candidates),
+            "candidate_count": len(run.candidates) if run.workflow != Workflow.ORGANIZE else 0,
+            "reviewed_candidate_count": sum(bool(c.reviews) for c in run.candidates)
+            if run.workflow != Workflow.ORGANIZE else 0,
+            "organized_report": organization_summary(self.store, run),
             "busy": self.jobs.running(run.id),
             "elapsed_seconds": round(budget.elapsed(run), 1),
             "settings": config_summary(Config.model_validate(run.config)),
@@ -172,8 +228,8 @@ class WebService:
     def bootstrap(self):
         try:
             settings, error = config_summary(self.config()), None
-        except (ValueError, OSError) as exc:
-            settings, error = None, str(exc)
+        except (ValueError, OSError):
+            settings, error = None, "Local configuration is invalid or unreadable; check config.yaml."
         return {
             "settings": settings, "config_error": error,
             "runs": [self.summary(run) for run in self.store.list_runs()],
@@ -182,12 +238,23 @@ class WebService:
 
     def start(
         self, request: StartRequest, *, ensure_backend: Callable[[str, str], None] | None = None,
+        validate_model: Callable[[Config], None] | None = None,
     ):
         config = request.options.apply(self.config())
         if config.backend.mode not in {"codex", "chat"} or config.backend.execution != "native":
             raise ValueError("The browser starts native codex/chat tasks; select these in config.yaml")
+        if validate_model is not None:
+            validate_model(config)
         if ensure_backend is not None:
             ensure_backend(config.backend.mode, config.backend.execution)
+        if request.workflow == "organize":
+            self.ensure_review_source_idle(request.from_run)
+            run = Orchestrator(self.store).organize(
+                config, request.from_run, language=request.language or "zh",
+                instructions=request.instructions,
+            )
+            self.jobs.launch(run.id, "drive")
+            return self.summary(self.store.load(run.id))
         if request.from_discovery:
             self.ensure_review_source_idle(request.from_discovery)
             run = Orchestrator(self.store).solve_discovered(
@@ -198,7 +265,7 @@ class WebService:
                 self.store.save(run, "web_direction_added")
             self.jobs.launch(run.id, "drive")
             return self.summary(self.store.load(run.id))
-        problem, candidate, evidence = None, None, None
+        problem, candidate, evidence, provenance = None, None, None, None
         if request.from_run:
             self.ensure_review_source_idle(request.from_run)
             with self.store.lock(request.from_run):
@@ -216,6 +283,10 @@ class WebService:
                     self.store.run_dir(original.id), original, request.source_files, config.backend.mode,
                 )
                 candidate = CandidateInput(**checked.model_dump(include=set(CandidateInput.model_fields)))
+                provenance = ReviewProvenance(
+                    source_run_id=original.id, source_candidate_id=checked.id,
+                    candidate_sha256=checked.sha256,
+                )
                 problem = original.problem or Problem(
                     id=f"claim-{digest(candidate.claim)[:12]}",
                     title=candidate.claim[:100], statement=candidate.claim,
@@ -234,6 +305,9 @@ class WebService:
             config, workflow=Workflow(request.workflow), problem=problem, candidate=candidate,
             source=request.source, discovery_request=request.query, discovery_count=request.count,
         )
+        if provenance is not None:
+            run.review_source = provenance
+            self.store.save(run, "web_review_source_linked")
         if evidence is not None:
             run.review_evidence = evidence.model_copy(update={"candidate_id": run.candidates[-1].id})
             self.store.save(run, "web_review_sources_captured", source_run_id=evidence.source_run_id,
@@ -247,8 +321,13 @@ class WebService:
     def ensure_review_source_idle(self, run_id, *, include_run_lock=True):
         if self.jobs.running(run_id, include_run_lock=include_run_lock):
             raise BusyError(
-                "Stop the source task and wait for its worker to finish before starting an independent review"
+                "Stop the source task and wait for its worker to finish before starting an independent review or report"
             )
+
+    def export_organized(self, run_id):
+        self.ensure_review_source_idle(run_id)
+        run = Orchestrator(self.store).export_organized(run_id)
+        return organization_summary(self.store, run)
 
     def resume(
         self, run_id, request: ResumeRequest,
@@ -264,6 +343,10 @@ class WebService:
         config = Overrides(
             budget_minutes=request.budget_minutes, max_iterations=request.max_iterations,
         ).apply(Config.model_validate(run.config))
+        for field in ("formal_memory_mb", "formal_address_space_mb", "formal_timeout_seconds"):
+            value = getattr(request, field)
+            if value is not None:
+                setattr(config.verification, field, value)
         if ensure_backend is not None:
             # Resume preserves the saved transport, regardless of current defaults or form values.
             ensure_backend(run.mode, run.execution)
@@ -300,16 +383,25 @@ class WebService:
         progress = {"text": "", "truncated": False}
         if run.native.active_attempt:
             progress = self.text_artifact(run_id, run.native.active_attempt + "/progress.md")
+        pending = run.native.pending_result
+        if not progress["text"] and pending and pending.get("directory"):
+            progress = self.text_artifact(run_id, pending["directory"] + "/answer.md")
+            if not progress["text"]:
+                progress = self.text_artifact(run_id, pending["directory"] + "/progress.md")
         if not progress["text"] and run.native.history:
             last = run.native.history[-1]
             if last.get("answer"):
                 progress = self.text_artifact(run_id, last["answer"])
+        progress["checking_evidence"] = bool(
+            pending and (pending.get("milestone") or {}).get("kind") in {"selection", "review"}
+        )
         worker = self.text_artifact(run_id, "web/status.json", limit=10000)["text"]
         formal_artifacts = list_formal_artifacts(self.store.run_dir(run_id))
         for item in formal_artifacts["items"]:
             item["reviewable"] = item["downloadable"] and selectable_source(item["path"])
         return {
             **self.summary(run),
+            "discovery_request": run.discovery_request,
             "problem": run.problem.model_dump(mode="json") if run.problem else None,
             "shortlist": [p.model_dump(mode="json") for p in run.shortlist],
             "shortlist_bindings": {p.id: problem_fingerprint(p) for p in run.shortlist},

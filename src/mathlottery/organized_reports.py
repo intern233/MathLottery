@@ -1,0 +1,111 @@
+"""Public metadata and bounded downloads for editorial reports."""
+
+from __future__ import annotations
+
+import hashlib
+import io
+import stat
+import zipfile
+
+from mathlottery.artifact_io import read_confined, validate_relative
+from mathlottery.models import Workflow, digest
+from mathlottery.organization import MAX_PDF_BYTES
+from mathlottery.storage import json_text
+
+MAX_BUNDLE_BYTES = 40_000_000
+
+
+def summary(store, run):
+    context, document = run.organization_context, run.organization_report
+    if context is None:
+        return None
+    pdf_available = False
+    if document and document.pdf_status == "ready":
+        root = store.run_dir(run.id)
+        parent, path = root / "organized", root / "organized/report.pdf"
+        try:
+            info = path.lstat()
+            pdf_available = (not parent.is_symlink() and stat.S_ISREG(info.st_mode)
+                             and info.st_nlink == 1 and 0 < info.st_size <= MAX_PDF_BYTES)
+        except OSError:
+            pass
+    return {
+        "source_run_id": context.source_run_id,
+        "language": context.language,
+        "markdown_available": bool(document),
+        "bundle_available": bool(document),
+        "pdf_available": pdf_available,
+        "pdf_status": document.pdf_status if document else "pending",
+        "pdf_error": document.pdf_error if document else None,
+        "pdf_warnings": document.pdf_details.get("warnings", []) if document else [],
+        "created_at": document.created_at if document else None,
+        "markdown_sha256": document.markdown_sha256 if document else None,
+    }
+
+
+def read_report(store, run_id, format):
+    run = store.load(run_id)
+    document = run.organization_report
+    if run.workflow != Workflow.ORGANIZE or document is None:
+        raise ValueError("This task has no organized report yet")
+    if digest(document.markdown) != document.markdown_sha256:
+        raise ValueError("The saved organized report failed its integrity check")
+    if format == "markdown":
+        return document.markdown.encode("utf-8")
+    if format == "bundle":
+        return _bundle(store, run)
+    if format != "pdf":
+        raise ValueError("Report format must be markdown, pdf or bundle")
+    return _read_pdf(store, run)
+
+
+def _read_pdf(store, run):
+    document = run.organization_report
+    if document.pdf_status != "ready":
+        raise ValueError("PDF is not ready; download Markdown or retry PDF export")
+    try:
+        data = read_confined(store.run_dir(run.id), "organized/report.pdf", MAX_PDF_BYTES)
+    except (OSError, ValueError):
+        raise ValueError("PDF is missing or unreadable; retry PDF export") from None
+    if not data.startswith(b"%PDF-") or hashlib.sha256(data).hexdigest() != document.pdf_details.get("sha256"):
+        raise ValueError("PDF failed its integrity check; retry PDF export")
+    return data
+
+
+def _bundle(store, run):
+    """Export only hash-checked frozen inputs, never arbitrary workspace files."""
+    from mathlottery.organization import MAX_FILES, MAX_TOTAL_BYTES, _read_files, export_manifest
+
+    context = run.organization_context
+    if context is None:
+        raise ValueError("The organized report has no frozen material manifest")
+    if len(context.files) > MAX_FILES or sum(item.size for item in context.files) > MAX_TOTAL_BYTES:
+        raise ValueError("The frozen material bundle exceeds its file count or size limit")
+    output = io.BytesIO()
+    total = 0
+    names = set()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        def add(name, data):
+            nonlocal total
+            validate_relative(name)
+            if name in names or ":" in name or any(ord(char) < 32 for char in name):
+                raise ValueError("The bundle contains a duplicate or nonportable material path")
+            total += len(data)
+            if total > MAX_BUNDLE_BYTES:
+                raise ValueError("The expert report bundle exceeds its 40 MB export limit")
+            names.add(name)
+            # Fixed archive metadata avoids leaking local timestamps or permissions.
+            entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            entry.compress_type = zipfile.ZIP_DEFLATED
+            entry.external_attr = 0o600 << 16
+            archive.writestr(entry, data)
+
+        add("report.md", run.organization_report.markdown.encode("utf-8"))
+        if run.organization_report.pdf_status == "ready":
+            add("report.pdf", _read_pdf(store, run))
+        for item, data in _read_files(store, run):
+            add("materials/" + item.path, data)
+        add("manifest.json", json_text(export_manifest(run)).encode("utf-8"))
+    if output.tell() > MAX_BUNDLE_BYTES:
+        raise ValueError("The expert report bundle exceeds its 40 MB export limit")
+    return output.getvalue()

@@ -83,6 +83,37 @@ def test_exact_snapshot_survives_source_change_and_review_resume(evidence_source
     assert service.store.load(source.id).candidates[-1].reviews == []
 
 
+def test_explicit_proof_materials_are_frozen_without_running_scripts(evidence_source):
+    service, source, launches = evidence_source
+    materials = {
+        "workspace/proof/Main.lean": "example : True := trivial\n",
+        "workspace/proof/Proof.md": "A complete proof.\n",
+        "workspace/proof/certificates.json": '{"coefficients":[1,2]}\n',
+        "workspace/proof/check.py": 'raise RuntimeError("must not run during capture")\n',
+    }
+    for path, text in materials.items():
+        write(service, source, path, text)
+    write(service, source, "workspace/proof/Unselected.md", "not selected")
+    write(service, source, "workspace/proof/logs/Transcript.md", "solver history")
+    detail = service.detail(source.id)
+    flags = {item["path"]: item["reviewable"] for item in detail["formal_artifacts"]["items"]}
+    assert all(flags[path] for path in materials)
+    assert not flags["workspace/proof/logs/Transcript.md"]
+    review = create_review(service, source, source_files=list(materials))
+    assert len(launches) == 1
+    assert {item.path: item.content for item in review.review_evidence.files} == materials
+    for path in materials:
+        write(service, source, path, "changed after capture")
+    workspace = NativeWorkspace(service.store, Orchestrator(service.store).candidates)
+    workspace.prepare(review, Config())
+    root = workspace.path(review) / "submitted-evidence"
+    for path, text in materials.items():
+        assert (root / path.removeprefix("workspace/")).read_text() == text
+    assert not (root / "proof/Unselected.md").exists()
+    assert not (root / "proof/logs").exists()
+    assert review.candidates[-1].level == Level.CANDIDATE
+
+
 def test_http_detail_exposes_manifest_not_source_contents(evidence_source):
     service, source, _ = evidence_source
     write(service, source, text="-- SOURCE_CONTENT_SENTINEL\nexample : True := trivial\n")

@@ -11,6 +11,7 @@ def source_assessment(assessment) -> str:
         return "Evidence policy: not assessed (historical or user-supplied record)."
     lines = [f"Evidence policy: `{assessment.policy_version}` · Checked: {assessment.assessed_at}"]
     lines += [f"- Gap: {reason}" for reason in assessment.reasons]
+    lines += [f"- Search limitation (reported): {item}" for item in assessment.limitations]
     for citation in assessment.checked_citations:
         lines.append(
             f"- {citation['role']} · {citation['url']} · {citation['locator']} · "
@@ -57,6 +58,23 @@ def report(store: Store, run: Run):
         + "\n```",
         "## Exploration Summary",
     ]
+    if run.organization_context:
+        context, document = run.organization_context, run.organization_report
+        sections += [
+            "## Expert Reading Report",
+            f"Editorial reconstruction of source `{context.source_run_id}`, revision {context.source_revision}. "
+            "This does not add an independent verification or upgrade proof, novelty or open-status claims.",
+        ]
+        if document:
+            sections += ["[Expert report (Markdown)](organized/report.md)",
+                         "[Evidence manifest](organized/manifest.json)",
+                         f"PDF export: `{document.pdf_status}`."]
+            if document.pdf_status == "ready":
+                sections.append("[Expert report (PDF)](organized/report.pdf)")
+            elif document.pdf_error:
+                sections.append(document.pdf_error)
+        else:
+            sections.append("The expert report has not been produced yet.")
     if run.shortlist:
         sections.extend(
             ["## Ranked Problems", "Ranking is a heuristic, not a probability of success."]

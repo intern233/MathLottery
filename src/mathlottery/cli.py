@@ -13,14 +13,16 @@ import yaml
 
 from mathlottery.backends import WorkBackend
 from mathlottery.chat_backend import ChatBackend
-from mathlottery.config import Config, duration_minutes, load_config
+from mathlottery.config import ChatConfig, Config, duration_minutes, load_config
 from mathlottery.demo import DemoBackend, demo_problem
 from mathlottery.execution import python_exec
+from mathlottery.local_network import apply_network_environment
 from mathlottery.models import (
     Candidate,
     CandidateInput,
     Problem,
     Reference,
+    ReviewProvenance,
     Run,
     State,
     Workflow,
@@ -55,6 +57,11 @@ class Execution(StrEnum):
 class ReasoningMode(StrEnum):
     standard = "standard"
     pro = "pro"
+
+
+class ReportLanguage(StrEnum):
+    en = "en"
+    zh = "zh"
 
 
 BackendOption = Annotated[
@@ -100,6 +107,7 @@ def main(
 
 def resources(ctx):
     root = ctx.obj["root"]
+    apply_network_environment(root)
     return Store(root), load_config(root, ctx.obj["config"])
 
 
@@ -279,6 +287,13 @@ def problems(ctx: typer.Context):
 
 def apply_options(config, mode, budget_time, max_iterations):
     if mode:
+        if config.backend.provider and mode.value != config.backend.mode:
+            if config.backend.provider in config.model_providers:
+                config.backend.chat = ChatConfig()
+            config.backend.provider = None
+            config.backend.model = None
+            config.backend.reasoning_effort = None
+            config.backend.chat.reasoning_mode = None
         config.backend.mode = mode.value
     if budget_time:
         config.budget.max_wall_time_minutes = duration_minutes(budget_time)
@@ -316,14 +331,24 @@ def research_problem(store, problem, prompt):
     return None if problem == "auto" else store.load_problem(problem)
 
 
-def start_task(store, config, *, task=None, **kwargs):
+def start_task(store, config, *, task=None, review_source=None, **kwargs):
     engine = Orchestrator(store)
     task = task or engine.create(config, **kwargs)
+    if review_source is not None:
+        task.review_source = review_source
+        store.save(task, "review_source_linked")
     typer.echo(
         f"Starting {task.id} ({task.workflow}, {task.mode}); artifacts: {store.run_dir(task.id)}"
     )
     result = engine.drive(task.id)
     show_run(store, result)
+    if result.organization_report is not None:
+        typer.echo(f"Expert report: {store.run_dir(result.id) / 'organized/report.md'}")
+        if result.organization_report.pdf_status == "ready":
+            typer.echo(f"PDF: {store.run_dir(result.id) / 'organized/report.pdf'}")
+        else:
+            typer.echo(result.organization_report.pdf_error or "PDF export is pending.")
+            typer.echo(f"Retry locally: mathlottery export {result.id} --format pdf")
     if result.state in {State.FAILED, State.RATE_LIMITED}:
         raise typer.Exit(1)
 
@@ -530,7 +555,7 @@ def verify(
     if sum(value is not None for value in (proof, candidate, from_run)) != 1:
         raise ValueError("Supply exactly one of --proof, --candidate or --from-run")
     problem_object = store.load_problem(problem) if problem else None
-    content = None
+    content, provenance = None, None
     if proof:
         if not problem_object:
             raise ValueError("--proof requires --problem")
@@ -554,19 +579,47 @@ def verify(
             **{key: getattr(parsed, key) for key in CandidateInput.model_fields}
         )
     else:
-        original = store.load(from_run)
-        if not original.candidates:
-            raise ValueError("The source run has no candidate to verify")
-        Orchestrator(store)._check_candidate_file(original)
-        content = CandidateInput(
-            **{key: getattr(original.candidates[-1], key) for key in CandidateInput.model_fields}
-        )
-        problem_object = problem_object or original.problem
+        with store.lock(from_run):
+            original = store.load(from_run)
+            if not original.candidates:
+                raise ValueError("The source run has no candidate to verify")
+            Orchestrator(store)._check_candidate_file(original)
+            checked = original.candidates[-1]
+            content = CandidateInput(
+                **{key: getattr(checked, key) for key in CandidateInput.model_fields}
+            )
+            provenance = ReviewProvenance(source_run_id=original.id, source_candidate_id=checked.id,
+                                          candidate_sha256=checked.sha256)
+            problem_object = problem_object or original.problem
     if not problem_object:
         problem_object = Problem(
             id=uid("claim"), title=content.claim[:100], statement=content.claim
         )
-    start_task(store, config, workflow=Workflow.VERIFY, problem=problem_object, candidate=content)
+    start_task(store, config, workflow=Workflow.VERIFY, problem=problem_object, candidate=content,
+               review_source=provenance)
+
+
+@app.command()
+@friendly
+def organize(
+    ctx: typer.Context,
+    from_run: Annotated[str, typer.Option(help="Reviewed source task to explain and collect")],
+    language: Annotated[ReportLanguage, typer.Option(help="Report language")] = ReportLanguage.zh,
+    instructions: Annotated[str | None, typer.Option(help="Audience, emphasis or editorial requirements")] = None,
+    mode: BackendOption = None,
+    model: ModelOption = None,
+    reasoning_effort: EffortOption = None,
+    reasoning_mode: ReasoningModeOption = None,
+    budget_time: TimeOption = None,
+    max_iterations: RoundsOption = None,
+):
+    """Organize reviewed research into an expert-readable Markdown/PDF report."""
+    store, config = resources(ctx)
+    research_options(config, mode, model, reasoning_effort, budget_time, max_iterations,
+                     reasoning_mode=reasoning_mode)
+    task = Orchestrator(store).organize(config, from_run, language=language.value,
+                                        instructions=instructions)
+    start_task(store, config, task=task)
 
 
 @app.command()
@@ -590,12 +643,39 @@ def export(
     format: Annotated[str, typer.Option()] = "markdown",
     output: Annotated[Path | None, typer.Option(help="New destination file; no overwrite")] = None,
 ):
-    """Export a Markdown report or complete JSON checkpoint."""
+    """Export Markdown, JSON, or an organized PDF/materials bundle without model calls."""
     store, _ = resources(ctx)
     task = store.load(run_id)
-    if format not in {"markdown", "json"}:
-        raise ValueError("--format must be markdown or json")
-    content = generate_report(store, task).read_text() if format == "markdown" else json_text(task)
+    if format not in {"markdown", "json", "pdf", "bundle"}:
+        raise ValueError("--format must be markdown, json, pdf or bundle")
+    if format == "bundle":
+        from mathlottery.organized_reports import read_report
+
+        if output is None:
+            raise ValueError("--format bundle requires --output <new-report.zip>")
+        content = read_report(store, run_id, "bundle")
+        with output.open("xb") as stream:
+            stream.write(content)
+        typer.echo(str(output.resolve()))
+        return
+    if format == "pdf":
+        from mathlottery.organized_reports import read_report
+
+        task = Orchestrator(store).export_organized(run_id)
+        content = read_report(store, run_id, "pdf")
+        if output:
+            with output.open("xb") as stream:
+                stream.write(content)
+            typer.echo(str(output.resolve()))
+        else:
+            typer.echo(str(store.run_dir(run_id) / "organized/report.pdf"))
+        return
+    if format == "markdown" and task.workflow == Workflow.ORGANIZE:
+        from mathlottery.organized_reports import read_report
+
+        content = read_report(store, run_id, "markdown").decode("utf-8")
+    else:
+        content = generate_report(store, task).read_text() if format == "markdown" else json_text(task)
     if output:
         with output.open("x") as stream:
             stream.write(content)

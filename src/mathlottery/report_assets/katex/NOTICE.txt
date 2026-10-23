@@ -1,0 +1,7 @@
+KaTeX 0.19.0
+https://github.com/KaTeX/KaTeX
+
+Unmodified browser JS/CSS and WOFF2 fonts from the official npm release.
+Source: https://registry.npmjs.org/katex/-/katex-0.19.0.tgz
+Archive SHA-512 (base64): v6Tznz3zJ7u3niRCoDTsumM2+HA2XXcCu+WAacCeHD2z3p9A9Ks987o5FzfTGBN0e8A0vjEgIDvLbICrXpdw/Q==
+License: MIT; see LICENSE. The renderer embeds only WOFF2 font sources.

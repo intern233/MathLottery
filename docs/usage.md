@@ -2,356 +2,274 @@
 
 English | [简体中文](usage.cn.md)
 
-[Project overview](../README.md) · [Result showcase](../showcase/README.md)
+[Browser quickstart](#local-browser-workspace) · [Terminal workflows](#cli) · [Backend setup](#backends) · [Troubleshooting](#troubleshooting)
 
-Run all commands from the MathLottery project root. The three research workflows are independent of the agent backend:
+MathLottery has two entry points. Both use the same workspace, configuration, accounts and saved results.
 
-| Workflow | Command | Output |
-| --- | --- | --- |
-| Find | `find` | Ranked problems, sources, evidence of open status, and selection reasons |
-| Solve | `solve` | Continuous research records, partial results, and candidate proofs |
-| Verify | `verify` | Separate review verdicts, issues, evidence, and novelty assessments |
-| Full pipeline | `run` | Find → solve → review, returning feedback to the original research session |
+| Entry point | Use it for |
+| --- | --- |
+| **Browser: `mathlottery serve`** | Find problems, choose one to solve, review candidates, and organize reports. Start here. |
+| **Terminal: `find`, `solve`, `verify`, `organize`, `run`** | Run individual stages or automate the research pipeline. |
 
-New tasks automatically read `config.yaml` in the project root for the backend, model, reasoning settings, and budget. The command only needs to specify the task and problem.
-
-## Environment setup
-
-Before installing Lean or starting local experiments, read [resource requirements and Lean setup](resources.md). Plan for 2–4 GiB of available RAM and 3–5 GiB of disk for a single remote workflow; with Lean/mathlib, start with 6–8 GiB available RAM and 20–30 GiB of disk. These are planning allowances, not measured minimums. Larger builds and concurrent tasks need more.
-
-**Lean can use several GiB even for one proof check.** The guide includes a measured showcase module (about 1.99 GiB peak RSS), cache/concurrency commands, WSL memory/swap settings, and failure diagnosis. `tools.memory_mb: 512` does not limit native Codex or Lean/Lake memory.
-
-~~~bash
-conda env create -f environment.yml
-conda activate mathlottery
-cp config.example.yaml config.yaml
-mathlottery doctor
-~~~
-
-For an existing environment, run `python -m pip install -e '.[dev,research]'`. Research dependencies include NumPy, SciPy, Matplotlib, pypdf, and SymPy/mpmath. Lean is optional and must be installed separately. You can also use `mathlottery init` to initialize local configuration and storage.
+The entry point is separate from the model connection: **Codex** uses the official CLI and a dedicated MathLottery login; **Chat** uses an API key and the Responses API. [Compatible providers](configuration.md#providers) are also configurable.
 
 ## Local browser workspace
 
-After environment setup, start the local interface:
+<a id="install"></a>
 
-~~~bash
+### 1. Install MathLottery
+
+Use **Linux or WSL 2**, with Git and Conda installed. In WSL, run these commands in the Linux terminal. If you already have the repository, enter its directory and skip the clone step.
+
+```bash
+git clone https://github.com/intern233/MathLottery.git
+cd MathLottery
+conda env create -f environment.yml
 conda activate mathlottery
+mathlottery init
+```
+
+The environment file installs Python and the project dependencies, including the research tools. `init` creates local storage and a default `config.yaml` if it is missing; it does not overwrite an existing file. Initial diagnostics may report that Codex is not installed/signed in or that Chat has no API key. Configure the backend you will use in the next step.
+
+For an existing `mathlottery` environment, update the project installation with `python -m pip install -e '.[dev,research]'`.
+
+**Lean is optional for the first run.** For planning, reserve 2–4 GiB of available RAM and 3–5 GiB of disk for one remote workflow; a Lean/mathlib setup needs substantially more. These are allowances, not measured minimums. Read [resource requirements](resources.md) before installing Lean or starting large local experiments.
+
+### 2. Prepare Codex
+
+The default backend is Codex. Install the [official Codex CLI](https://learn.chatgpt.com/docs/cli) in the **same Linux/WSL environment**, then check `codex --version`. If Node.js/npm is already installed there, one installation option is:
+
+```bash
+npm install --global --prefix "$CONDA_PREFIX" @openai/codex
+hash -r
+codex --version
+```
+
+Conda must be activated for this command. Node.js/npm is not included in `environment.yml`; the official CLI page also provides installation without npm. [Official package instructions](https://github.com/openai/codex#installing-and-running-codex-cli)
+
+Already have a working CLI? Skip installation. Prefer an API instead? Skip Codex setup and follow [Chat API configuration](#chat-api) before starting the server.
+
+### 3. Start the page and sign in
+
+```bash
 mathlottery serve
-~~~
+```
 
-The terminal prints the workspace, actual port and browser address. The preferred port is `8765`. Starting again reuses a compatible MathLottery service for the same workspace and configuration and prints its address. When a port belongs to another service, startup tries the next port, up to 20 binding attempts. Under WSL, startup reads and skips Windows-reserved TCP port ranges when the Windows networking utility is available. Use `mathlottery serve --open` to open the browser automatically, or `--port 9001` to choose a different preferred port.
+Open the **address printed in the terminal**. The preferred port is `8765`; the actual port may differ. On WSL, use the printed `http://localhost:<port>` address in your Windows browser. Keep the server terminal open. There is no separate frontend build or installation.
 
-With an editable installation, `serve` finds the MathLottery checkout even when launched from another project directory. An explicit `mathlottery --root ./research-workspace serve` selects a different data workspace. Other CLI commands keep their existing root behavior. There is no Node.js build step or separate frontend installation. The interface supports English and Chinese and initially follows the browser language.
+In the **MathLottery account** panel, choose **Sign in with ChatGPT** and complete authorization on the official page. Your ordinary Codex CLI / IDE login stays separate. The same account can be used, but its quota is shared. Device-code login may need enabling in ChatGPT security settings. [Authentication guidance](https://learn.chatgpt.com/docs/auth)
 
-The default listener is `127.0.0.1`, including under WSL. Open the printed **Windows** `http://localhost:<port>` address from a Windows browser; WSL normally forwards localhost connections into Linux. Use the actual printed port, since a port that can bind in Linux may still be reserved on Windows. If access fails, check the Linux and Windows sides separately. [Microsoft's WSL networking guide](https://learn.microsoft.com/en-us/windows/wsl/networking)
+Select the provider, model and reasoning effort in **Model for this task**. For example, `gpt-6-astra` is a model ID and `max` is a separate effort setting, when supported by your account. Starting a task uses the selected backend's quota or API billing. For a first test, reduce the time budget under **Budget & agent settings**.
 
-For an explicit alternative on NAT-mode WSL, `mathlottery serve --wsl-direct` enables direct access through the WSL address and prints it. This option broadens the listener and restricts request peers to loopback, the WSL address and the Windows gateway. It is never enabled automatically. `--loopback-only` remains a supported way to select the default loopback behavior and cannot be combined with `--wsl-direct`. Startup does not modify WSL configuration, proxies, port-forwarding rules or the firewall.
+### 4. Run a workflow
 
-1. **Find:** enter preferences, an optional source URL and a shortlist size. Compare each problem’s difficulty, verification feasibility, Lean feasibility, prerequisites, obstacles and source evidence. The agent recommendation is not a user selection. Click **Choose this problem**, review **Your choice** in the Solve form, and then click **Start solving**. Choosing alone never starts a model call.
-2. **Solve:** select a saved problem or enter a statement. The result panel shows candidate proofs; **Verify latest candidate** prepares a separate review task.
-3. **Verify:** select a run's latest candidate, or provide a problem and proof. Reviews retain verdicts, issues, evidence and novelty separately from the candidate's proof level.
-
-Use the optional **Task instructions** field to request Lean formalization, compiler checks or a particular research approach from the first turn, while preserving the selected problem's statement.
-
-New tasks read the current `config.yaml`. Expand **Model & budget** for per-task backend, model, reasoning and budget overrides; this does not edit the configuration file. Codex uses this MathLottery workspace's own login and tool configuration; Chat uses its API credentials and billing. Starting a task makes real calls to the selected backend.
-
-For Codex, **Start** and **Continue research** require a completed ChatGPT login in the MathLottery account panel. The server checks again before saving a new task or launching a continuation, using the selected backend for a new task and the saved backend for a continuation. An unavailable CLI, pending login or API-key-only Codex account produces an actionable error without starting a worker. These checks leave local Codex credentials unchanged and do not gate Chat API tasks. Login readiness does not guarantee that the provider will accept a later model request; execution errors remain visible in the task.
-
-History groups Solve and Verify records by saved problem ID and exact statement. Each Find remains a separate shortlist, rather than being assigned to its first recommendation. A solver started from a shortlist links back to its source Find. Multiple runs of the same stage remain visible and are numbered. Click any record to open its own results. Groups show their latest update time, while each record shows its start time. **Agent turns** count research handoffs, including interrupted calls and continuations, rather than complete attempts to solve the problem. Resuming keeps the same run record.
-
-You can skip Find: open **Solve**, choose **Enter a new problem**, and enter a statement and optional title. Without a title, the first 100 characters of the statement become the title. The problem is saved for reuse, and its history initially contains only a Solve record. **Verify latest candidate** prepares a review in the same problem group; no Find record is created. A supplied problem starts with status **Unknown**; entering it does not establish that it is open or solved.
-
-The history and detail panels refresh every two seconds while the page is visible. They show checkpoints, saved visible output, token usage, candidate proofs and reports; a long native call can remain quiet between checkpoints. Download the report or use **Stop task** to request cancellation and retain already saved progress. Stopping does not guarantee that the agent can finish its current submission. User cancellation and an exhausted active-time budget have distinct stop reasons; provider failures remain errors. **Resume / add direction** continues the saved session. Resume budget fields replace total limits, and the task retains its saved model settings. A completed task needs additional direction to continue.
-
-When a research or review workspace contains Lean files, **Results** also lists downloadable `.lean`, `lean-toolchain` and `lakefile.toml` text files. Each download is limited to 1 MB; linked files, hidden directories, dependency caches and build outputs are excluded. The list is bounded and reports when it is incomplete. Downloads contain the selected source text, not a complete Lean project archive, and preserve the source filename in modern browsers; retain the displayed relative path when reconstructing the project locally. Source availability is not evidence that Lean ran successfully, that the formal statement matches the public problem, or that the result is new. The candidate's proof level is unchanged by listing or downloading these files.
-
-When verifying a saved candidate, you can explicitly select proof source files from its research workspace. No files are selected automatically. The form retains the displayed candidate ID and checksum; if that candidate changes before submission, refresh the source before trying again. The source task must be idle. At submission, MathLottery freezes the selected file contents and records their paths, sizes and SHA256 hashes. Later source edits do not change the review input. The review's Results panel shows this manifest separately from its verdict.
-
-Attachments are limited to 20 files, 1 MB per file and 2 MB total for native Codex. Native Chat includes the actual source text in its prompt, with a smaller 128 KB total limit. Codex receives the files under `submitted-evidence/` in its independent review workspace. Logs, previous reviews, dependency caches and login data are not included. Provide all small local Lean dependencies needed by the proof; this does not package or install mathlib. Attached sources are untrusted evidence for the reviewer to inspect and recheck, and never automatically raise the proof level.
-
-The result summary distinguishes the proof level, latest agent review, recorded problem status and novelty. A completed task or an agent finding no issues is not a claim of complete formal verification or a confirmed new solution to an open problem.
-
-Workers continue when the browser or UI server closes. To stop research, use **Stop task** or `mathlottery stop <run-id>`. Restarting the UI reconnects to the same local state; it does not relaunch tasks automatically. The UI and CLI share `problems/`, `runs/` and `.mathlottery/`, and per-task worker records live under `runs/<run-id>/web/`. Use the CLI for the full `run` pipeline and legacy manual handoffs.
-
-Browser writes require a same-origin request token, and only packaged assets and selected run data are served. Agent output is displayed as text. This remains a local workspace; the Codex account connection is not multi-user access control for the web interface.
-
-### Sign in with ChatGPT
-
-The **MathLottery account** panel manages a login dedicated to the current workspace. Signing in, switching accounts, or signing out here leaves your ordinary local Codex CLI / IDE login unchanged. The MathLottery browser interface, MathLottery CLI commands, and background research workers all use this workspace's login.
-
-Sign in once in MathLottery even if your local Codex is already logged in. Choose **Sign in with ChatGPT**, open the official link, and enter the one-time code. Complete authentication on OpenAI's page. You may choose the same ChatGPT account or a different account. Separate login state does not provide additional quota: sessions using the same account still use its subscription allowance. Device-code login may first need enabling in ChatGPT security settings or by a workspace administrator. [Official authentication guidance](https://learn.chatgpt.com/docs/auth)
-
-After login, the panel shows the masked email and plan when available. **Switch account** signs out of this MathLottery workspace first, then starts a new device-code login. Cancelling or failing the new authorization leaves MathLottery signed out; sign in again to restore access. **Sign out** ends only this workspace's login. Both actions ask for confirmation and are blocked while a Codex task is running in this workspace. Reading status or using ordinary sign-in never automatically replaces an existing MathLottery login. The ChatGPT website's browser session is separate.
-
-MathLottery sets `CODEX_HOME` only in its Codex child processes, to `.mathlottery/codex-home`, and forces `cli_auth_credentials_store="file"`. Official Codex stores credentials there; the directory is Git-ignored and owner-only on POSIX systems. The parent's environment, local Codex home, and OS credential store remain untouched. MathLottery does not copy or fall back to local Codex credentials, configuration, or sessions. Configure optional MCP servers, plugins and Codex defaults in this dedicated home when needed. Search, shell and file tools still run through official Codex. [Codex environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables)
-
-Existing MathLottery problems, reports and checkpoints remain available after this change. A native conversation previously stored in your personal Codex home is not copied: resuming it may require a new run because its original session is absent from the dedicated home. Newly created sessions persist in the dedicated home for later continuation.
-
-Passwords and tokens never pass through the MathLottery frontend. Only masked account details and pending device-code state are retained in application memory, not in configuration, reports or browser localStorage. Login checks do not start research. The integration uses the official [Codex app-server authentication protocol](https://learn.chatgpt.com/docs/app-server). Keep `.mathlottery/` private and excluded from Git, including its credentials and sessions.
-
-This login connects the **codex** backend. MathLottery's current **chat** backend still requires an API key and API billing; it does not implement the separate Sign in with ChatGPT API integration.
-
-## Choose a model in config.yaml
-
-Common settings are grouped at the top of the configuration file. This example selects Codex, GPT-6 Astra, and Max:
-
-~~~yaml
-backend:
-  mode: codex
-  model: gpt-6-astra
-  reasoning_effort: max
-  chat:
-    reasoning_mode: pro
-
-budget:
-  max_wall_time_minutes: 180
-  max_iterations: 50
-~~~
-
-To use Chat Pro, change `backend.mode` to `chat` and configure an API key as described below. `backend.chat.reasoning_mode` only applies to the chat backend and accepts `pro` or `standard`; Codex uses `model` and `reasoning_effort`. Edit `model` to select a different model.
-
-After saving the configuration, use a short command:
-
-~~~bash
-mathlottery find
-mathlottery solve --prompt 'Please solve the Riemann hypothesis'
-mathlottery verify --from-run <solve-run-id>
-mathlottery run
-~~~
-
-These commands start finding, solving, verification, and the full pipeline respectively. Choose the one you need; there is no need to repeat model and budget settings.
-
-| Configuration field | Purpose | Example |
+| Stage | What you do | What you get |
 | --- | --- | --- |
-| `backend.mode` | Agent backend | `codex` / `chat` |
-| `backend.model` | Model ID | `gpt-6-astra` |
-| `backend.reasoning_effort` | Reasoning effort | `max` |
-| `backend.chat.reasoning_mode` | Chat API reasoning mode | `pro` / `standard` |
-| `budget.max_wall_time_minutes` | Total active time limit, in minutes | `180` |
+| **Find** | Enter preferences, for example: “Find a precisely stated public open problem with recent status evidence, a small scope, and potential for Lean verification.” | A shortlist with sources, open-status evidence, difficulty, verification and Lean feasibility estimates. |
+| **Choose → Solve** | Click **Choose this problem**, check **Your choice**, then **Start solving**. Add task instructions if needed. | Research records and candidate proofs, or a recorded partial/unsuccessful attempt. Choosing alone does not start solving. |
+| **Verify** | Click **Verify latest candidate**, select any needed proof source files, choose review settings, then start verification. | A separate review with issues, evidence gaps and the scope actually checked. |
+| **Organize · optional** | After a review, click **Organize for expert review**. Choose the report language and model, then **Create expert report**. | Markdown and PDF reports explaining the argument, its materials and the review findings. [Report setup](#organize) |
 
-GPT-6 Astra supports low, medium, high, xhigh, and max. The GPT-5.6 and GPT-6 families support a separate `reasoning.mode: pro` field in the Responses API. Do not append `-pro` to the model ID or put `pro` in `reasoning_effort`. Pro increases model work, latency, and token usage. [Model reference](https://developers.openai.com/api/docs/models/gpt-6-astra) · [Reasoning mode](https://developers.openai.com/api/docs/guides/reasoning#reasoning-mode)
+You can also skip Find: in **Solve**, choose **Enter a new problem** and supply its statement. For a small first test, try “Prove that the sum of the first n positive odd integers is n² for every nonnegative integer n.” This tests the workflow using a known result; it is not an open-problem discovery.
 
-This configures the API's Pro execution mode. ChatGPT on the web may use different tools, system instructions, and product orchestration, so identical behavior is not guaranteed. Model, effort, and tool availability depend on the account and backend. Unsupported settings produce errors rather than an automatic downgrade. Reports distinguish requested settings from those actually reported by the backend; unreported fields remain unknown.
+History groups Solve, Verify and Organize attempts by problem; a Find shortlist remains its own entry. Select a record to inspect its results. **Run completed** describes task execution, not proof correctness or novelty. Read the coverage, proof evidence, review issues and remaining obligations together. See [how to interpret evidence](evidence.md) and the [result showcase](../showcase/README.md).
 
-Use `--backend`, `--model`, `--reasoning-effort`, or `--reasoning-mode` for a temporary override without editing the file. New tasks read the current configuration. `resume` restores the configuration saved when the task was created, so later edits to `config.yaml` do not affect existing tasks. Pass explicit overrides to change a model or mode when resuming. Pending background requests are recovered first; new settings apply to the next request.
+Closing the page or UI server does **not** stop background research. Use **Stop task** or `mathlottery stop <run-id>`. Starting the server again reconnects to saved state without automatically restarting stopped tasks.
 
-## Choose an agent backend
+<a id="cli"></a>
 
-### codex: persistent native agent sessions
+## Terminal workflows
 
-Install the official Codex CLI, then sign in through the browser workspace's **MathLottery account** panel. Running plain `codex login` signs in to your separate local Codex and does not sign in to MathLottery. MathLottery uses official `codex exec` calls and resumes the exact same session in its dedicated home. Codex supplies search, shell and file operations; optional MCP/plugin configuration belongs in the MathLottery home. Available tools depend on the machine and account.
+Activate the environment and run commands from the **MathLottery project directory**. Complete [backend setup](#backends) once; no running browser server is needed for terminal research.
 
-~~~bash
-mathlottery solve --prompt 'Please solve Goldbach’s conjecture'
-~~~
+| Command | Behavior |
+| --- | --- |
+| `mathlottery find` | Find and save a shortlist, then stop for your choice. |
+| `mathlottery solve --problem <problem-id>` | Solve a saved problem. Use `--prompt` for a new statement. |
+| `mathlottery verify --from-run <solve-run-id>` | Independently review the latest candidate from a Solve run. |
+| `mathlottery organize --from-run <verify-run-id> --language en` | Explain and collect reviewed research for a human expert. |
+| `mathlottery run` | Automatically find a problem, solve and review; it does not pause for your selection. |
 
-Set `backend.mode` to `codex` in `config.yaml`. When `model` and `reasoning_effort` are `null`, they use Codex defaults from the dedicated MathLottery home; set them in the file to choose explicitly. A model selected in a separate chat interface may differ from the CLI default. Research files are written to the current research workspace using the `workspace-write` sandbox and configured network permissions.
+### Find → choose → solve → verify
 
-Native calls use ordinary agent execution without the per-action JSON protocol, the legacy 15-second / 512 MB tool wrapper, or fixed-length summaries in place of native history. Codex still has its own context window and compaction behavior. [Official non-interactive usage](https://learn.chatgpt.com/docs/non-interactive-mode)
-
-### chat: automatic Responses API calls
-
-The chat backend calls the model API directly, waits for results, saves context, and continues to the next round. Server-hosted `web_search` and Code Interpreter are enabled by default. It requires API credentials and an explicit model. Here, `chat` means the API backend, not automation of ChatGPT's web Pro mode.
-
-Set `backend.mode` to `chat` and `model` to a model available to your account. Store the API key in the `OPENAI_API_KEY` environment variable, not in the configuration file. This Bash command hides input and keeps the key out of command history:
-
-~~~bash
-read -rs -p 'OpenAI API key: ' OPENAI_API_KEY
-export OPENAI_API_KEY
-mathlottery doctor
-mathlottery find --query 'Combinatorics problems suitable for a limited research budget'
-~~~
-
-If `backend.model` is unset, you can supply the model through `OPENAI_MODEL`. `doctor` checks whether Chat configuration is complete without sending billable model requests. Missing credentials, missing models, or unsupported tools produce explicit errors; the program does not switch to manual mode or another backend.
-
-Chat uses `previous_response_id` to continue research context, while reviews start with fresh context. Long calls run in the background on the server and the program polls their status. Ctrl+C and `stop` request server-side cancellation. After a connection loss, a call with a known response ID is retrieved rather than created again. If creation fails before an ID arrives, the program preserves an uncertain state; check the API dashboard before deciding to start a new run.
-
-Full API answers, tool results, and citation metadata are saved locally. Code Interpreter runs in a hosted container and cannot directly read local files. Containers and server-side responses have their own retention periods; local reports cannot recreate expired remote context.
-
-References: [Conversation state](https://developers.openai.com/api/docs/guides/conversation-state), [background calls and cancellation](https://developers.openai.com/api/docs/guides/background), [web search](https://developers.openai.com/api/docs/guides/tools-web-search), and [Code Interpreter](https://developers.openai.com/api/docs/guides/tools-code-interpreter).
-
-## Native agent capabilities
-
-The native backend keeps official search, shell tools and persistent sessions. It adds no per-action JSON protocol or legacy memory excerpt limit. In `config.yaml`, `backend.native_multi_agent` and `backend.native_memories` accept `true`, `false` or `null`; `null` inherits the isolated Codex configuration and runtime defaults. The browser exposes both as task overrides. A continuous primary researcher remains responsible for the result. Helper agents can consume additional tokens; choosing `false` keeps a single agent. Review sessions always force memories off.
-
-Optional MCP servers, plugins and Codex defaults belong in `.mathlottery/codex-home/config.toml` and the corresponding private home, not your personal Codex home. They are not copied automatically. A feature flag does not install tools or guarantee account support. Existing workspace isolation, network configuration and budgets still apply. Independent source/Lean checks currently share the research time budget. Chat continues to use its configured hosted tools; it does not gain local Shell/Lean access from these Codex options.
-
-## Find problems
-
-~~~bash
-mathlottery find --query 'Prioritize precisely stated problems with recent evidence that they remain open and scope for computational experiments'
-mathlottery find --source https://www.erdosproblems.com/ --count 3
+```bash
+mathlottery find --query 'Find a small, precisely stated open problem suitable for Lean; check original sources and later work' --count 3
 mathlottery problems
-~~~
-
-The agent searches, compares problems, and checks prior progress. Finding saves reusable problems and the current ranking, then stops before solving. The terminal lists problem IDs; detailed output is in `runs/<run-id>/literature/selection.json` and `report.md`.
-
-To choose a problem and carry its Find context forward:
-
-~~~bash
 mathlottery solve --from-find <find-run-id> --problem <problem-id>
-~~~
+mathlottery verify --from-run <solve-run-id>
+```
 
-The problem must belong to that exact shortlist. The browser also binds the displayed version by checksum, so a changed list requires a fresh choice. A new Solve session receives a frozen dossier containing the preferences, shortlist, full visible research answers, notes and supported source files. It does not share the mutable Find conversation or inherit hidden reasoning. The original Find stays unchanged, and you can choose another problem from it later. Verify does not inherit this research dossier.
+Run these **one at a time**. Replace `<find-run-id>`, `<problem-id>` and `<solve-run-id>` with the IDs printed by the preceding commands; do not paste the angle-bracket placeholders literally. Inspect the Find report before selecting. `--from-find` passes the selected problem's frozen research dossier to a new Solve session, while preserving the original Find record.
 
-The snapshot defaults to 300 files, 8 MB per file and 32 MB total. Dependency/build caches, hidden files, credentials and linked files are excluded. Supported formats are Markdown/text, JSON, CSV/TSV, Python, Lean, LaTeX/BibTeX and PDF. The manifest lists files omitted by size, scan or read limits. Chat receives up to 256 KB of text inline on its first response; binary PDFs and text beyond that limit are explicitly listed as not sent. Configure `discovery.context_max_files`, `context_max_file_bytes`, `context_max_total_bytes` and `chat_context_max_bytes` when needed. Source files remain untrusted, and old open-status evidence may need refreshing.
+`verify --from-run` includes the candidate, statement and references; it does not automatically copy workspace proof files. To include Lean or other proof sources as frozen attachments, use the browser Verify form. [Evidence inputs and limits](configuration.md#evidence)
 
-Find may explore examples or proof routes to estimate difficulty, but returns its list for your choice. Uncertain open status stays **Unknown**; an estimate is never a success probability. The CLI’s explicit `run` command remains the automatic full-pipeline alternative.
+### Supply your own problem
 
+```bash
+mathlottery solve --prompt 'Prove that the sum of the first n positive odd integers is n squared for every nonnegative integer n' --budget-time 10m
+```
 
-Each problem retains its exact statement, sources, difficulty estimate, verification feasibility, and selection reason. Open status is an agent assessment supported by evidence; ranking is not a probability of success. Only sources supported by the run record count toward status checks. Insufficient evidence leaves status at `UNKNOWN`, while the original agent assessment remains in the selection record.
+Or import the bundled example and reuse its problem ID:
 
-## Solve a problem
-
-Use a problem ID from discovery or provide a research goal directly:
-
-~~~bash
-mathlottery solve --problem <problem-id>
-mathlottery solve --prompt 'Investigate this mathematical problem...'
-~~~
-
-You can also import your own problem:
-
-~~~bash
+```bash
 mathlottery add --file examples/odd_sum.problem.json
 mathlottery solve --problem odd-sum --budget-time 10m
-~~~
-
-The same research agent chooses the order of derivations, experiments, and tool calls. It can save partial candidates and continue exploring. Submitting a final candidate ends an independent `solve` task; the proof remains `CANDIDATE` until `verify`. Finding no proof is also a valid research outcome.
-
-## Verify a candidate
-
-Review the latest candidate from an existing solve run, or supply a candidate JSON file or proof file:
-
-~~~bash
-mathlottery verify --from-run <solve-run-id>
-mathlottery verify --candidate runs/<run-id>/candidates/<candidate-id>.json
 mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
-~~~
+```
 
-Candidate JSON retains its `claim`, `proof`, `assumptions`, and `references`; prior review verdicts are excluded from the new review. Without `--problem`, the JSON candidate's `claim` is the statement being checked. A plain proof file requires `--problem`.
+That last command reviews the supplied example proof. Use `verify --from-run <solve-run-id>` to review your solver's candidate instead. A supplied problem is not automatically classified as open or new.
 
-Reviews use a separate session and workspace. The initial context contains the problem, candidate and references, plus any proof sources explicitly selected in the browser. Previous solver conversations and review verdicts are not included. Any of `NO_ISSUES_FOUND`, `ISSUES_FOUND`, or `INCONCLUSIVE` ends an independent `verify` task without starting a solver. A favorable model review can establish at most `SELF_CHECKED`; finite tests or an agent's claim that Lean passed do not automatically establish a formal proof.
+<a id="organize"></a>
 
-New Find/Verify milestones must provide checkable excerpts, search coverage and concrete proof checks to support their conclusions. Results display **original-problem coverage**, remaining obligations and evidence gaps separately from the verdict. A correct partial result does not become a complete solution. Historical records without these fields remain unassessed under the new policy.
+### After Verify: organize an expert reading report
 
-For an independent Lean receipt, attach the required sources in the browser and ask the reviewer to request a check of the named theorem declarations. Configure `verification` in `config.yaml`; prepare compatible Lean/leanchecker, bubblewrap, `prlimit` and prebuilt libraries first. Successful kernel replay can support `PARTIALLY_VERIFIED`, with its exact scope recorded. Missing tools, resource limits and source failures remain visible. See [evidence requirements and configuration](evidence.md).
+Choose **Organize** in the browser, or run:
 
-Codex's `workspace-write` sandbox does not fully isolate file reads. Review independence here concerns the context; it is not a certified blind review.
+```bash
+mathlottery organize --from-run <verify-run-id> --language en
+mathlottery export <organize-run-id> --format markdown --output expert-report.md
+mathlottery export <organize-run-id> --format pdf
+```
 
-## Run the full pipeline
+Replace the run-ID placeholders with actual IDs. `--language` accepts `en` or `zh`; `--instructions` can specify an audience or emphasis. Organize uses the same model configuration and `--backend`, `--model`, `--reasoning-effort`, `--reasoning-mode`, `--budget-time` and `--max-iterations` overrides as research commands. It starts a separate model task and uses quota; merely selecting a source does not.
 
-~~~bash
+The source must be idle and contain a recorded review. An inconclusive or negative review is also eligible. The report explains the statement, assumptions, proof strategy, lemmas and derivations, and preserves review issues, formal-check scope and novelty uncertainty. It reconstructs saved visible work; it is not hidden model reasoning or a new verification.
+
+For PDF output, install the [optional report dependencies](resources.md#reports) once. Both entry points save `runs/<organize-run-id>/organized/report.md` and, when export succeeds, `report.pdf`. The adjacent `manifest.json` records provenance, hashes and omissions; `materials/` holds the captured small source files. Binary dependencies, caches and historical Solve records without an explicit source link may be absent—check the manifest before sharing.
+
+For handoff, use **Download report + materials (ZIP)** in the browser, or share the whole `organized/` directory. The bundle preserves relative links and includes the PDF when available. Downloading only Markdown or PDF does not include the referenced source files.
+
+If PDF export fails, Markdown remains available. After fixing the renderer, use **Retry PDF export** or the PDF export command above; this does **not** call the model again. Markdown export returns the expert report; `mathlottery report <organize-run-id>` continues to produce the task summary.
+
+### Automate the stages
+
+```bash
 mathlottery run
-mathlottery run --problem <problem-id>
-mathlottery run --prompt 'Please solve the Riemann hypothesis'
-~~~
+```
 
-With no problem supplied, the pipeline starts by finding one; otherwise it starts solving. Candidates go to a separate reviewer, and issues or uncertainty return to the original researcher. Passing a partial result continues research. The pipeline ends when the researcher explicitly submits a final deliverable and its review finds no issues.
+Without a supplied problem, `run` starts by finding one and proceeds automatically. Use `run --problem <problem-id>` or `run --prompt 'Your problem statement'` to start directly with solving. Review feedback can return to the original researcher. Budget exhaustion, errors or failure to find a proof can end the attempt; more time does not guarantee a solution.
 
-## Pause, resume, and inspect reports
+`run` does not automatically start Organize. Request it explicitly after reviewing the result.
 
-~~~bash
-mathlottery status <run-id>
-mathlottery stop <run-id>
-mathlottery resume <run-id>
-mathlottery resume <run-id> --message 'Prioritize boundary cases and counterexamples'
-mathlottery resume <run-id> --budget-time 6h --max-iterations 100
-mathlottery report <run-id> --show
-mathlottery export <run-id> --format json --output checkpoint.json
-~~~
+<a id="backends"></a>
 
-Budget overrides set new total limits and do not reset time already consumed. Paused time does not count as active time. `max_iterations` counts research handoffs, not native tool calls within a round. Token accounting uses actual backend reports and is checked between calls; unreported usage stays unknown.
+## Configure the model connection
 
-Reports include a stage measurement table and `metrics.json`: completed returns, missing/invalid milestones, measured invocation seconds, candidate counts and review outcomes. Use these to locate time spent on discovery, solving or review, and to detect repeated handoff failures. Missing historical timing is `unknown`, not zero. These measurements do not certify mathematical success. See [code flow and recovery](architecture.md) for the module boundaries.
+Both entry points read the workspace's **`config.yaml` for new tasks**. Edit the existing `backend` section instead of appending a duplicate YAML key. The browser can override settings for a new task without changing this file.
 
-A finished native task can receive further guidance through `resume --message` and continue its original workflow. Use `--backend` explicitly to switch agents; pending calls must be recovered first. Each backend has separate context IDs, and switching imports recorded research answers.
+| Connection | What you need | Where to configure it |
+| --- | --- | --- |
+| **Codex** (default) | Official CLI and a MathLottery ChatGPT login | `backend.mode: codex`; sign in once through MathLottery |
+| **Chat / OpenAI API** | API key and a supported model | `backend.mode: chat`; key in an environment variable |
+| **Other Responses provider** | Compatible API endpoint, key and model | Named `model_providers` profile and `backend.provider` |
 
-Do not operate the same active session simultaneously from another Codex client.
+### Codex: use the same login for browser and terminal
 
-## Configuration and usage accounting
+The configuration created by `init` uses Codex with its default model settings. This minimal backend section is enough:
 
-Time and token budgets do not cap local RAM or disk. See [the scope of resource controls](resources.md#what-the-configuration-actually-limits) before increasing concurrency or launching a Lean build.
-
-See [config.example.yaml](../config.example.yaml) for the full template. Common settings:
-
-~~~yaml
+```yaml
 backend:
   mode: codex
   execution: native
-  model: gpt-6-astra
-  reasoning_effort: max
-  native_turn_timeout_seconds: null
-  native_web_search: live
-  native_network_access: true
+  model: null
+  reasoning_effort: null
+```
+
+`null` uses defaults from **MathLottery's isolated Codex home**, not your personal CLI / IDE configuration. To choose explicitly, set `model` and `reasoning_effort`, for example `gpt-6-astra` and `max` if available. You do not need long model flags on every command.
+
+Sign in through `mathlottery serve` once, then use the terminal commands with the same workspace. For login without the MathLottery page, use the [isolated terminal login instructions](configuration.md#account). Plain `codex login` signs into your ordinary Codex, not MathLottery.
+
+<a id="chat-api"></a>
+
+### Chat: use an API key
+
+Replace the backend section below with your chosen model ID. `your-model-id` is a placeholder. The default hosted tools are web search and Code Interpreter; the model and account must support them.
+
+```yaml
+backend:
+  mode: chat
+  execution: native
+  model: your-model-id
+  reasoning_effort: null
   chat:
+    reasoning_mode: null
     api_key_env: OPENAI_API_KEY
-    base_url: https://api.openai.com/v1
-    reasoning_mode: pro
-    poll_interval_seconds: 1
-    request_timeout_seconds: 30
-    tools:
-      - type: web_search
-      - type: code_interpreter
-        container:
-          type: auto
-budget:
-  max_wall_time_minutes: 180
-  max_iterations: 50
-  max_external_cost_usd: null
-~~~
+```
 
-When `native_turn_timeout_seconds` is `null`, one agent call may use the remaining total time budget. `chat.request_timeout_seconds` limits a single HTTP request, not the model's total thinking time. When `chat.reasoning_mode` is `null`, that field is omitted and the API default applies; `standard` and `pro` can be selected explicitly. Configure Chat's hosted tools according to account and model support. Custom tools that require client-side execution are not yet implemented.
+In the terminal that will launch MathLottery, enter the API key without displaying it or putting it in shell history:
 
-Chat uses API billing; Codex uses the official CLI's ChatGPT login. Authentication and billing methods are never switched automatically. This project does not estimate dollar costs, subscription balances, or third-party tool fees; set API spending controls in the provider account. The legacy setting `max_external_cost_usd: 0` blocks Chat API calls. `null` delegates spending controls to the account and does not mean free usage.
+```bash
+read -rs -p 'OpenAI API key: ' OPENAI_API_KEY
+export OPENAI_API_KEY
+mathlottery doctor
+```
 
-`codex_command` defaults to the command name `codex`, resolved through `PATH` at runtime. Discovered absolute paths are not written back into configuration. `config.yaml`, `.env`, IDE settings, databases, run records, and test logs are ignored local files.
+Now start `mathlottery serve` or run a terminal workflow. Restart an existing server to pick up new environment variables. `.env` files are **not loaded automatically**. Keys belong in the environment, never in YAML or proof files.
 
-## Browse result samples
+`chat` is an automatic Responses API backend, not the ChatGPT website's Pro interface. The MathLottery Codex login does not authenticate Chat API calls. Optional `backend.chat.reasoning_mode: pro` is sent only when configured; use it only if the selected API model supports it. [Models, tools and provider configuration](configuration.md#models)
 
-The [showcase](../showcase/README.md) contains three compact case studies with proofs, review summaries, and verification records:
+### Other providers
 
-- [Mesh patterns on involutions](../showcase/mesh-involutions/README.md): a complete written candidate proof with partial Lean verification.
-- [Medial-triangle inequality](../showcase/medial-triangle-inequality/README.md): a complete written proof and a checked Lean formalization.
-- [Stepwise irregular graphs](../showcase/stepwise-irregular-graphs/README.md): a complete counterexample with an executable finite certificate.
+Configure a named Responses provider, then select it in the browser or through `backend.provider` in YAML. See the [complete provider example and compatibility requirements](configuration.md#providers). CLI `--backend` chooses the transport (`codex` or `chat`), not a vendor name; there is no `--provider` flag. Other vendors' native protocols require an adapter.
 
-Each case links to its reproduction instructions and states its novelty limits. Its review summary and verification records explain the evidence behind those assessments. These are research outputs; their formal verification and novelty status should be read separately.
+<a id="operations"></a>
 
-## Local artifacts
+## Inspect, stop and continue
 
-~~~text
-.mathlottery/state.sqlite3          # Authoritative state, backend context IDs, events
-problems/<problem-id>/problem.json # Reusable problem statement
-runs/<run-id>/
-  literature/selection.json        # Ranking, status evidence, original assessment
-  workspace/                       # Research workspace and full research answers
-  review-workspaces/<candidate-id>/ # Separate review workspace
-  tasks/<task-id>/<attempt>/        # Prompts, answers, invocation receipts
-    request.json / response.json   # Chat API bodies, without authentication headers
-    codex.events.jsonl             # Native Codex events
-  candidates/                      # Immutable candidate proof versions
-  verification/                    # Separate review results
-  checkpoints/ / usage.json         # Recovery state and actual usage
-  report.md                        # Workflow results and evidence
-  metrics.json                     # Measured stage outcomes and invocation timing
-~~~
+Replace `<run-id>` with an actual task ID.
 
-Model and tool information comes from actual responses or session metadata; unreported fields stay unknown. External tool side effects are not guaranteed to occur exactly once. Check logs and research files during recovery.
+| Action | Command |
+| --- | --- |
+| Inspect saved status | `mathlottery status <run-id>` |
+| Stop a task | `mathlottery stop <run-id>` |
+| Continue an interrupted task | `mathlottery resume <run-id>` |
+| Add direction, including to a completed task | `mathlottery resume <run-id> --message 'Check boundary cases and missing assumptions'` |
+| Increase total limits | `mathlottery resume <run-id> --budget-time 6h --max-iterations 100` |
+| Read the report | `mathlottery report <run-id> --show` |
+| Export saved state | `mathlottery export <run-id> --format json --output checkpoint.json` |
 
-## Legacy compatibility and development
+Resume uses the task's **saved configuration**. Editing `config.yaml` or the browser model picker does not change an existing task. Budget overrides replace the **total limit**, not add more time; paused time does not count. A completed task needs `--message` to continue. [Budgets and recovery](configuration.md#budgets)
 
-The former manual handoff backend is now named `manual`. `work` remains an alias for `codex`, and `--mode` remains an alias for `--backend`. Old `chat` checkpoints still resume as `manual`; upgrading does not automatically send billable API requests.
+Terminal research runs in the foreground; browser tasks use background workers. Do not operate the same active task simultaneously from multiple clients.
 
-~~~bash
-mathlottery run --backend manual --prompt 'Investigate this mathematical problem...'
-mathlottery submit --run <run-id> --file response.md
-mathlottery run --backend manual --execution structured --problem odd-sum
-mathlottery demo
-mathlottery demo --case incorrect
-pytest -q
-ruff check .
-~~~
+<a id="files"></a>
 
-Only `manual` requires a person to transfer responses. Both `chat` and `codex` call the agent automatically. `structured` is the legacy compatibility protocol; the three independent workflows use `native`.
+## Where results are saved
 
-See [architecture and recovery](architecture.md), [validation methods and scope](local-validation.md), and the [legacy protocol](protocol.md) for details. Offline demos and mock-backend tests do not measure a model's mathematical ability. The project does not automatically commit or push to GitHub.
+| Path | Contents |
+| --- | --- |
+| `problems/<problem-id>/` | Reusable problem statements |
+| `runs/<run-id>/report.md` | Result and evidence summary |
+| `runs/<run-id>/candidates/` / `verification/` | Candidate versions and review records |
+| `runs/<run-id>/workspace/` | Research files and visible answers |
+| `runs/<organize-run-id>/organized/` | Expert report, PDF export status, source manifest and captured materials |
+| `.mathlottery/` | Local state, sessions and the isolated Codex login |
+
+These working directories and `config.yaml` are Git-ignored. The browser offers reports and small proof-source downloads; a source file alone does not establish successful formal verification. Curated, compact examples live in the versioned [showcase](../showcase/README.md).
+
+<a id="troubleshooting"></a>
+
+## Common setup issues
+
+| Symptom | Next step |
+| --- | --- |
+| Codex unavailable / missing Linux dependency in WSL | Check `codex --version` in the server's terminal; install the Linux CLI there. [Installation and account details](configuration.md#account) |
+| Login times out | Check that terminal's network/proxy, then restart the server. A timeout does not establish that the saved login expired. [Network setup](configuration.md#network) |
+| Browser connection refused / port busy | Use the actual printed address; try `mathlottery serve --port 9001`. [WSL and port details](configuration.md#network) |
+| Chat has no key or model | Export the API key in the launching terminal and configure a model; restart the server. [Chat setup](#chat-api) |
+| Model or reasoning setting rejected | Choose one supported by the account/provider; MathLottery does not silently substitute another. [Model settings](configuration.md#models) |
+| Lean fails or uses too much memory | Check the pinned toolchain, libraries, available RAM and concurrency. [Resource guide](resources.md) |
+| Markdown is ready but PDF is unavailable | Install report dependencies, Chromium and needed fonts, then retry PDF export. [PDF setup](resources.md#reports) |
+
+`mathlottery doctor` checks setup for both built-in backends without model inference. An unconfigured unused backend is not a reason to change the one you selected. Chat diagnostics check configuration, not connectivity, quota, model access or tool support.
+
+CLI commands normally use the current directory. To select a workspace/configuration explicitly, put global options **before** the subcommand: `mathlottery --root ./research-workspace --config ./my-config.yaml find`. A relative `--config` path is resolved from the launching terminal's directory, not `--root`; without it, the default is `<root>/config.yaml`. `serve` can locate an editable checkout automatically; other commands do not. Use `mathlottery --help` or `mathlottery solve --help` for available options.
+
+<a id="next"></a>
+
+## Further reading
+
+- [Configuration reference](configuration.md): providers, accounts, network, budgets, attachments and legacy modes.
+- [Resource requirements](resources.md): Lean installation, RAM/disk planning and WSL.
+- [Evidence policy](evidence.md) and [result showcase](../showcase/README.md): what a result actually establishes.
+- [Architecture](architecture.md) and [local validation](local-validation.md): implementation, checks and recovery.

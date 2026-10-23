@@ -11,6 +11,7 @@ from mathlottery.config import Config
 from mathlottery.discovery import project as project_discovery
 from mathlottery.models import Phase, Run, uid
 from mathlottery.native_prompts import build_native_prompt, milestone_schema
+from mathlottery.organization import project as project_organization
 from mathlottery.review_evidence import project as project_review_evidence
 from mathlottery.storage import Store, atomic_write, json_text, safe_path
 
@@ -23,6 +24,8 @@ class NativeWorkspace:
         root = self.store.run_dir(run.id)
         if run.phase == Phase.VERIFY:
             return safe_path(root, f"review-workspaces/{run.candidates[-1].id}")
+        if run.phase == Phase.ORGANIZE:
+            return safe_path(root, "organization-workspace")
         return safe_path(root, "workspace")
 
     def prepare(self, run: Run, config: Config) -> str:
@@ -48,7 +51,8 @@ class NativeWorkspace:
             project_review_evidence(run, workspace)
         else:
             for entry in run.native.history:
-                if entry.get("role") != "research" or not entry.get("answer"):
+                role = "organization" if run.phase == Phase.ORGANIZE else "research"
+                if entry.get("role") != role or not entry.get("answer"):
                     continue
                 answer = safe_path(self.store.run_dir(run.id), entry["answer"])
                 if answer.is_file():
@@ -58,10 +62,12 @@ class NativeWorkspace:
                     )
         prompt = build_native_prompt(run, budget.remaining(run, config))
         prompt += project_discovery(self.store, run, workspace)
+        prompt += project_organization(self.store, run, workspace)
         if run.phase != Phase.VERIFY:
             imported = []
             for entry in reversed(run.native.history):
-                if entry.get("role") != "research":
+                role = "organization" if run.phase == Phase.ORGANIZE else "research"
+                if entry.get("role") != role:
                     continue
                 if entry.get("mode", run.mode) == run.mode:
                     # Hosted tools cannot read local history. Preserve visible partial

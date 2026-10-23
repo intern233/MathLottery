@@ -6,7 +6,7 @@ English | [简体中文](resources.cn.md)
 
 MathLottery calls remote models. Its current backends do not require local model weights, a GPU, or CUDA. The browser workspace, agent client, files, and any tools launched locally still use your machine. Lean/mathlib checks and symbolic or numerical experiments can dominate local memory and disk use. Chat's hosted Code Interpreter uses a separate remote environment; installing Lean locally does not install it there.
 
-Use Linux or WSL 2 for the current implementation. The environment file installs Python 3.12 and the project dependencies; the package requires Python 3.11 or newer. The Codex backend needs the official CLI, and Lean is an optional, separate installation. The frontend has no separate Node.js build step.
+Use Linux or WSL 2 for the current implementation. The environment file installs Python 3.12 and the project dependencies; the package requires Python 3.11 or newer. The Codex backend needs the official CLI. Lean and the [PDF report renderer](#reports) are optional, separate installations. The frontend has no separate Node.js build step.
 
 Keep outbound network access available for authentication, model calls and research searches. Initial Python/Lean/mathlib setup also needs access to package, repository and cache hosts; downloads can be substantial and the extracted disk footprint is larger than the transfer size. Once prepared, a local Lean check with all dependencies present can run offline, while model-driven research still needs its backend connection and account allowance.
 
@@ -38,6 +38,25 @@ A single check of the showcase's [MedialAlgebra.lean](../showcase/medial-triangl
 | mathlib working copy, dependencies and existing build/cache files | About 7.2 GiB |
 
 The RAM figure covers **one module's compiler process**, excluding the UI, agent, IDE and other jobs. It does not measure the whole showcase, a clean mathlib build, or peak WSL memory. The disk figures describe one installed version and cache state, not the archive download size or a fixed requirement. Other experiments have hit Lean's `-M 2048` limit during large polynomial normalization; that error records a limit being exceeded, not a measured peak RSS of 2 GiB. Keep the distinction between a configured limit and measured usage.
+
+<a id="reports"></a>
+
+## Optional expert report PDF setup
+
+Organize uses the configured remote model to write the expert report. Markdown is saved without a PDF renderer; PDF export runs Chromium locally. In the active MathLottery environment, from the project directory:
+
+```bash
+python -m pip install -e '.[reports]'
+python -m playwright install chromium
+```
+
+If Linux reports missing browser libraries, install them with `python -m playwright install-deps chromium`; this may require administrator privileges. Chinese reports also need installed CJK fonts. For Debian/Ubuntu/WSL Ubuntu, `sudo apt-get install fonts-noto-cjk` is one option. Installing browser dependencies and fonts is a machine setup step, not a model call.
+
+Chromium adds a platform-dependent browser download and cache occupying hundreds of MB; reserve additional disk beyond the basic Python environment. Each export launches a local browser process tree. Start with one export at a time and measure its RAM for long reports; there is no measured universal minimum or process-tree RAM cap. Organize's model work uses its ordinary task budget. PDF export and local retries use local CPU, RAM and disk, without another model call or a Lean compilation.
+
+The renderer supports headings, tables, code, page numbers and common TeX mathematics in `$…$`, `$$…$$`, `\(…\)` and `\[…\]`. Mathematics assets are bundled, so rendering does not fetch scripts or fonts from a CDN. Unsupported TeX remains visible as source text with a warning. Images are replaced with descriptive text; review the captured original materials separately. Raw HTML is not executed, and embedded remote/local resources are not fetched.
+
+If dependencies, Chromium or rendering fail, the saved Markdown remains available. Fix the environment, then click **Retry PDF export** or run `mathlottery export <organize-run-id> --format pdf`. Review export warnings and the first generated PDF before sharing, especially mathematical symbols, long formulas and Chinese text. PDF success is a formatting result, not proof validation. [Organize usage and output paths](usage.md#organize)
 
 ## Prepare Lean without rebuilding everything
 
@@ -72,6 +91,7 @@ For agent-driven work, put the desired toolchain, cache location and concurrency
 | `tools.memory_mb: 512` | Address-space limit for the legacy structured Python worker. It does **not** cap native Codex commands, Lean/Lake, the web server, or WSL. The legacy Lean checker does not use this memory setting either. |
 | `tools.timeout_seconds: 15` | Legacy local tool timeout, including the legacy Lean checker; it does not impose a 15-second limit on native shell commands. |
 | `verification.formal_memory_mb: 2048` | Independent attached-source checker only: Lean internal `-M` threshold. The separate `formal_address_space_mb: 8192` bounds per-process virtual address space (`RLIMIT_AS`), including reserved stacks and mapped libraries; it is not measured RAM. One Lean worker, 64 MiB thread stack, 120-second default total check timeout. Not a process-tree or WSL RSS cap. |
+| `verification.formal_max_object_mb: 16` / `formal_max_total_object_mb: 960` | Independent checker compiler output: per-file size limit and monitored total size, in MiB. Proof objects can greatly exceed source size. Temporary compiled objects are deleted after checking; limits, sizes and hashes remain in the receipt. Not a quota on native research artifacts or the whole disk. |
 | `verification.max_sources`, `source_timeout_seconds` | Independent citation retrieval: defaults to 12 URLs and a 60-second collection budget per milestone; in-flight requests use `tools.web_timeout_seconds`. PDFs use a 512 MB isolated parser. See [evidence configuration](evidence.md). |
 | `budget.max_wall_time_minutes` / `backend.native_turn_timeout_seconds` | Active research time / individual native-turn duration, not RAM, CPU-thread or disk limits. |
 | `budget.max_iterations` | Research handoffs, not the number of tool calls or child processes inside a turn. |
@@ -80,7 +100,7 @@ For agent-driven work, put the desired toolchain, cache location and concurrency
 
 MathLottery prevents two workers from driving the **same run** at once. It currently has no global resource scheduler or memory-based queue across different runs. Start one local compute-heavy task at a time until measured headroom supports more. Closing the browser or UI server does not stop research workers; use **Stop task** or `mathlottery stop <run-id>`.
 
-If a hard cap for a whole process group is required, configure an OS/container resource limit that includes its descendants. MathLottery does not install such a limit automatically, and Codex's workspace sandbox is not a RAM quota. Likewise, time/token budgets do not reserve provider quota: credentials, subscription/API allowance, connectivity and local hardware are separate requirements. See [configuration and usage limits](usage.md#configuration-and-usage-accounting).
+If a hard cap for a whole process group is required, configure an OS/container resource limit that includes its descendants. MathLottery does not install such a limit automatically, and Codex's workspace sandbox is not a RAM quota. Likewise, time/token budgets do not reserve provider quota: credentials, subscription/API allowance, connectivity and local hardware are separate requirements. See [backend configuration and budgets](configuration.md).
 
 ## WSL 2 memory and swap
 

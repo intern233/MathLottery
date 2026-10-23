@@ -6,7 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from mathlottery import budget
+from mathlottery import budget, organization
 from mathlottery.agent_backend import research_backend
 from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
@@ -62,7 +62,8 @@ class NativeRunner:
                 collect_sources(self.store, run, [c for p in milestone.shortlist for c in p.citations])
             elif milestone.kind == "review":
                 self.engine.candidates.prepare_review(run, milestone.review)
-        role = "review" if run.phase == Phase.VERIFY else "research"
+        role = ("organization" if run.phase == Phase.ORGANIZE
+                else "review" if run.phase == Phase.VERIFY else "research")
         run.native.history.append(
             {
                 "task_id": run.task_id,
@@ -168,6 +169,9 @@ class NativeRunner:
                     finish = "Independent review recorded; see proof status and verification limits"
                 else:
                     run.phase = Phase.SOLVE
+            elif milestone.kind == "organization":
+                organization.accept(run, milestone.report_markdown)
+                finish = "Expert reading report organized; original verification outcomes are unchanged"
             elif milestone.kind == "stop":
                 finish = milestone.summary or "Researcher ended the investigation"
             run.native.history[-1]["milestone"] = milestone.model_dump(mode="json")
@@ -179,6 +183,8 @@ class NativeRunner:
                 run.phase = Phase.FIND
             elif run.workflow == Workflow.VERIFY:
                 run.phase = Phase.VERIFY
+            elif run.workflow == Workflow.ORGANIZE:
+                run.phase = Phase.ORGANIZE
             else:
                 run.phase = Phase.SOLVE if run.problem else Phase.FIND
                 run.native.review_only = False

@@ -27,6 +27,29 @@ MODULE = re.compile(rf"{IDENTIFIER}(?:\.{IDENTIFIER})*")
 ALLOWED_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
 
 
+def _output_budget_error(output, max_object_bytes, max_total_bytes):
+    """Bound generated files during compilation, including unexpected temporary files."""
+    total = 0
+    for count, path in enumerate(output.rglob("*"), start=1):
+        if count > 256:
+            return "OUTPUT_LIMIT", "Compiler output exceeds the file/directory count limit"
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            # The compiler may atomically replace temporary output during a poll.
+            continue
+        if stat.S_ISDIR(info.st_mode):
+            continue
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            return "ERROR", "Unexpected linked or special file in compiler output"
+        if info.st_size > max_object_bytes:
+            return "OUTPUT_LIMIT", "Compiler object exceeds the configured size limit"
+        total += info.st_size
+        if total > max_total_bytes:
+            return "OUTPUT_LIMIT", "Compiler output exceeds the configured total size limit"
+    return None
+
+
 def _run(command, directory, name, deadline, cancelled):
     """Bound all subprocess output and kill the entire process group on every exit."""
     log = directory / f"{name}.log"
@@ -81,6 +104,8 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
         "declarations": [], "statement_alignment": "NOT_CERTIFIED",
         "limits": {"seconds": settings.formal_timeout_seconds, "memory_mb": settings.formal_memory_mb,
                    "address_space_mb": settings.formal_address_space_mb, "thread_stack_kb": 65536,
+                   "max_object_mb": settings.formal_max_object_mb,
+                   "max_total_object_mb": settings.formal_max_total_object_mb,
                    "threads": 1, "memory_scope": "Lean internal threshold plus per-process RLIMIT_AS; not measured RSS or host-wide RAM"},
         "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. "
                  "No independent kernel implementation or natural-language equivalence check.",
@@ -96,17 +121,27 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
         return unavailable("No immutable proof-source snapshot was attached to this review")
     validate(evidence, candidate, run.mode)
     sources = {s.path: s for s in evidence.files}
-    modules = []
+    modules, relative_files = [], []
+    module_root = request.module_root
+    if module_root and not re.fullmatch(rf"{IDENTIFIER}(?:/{IDENTIFIER})*", module_root):
+        return unavailable("Module root must be a plain directory path relative to the submitted workspace")
     if len(set(request.files)) != len(request.files):
         return unavailable("Formal check files must be distinct and ordered by dependencies")
     for path in request.files:
-        module = path.removeprefix("workspace/").removesuffix(".lean").replace("/", ".")
-        if path not in sources or not path.endswith(".lean") or not MODULE.fullmatch(module):
+        relative = path.removeprefix("workspace/")
+        if module_root:
+            if not relative.startswith(module_root + "/"):
+                return unavailable("Every requested Lean source must be inside the selected module root")
+            relative = relative[len(module_root) + 1:]
+        module = relative.removesuffix(".lean").replace("/", ".")
+        if (path not in sources or not path.startswith("workspace/")
+            or not path.endswith(".lean") or not MODULE.fullmatch(module)):
             return unavailable("Only attached Lean files with plain module names can be checked")
         if module.split(".")[0] in {"Init", "Lean", "Std", "Mathlib", "MathLotteryInspector"}:
             return unavailable("Submitted module would shadow a trusted library or inspector")
         modules.append(module)
-        receipt["sources"].append({"path": path, "sha256": sources[path].sha256})
+        relative_files.append(relative)
+        receipt["sources"].append({"path": path, "module": module, "sha256": sources[path].sha256})
     if len(set(request.declarations)) != len(request.declarations) or any(
         not MODULE.fullmatch(name) for name in request.declarations
     ):
@@ -128,6 +163,8 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
     except (OSError, subprocess.SubprocessError):
         return unavailable("Cannot resolve the configured Lean toolchain or prebuilt libraries")
     receipt["lean_version"] = version
+    max_object_bytes = settings.formal_max_object_mb * 1024 * 1024
+    max_total_bytes = settings.formal_max_total_object_mb * 1024 * 1024
     inspector = Path(__file__).with_name("lean_inspector.lean").read_text()
     receipt["inspector_sha256"] = digest(inspector)
     key = digest(json_text([receipt["candidate_sha256"], receipt["problem_sha256"], request.model_dump(),
@@ -145,15 +182,15 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
             inputs, output = root / "inputs", root / "output"
             inputs.mkdir()
             output.mkdir()
-            for path in request.files:
-                destination = inputs / path.removeprefix("workspace/")
+            for path, relative in zip(request.files, relative_files, strict=True):
+                destination = inputs / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_text(sources[path].content)
             (inputs / "MathLotteryInspector.lean").write_text(inspector)
 
             def command(args, writable):
                 base = [prlimit, f"--as={settings.formal_address_space_mb * 1024 * 1024}",
-                        "--fsize=16777216", "--nofile=256", "--", bwrap,
+                        f"--fsize={max_object_bytes}", "--nofile=256", "--", bwrap,
                         "--unshare-all", "--die-with-parent", "--new-session", "--clearenv",
                         "--setenv", "PATH", "/lean/bin:/usr/bin:/bin",
                         "--setenv", "LEAN_NUM_THREADS", "1",
@@ -172,14 +209,28 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
                 return base
 
             def execute(args, label, writable=False):
-                result = _run(command(args, writable), directory, label, deadline, cancelled)
+                output_error = None
+
+                def interrupted():
+                    nonlocal output_error
+                    if cancelled():
+                        return True
+                    if writable:
+                        output_error = _output_budget_error(output, max_object_bytes, max_total_bytes)
+                    return output_error is not None
+
+                result = _run(command(args, writable), directory, label, deadline, interrupted)
+                if writable:
+                    output_error = output_error or _output_budget_error(output, max_object_bytes, max_total_bytes)
+                if output_error:
+                    result["status"] = output_error[0]
                 receipt["steps"].append({k: v for k, v in result.items() if k != "output"} | {"argv": args})
                 if result["status"] != "OK":
-                    receipt.update(status=result["status"], reason=f"{label} did not complete successfully")
+                    receipt.update(status=result["status"], reason=output_error[1] if output_error
+                                   else f"{label} did not complete successfully")
                 return result
 
-            for index, (path, module) in enumerate(zip(request.files, modules, strict=True)):
-                relative = path.removeprefix("workspace/")
+            for index, (relative, module) in enumerate(zip(relative_files, modules, strict=True)):
                 (output / relative).parent.mkdir(parents=True, exist_ok=True)
                 result = execute(["/lean/bin/lean", "-j", "1", "-s", "65536", "-M", str(settings.formal_memory_mb),
                                   "-o", "/out/" + relative.removesuffix(".lean") + ".olean", relative],
@@ -202,14 +253,14 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
                 relative = path.relative_to(output).as_posix()
                 if relative not in allowed or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                     raise ValueError("Unexpected file in compiler output")
-                if info.st_size > 16_777_216:
+                if info.st_size > max_object_bytes:
                     raise ValueError("Compiler object exceeds size limit")
                 target = frozen / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(path, target, follow_symlinks=False)
                 with target.open("rb") as stream:
                     sha = hashlib.file_digest(stream, "sha256").hexdigest()
-                receipt["objects"].append({"path": relative, "sha256": sha})
+                receipt["objects"].append({"path": relative, "size": info.st_size, "sha256": sha})
             if any(not (frozen / (m.replace(".", "/") + ".olean")).is_file() for m in modules):
                 raise ValueError("Compiler produced no object for a requested module")
             output = frozen

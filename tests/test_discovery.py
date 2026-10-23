@@ -6,10 +6,10 @@ import pytest
 
 from mathlottery.config import Config
 from mathlottery.discovery import problem_fingerprint
-from mathlottery.models import Phase, Problem, State, Workflow
+from mathlottery.models import Phase, Problem, State, Workflow, digest
 from mathlottery.native import NativeRunner
 from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import atomic_write
+from mathlottery.storage import atomic_write, json_text
 
 
 @pytest.fixture
@@ -67,6 +67,27 @@ def test_global_problem_catalog_does_not_override_selected_find_snapshot(discove
     store.save_problem(selected.model_copy(update={"statement": "Different later statement"}))
     run = engine.solve_discovered(config, source.id, selected.id)
     assert run.problem.statement == selected.statement
+
+
+def test_legacy_discovery_fingerprint_survives_new_optional_evidence_fields(discovery):
+    engine, source, config = discovery
+    legacy = source.shortlist[1].model_dump(mode="json")
+    legacy["literature_search"].pop("limitations")
+    legacy["evidence_assessment"].pop("limitations")
+    previous_hash = digest(json_text(legacy))
+    assert problem_fingerprint(Problem.model_validate(legacy)) == previous_hash
+    run = engine.solve_discovered(config, source.id, "chosen", previous_hash)
+    run.discovery_context.problem_sha256 = previous_hash
+    assert "user explicitly chose" in NativeRunner(engine).prepare(run, config)
+
+
+@pytest.mark.parametrize("field", ["literature_search", "evidence_assessment"])
+def test_new_search_limits_are_bound_into_frozen_discovery(discovery, field):
+    engine, source, config = discovery
+    run = engine.solve_discovered(config, source.id, "chosen")
+    getattr(run.problem, field).limitations = ["Only one database was searched."]
+    with pytest.raises(ValueError, match="no longer matches"):
+        NativeRunner(engine).prepare(run, config)
 
 
 @pytest.mark.parametrize("problem_id,sha,error", [

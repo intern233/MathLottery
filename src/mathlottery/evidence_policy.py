@@ -18,7 +18,7 @@ from mathlottery.models import (
     now,
 )
 
-POLICY_VERSION = "evidence-v1"
+POLICY_VERSION = "evidence-v2"
 
 
 def normalized(text: str) -> str:
@@ -38,7 +38,9 @@ def assess_sources(
 ) -> EvidenceAssessment:
     from mathlottery.models import digest
 
-    assessment = EvidenceAssessment(policy_version=POLICY_VERSION, assessed_at=now())
+    assessment = EvidenceAssessment(
+        policy_version=POLICY_VERSION, assessed_at=now(), limitations=list(search.limitations),
+    )
     observed = {
         normalized(query)
         for record in records if record.get("status") == "OK" and recent(record.get("retrieved_at"))
@@ -105,6 +107,8 @@ def assess_problem(problem: Problem, records: list[dict]) -> Problem:
     if problem.status == OpenStatus.OPEN:
         if "EXPLICIT_OPEN" not in roles:
             assessment.reasons.append("No checked source explicitly supports an open status")
+        if any(c["role"] == "PRIOR_RESULT" and c["relation"] == "UNKNOWN" for c in verified):
+            assessment.reasons.append("A cited prior result has an unresolved relationship to the original problem")
         if solution or any(
             c["role"] in {"SOLUTION", "CORRECTION"} and c["relation"] != "DIFFERENT"
             for c in verified

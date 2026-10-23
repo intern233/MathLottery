@@ -19,6 +19,7 @@ mathlottery = "mathlottery.cli:app"
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.9,<1"]
 research = ["numpy>=1.26,<3", "scipy>=1.12,<2", "matplotlib>=3.8,<4", "pypdf>=5,<7"]
+reports = ["markdown-it-py>=3,<5", "playwright>=1.50,<2", "pypdf>=5,<7"]
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "ruff>=0.9,<1"]

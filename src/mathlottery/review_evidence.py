@@ -46,7 +46,7 @@ def validate(evidence: ReviewEvidence, candidate: Candidate, mode: str, *, bound
     total = 0
     for item in evidence.files:
         if not selectable_source(item.path):
-            raise ValueError("Select formal sources from the solver workspace only")
+            raise ValueError("Select proof sources from the solver workspace only")
         data = item.content.encode("utf-8")
         if b"\0" in data or len(data) != item.size or digest(item.content) != item.sha256:
             raise ValueError("Submitted proof source integrity check failed")
@@ -71,7 +71,7 @@ def capture(root: Path, source: Run, paths: list[str], mode: str) -> ReviewEvide
     files = []
     for relative in paths:
         if not selectable_source(relative):
-            raise ValueError("Select formal sources from the solver workspace only")
+            raise ValueError("Select proof sources from the solver workspace only")
         data = read_formal_artifact(root, relative)
         content = data.decode("utf-8")
         files.append(ReviewSource(path=relative, size=len(data), sha256=digest(content), content=content))

@@ -14,6 +14,11 @@ def validate_milestone(run: Run, data: dict) -> NativeCheckpoint:
     value = NativeCheckpoint.model_validate(data)
     if (value.run_id, value.task_id) != (run.id, run.task_id):
         raise ValueError("Stale milestone: run_id and task_id must match the current turn")
+    if run.phase == Phase.ORGANIZE:
+        if value.kind not in {"progress", "organization", "stop"} or value.problem:
+            raise ValueError("An organizing session cannot change the problem, candidate or review")
+    elif value.kind == "organization":
+        raise ValueError("Only an organizing session can submit an organization report")
     if (
         value.problem
         and run.problem

@@ -11,8 +11,9 @@ from urllib.parse import urlsplit
 
 from pydantic import StrictBool, field_validator
 
-from mathlottery.backends import resolve_codex
+from mathlottery.backends import CodexCLIError, resolve_codex
 from mathlottery.codex_identity import CodexIdentity
+from mathlottery.local_network import NetworkConfigError
 from mathlottery.models import Model
 
 
@@ -29,6 +30,16 @@ class AccountChangeRequest(Model):
 
 class AccountError(ValueError):
     pass
+
+
+class AccountTimeoutError(AccountError):
+    def __init__(self):
+        super().__init__(
+            "Codex account request timed out; sign-in status could not be confirmed. "
+            "Check the network/proxy settings in the terminal running MathLottery, or configure "
+            ".mathlottery/network.json, then restart the server and refresh. "
+            "A timeout does not by itself mean the account was signed out."
+        )
 
 
 class AccountRPC:
@@ -88,11 +99,11 @@ class AccountRPC:
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise AccountError("Codex account request timed out. Refresh to retry.")
+                raise AccountTimeoutError()
             try:
                 message = self.messages.get(timeout=remaining)
             except queue.Empty:
-                raise AccountError("Codex account request timed out. Refresh to retry.") from None
+                raise AccountTimeoutError() from None
             if message is None:
                 raise AccountError("Codex account service stopped. Refresh to reconnect.")
             if message.get("id") == request_id:
@@ -191,15 +202,19 @@ class CodexAccount:
         with self.lock:
             try:
                 return operation()
-            except (OSError, ValueError, subprocess.SubprocessError):
+            except (OSError, ValueError, subprocess.SubprocessError) as error:
                 self._close()
+                cli_error = isinstance(error, CodexCLIError) and not failure_message
+                network_error = isinstance(error, NetworkConfigError) and not failure_message
+                timed_out = isinstance(error, (AccountTimeoutError, subprocess.TimeoutExpired)) and not failure_message
+                public_error = str(error) if cli_error or network_error else str(AccountTimeoutError()) if timed_out else None
                 return {
                     "available": False, "authenticated": False, "account": None, "login": None,
-                    "error": failure_message or (
-                        "Codex account access failed. Check that a current official Codex CLI "
-                        "is installed. Device login requires enabling device-code authentication in "
-                        "ChatGPT security settings. Sign in from the MathLottery account panel; "
-                        "your normal Codex CLI login is separate."
+                    "error_code": error.code if cli_error else "NETWORK_CONFIG_INVALID" if network_error else "ACCOUNT_TIMEOUT" if timed_out else None,
+                    "error": failure_message or public_error or (
+                        "Codex account access failed. Refresh to reconnect. If the problem "
+                        "persists, check the Codex CLI installation and this workspace's "
+                        "MathLottery account configuration."
                     ),
                 }
 

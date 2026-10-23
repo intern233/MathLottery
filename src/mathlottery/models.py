@@ -30,6 +30,7 @@ class Phase(StrEnum):
     FIND = "FIND"
     SOLVE = "SOLVE"
     VERIFY = "VERIFY"
+    ORGANIZE = "ORGANIZE"
     REPORT = "REPORT"
 
 
@@ -37,6 +38,7 @@ class Workflow(StrEnum):
     FIND = "find"
     SOLVE = "solve"
     VERIFY = "verify"
+    ORGANIZE = "organize"
     PIPELINE = "pipeline"
 
 
@@ -46,6 +48,7 @@ class State(StrEnum):
     SELECTING = "SELECTING"
     SOLVING = "SOLVING"
     VERIFYING = "VERIFYING"
+    ORGANIZING = "ORGANIZING"
     REPORTING = "REPORTING"
     COMPLETED = "COMPLETED"
     PAUSED = "PAUSED"
@@ -108,7 +111,10 @@ class Citation(Model):
     url: str = Field(max_length=2048)
     role: Literal[
         "ORIGINAL_STATEMENT", "EXPLICIT_OPEN", "SOLUTION", "CORRECTION", "PRIOR_RESULT"
-    ]
+    ] = Field(description="ORIGINAL_STATEMENT identifies a published problem or conjecture; "
+              "EXPLICIT_OPEN identifies an open-status statement. PRIOR_RESULT and SOLUTION "
+              "identify established mathematical results, not just matching conjectures. "
+              "Use CORRECTION for an erratum or correction.")
     locator: str = Field(max_length=1000)
     excerpt: str = Field(min_length=1, max_length=2000)
     explanation: str = Field(max_length=5000)
@@ -123,7 +129,17 @@ class Citation(Model):
 class LiteratureSearch(Model):
     queries: list[str] = Field(default_factory=list, max_length=30)
     conclusion: str = Field(default="", max_length=10000)
-    unresolved: list[str] = Field(default_factory=list, max_length=30)
+    unresolved: list[str] = Field(
+        default_factory=list, max_length=30,
+        description="Material unresolved evidence, such as an inaccessible potential solution, "
+        "a conflicting status claim, or an unclear equivalence. These block a supported assessment.",
+    )
+    limitations: list[str] = Field(
+        default_factory=list, max_length=30,
+        description="General bounds on the search, such as databases, languages and dates covered "
+        "or the possibility of unindexed work. These remain visible and do not certify exhaustive "
+        "coverage. Never move a specific unresolved source or comparison here.",
+    )
 
 
 class EvidenceAssessment(Model):
@@ -135,6 +151,7 @@ class EvidenceAssessment(Model):
     reasons: list[str] = Field(default_factory=list)
     checked_citations: list[dict] = Field(default_factory=list)
     observed_queries: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
 
 
 class Problem(Model):
@@ -212,6 +229,12 @@ class FormalCheckRequest(Model):
     # Ordered modules from the explicitly submitted immutable source snapshot.
     files: list[str] = Field(min_length=1, max_length=20)
     declarations: list[str] = Field(min_length=1, max_length=30)
+    module_root: str = Field(
+        default="", max_length=300,
+        description="Module root relative to the submitted workspace, e.g. proof for "
+        "workspace/proof/Main.lean importing Lemmas from the same directory. "
+        "Empty means workspace. All requested files must be inside this root.",
+    )
 
 
 class Review(Model):
@@ -291,13 +314,14 @@ class NativeCheckpoint(Model):
 
     run_id: str
     task_id: str
-    kind: Literal["progress", "selection", "candidate", "review", "stop"] = "progress"
+    kind: Literal["progress", "selection", "candidate", "review", "organization", "stop"] = "progress"
     summary: str = ""
     conclude: bool = False
     problem: Problem | None = None
     shortlist: list[Problem] = Field(default_factory=list)
     candidate: CandidateInput | None = None
     review: Review | None = None
+    report_markdown: str | None = Field(default=None, min_length=1, max_length=400000)
 
     @model_validator(mode="after")
     def payload_matches_kind(self):
@@ -305,6 +329,10 @@ class NativeCheckpoint(Model):
             raise ValueError("Only a candidate milestone must contain candidate")
         if (self.kind == "review") != (self.review is not None):
             raise ValueError("Only a review milestone must contain review")
+        if (self.kind == "organization") != (self.report_markdown is not None):
+            raise ValueError("Only an organization milestone must contain report_markdown")
+        if self.report_markdown is not None and not self.report_markdown.strip():
+            raise ValueError("The organized report must not be blank")
         if self.kind == "selection" and (not self.problem or not self.shortlist):
             raise ValueError("Selection requires a selected problem and an ordered shortlist")
         if self.shortlist and self.kind != "selection":
@@ -368,6 +396,42 @@ class DiscoveryContext(Model):
     omitted: list[str] = Field(default_factory=list)
 
 
+class ReviewProvenance(Model):
+    """Exact solver linkage, including reviews with no file attachments."""
+
+    source_run_id: str = Field(pattern=r"^run-[a-f0-9]{12}$")
+    source_candidate_id: str = Field(pattern=r"^candidate-[a-f0-9]{12}$")
+    candidate_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class OrganizationContext(Model):
+    """An immutable evidence bundle for an independent editorial session."""
+
+    source_run_id: str = Field(pattern=r"^run-[a-f0-9]{12}$")
+    source_revision: int = Field(ge=0)
+    source_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    problem_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    captured_at: str
+    language: Literal["zh", "en"] = "zh"
+    instructions: str | None = Field(default=None, max_length=30000)
+    candidate_hashes: list[dict] = Field(default_factory=list)
+    files: list[DiscoveryFile] = Field(default_factory=list)
+    omitted: list[str] = Field(default_factory=list)
+    lineage: list[dict] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
+class OrganizationReport(Model):
+    """Editorial output, never a new mathematical candidate or review."""
+
+    markdown: str = Field(min_length=1, max_length=500000)
+    markdown_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    created_at: str
+    pdf_status: Literal["pending", "ready", "failed"] = "pending"
+    pdf_error: str | None = None
+    pdf_details: dict = Field(default_factory=dict)
+
+
 class Run(Model):
     id: str = Field(pattern=r"^run-[a-f0-9]{12}$")
     mode: Literal["chat", "codex", "work", "manual", "demo"]
@@ -393,7 +457,10 @@ class Run(Model):
     next_actions: list[str] = Field(default_factory=list)
     candidates: list[Candidate] = Field(default_factory=list)
     review_evidence: ReviewEvidence | None = None
+    review_source: ReviewProvenance | None = None
     discovery_context: DiscoveryContext | None = None
+    organization_context: OrganizationContext | None = None
+    organization_report: OrganizationReport | None = None
     observations: list[dict] = Field(default_factory=list)
     task_id: str | None = None
     prompt_path: str | None = None

@@ -239,6 +239,21 @@ def test_history_unselected_searches_keep_individual_run_identities(web):
     assert all(record["problem_id"] is None and record["problem_key"] is None for record in records)
 
 
+@pytest.mark.parametrize("criteria", [
+    "First line\n" + "Detailed requirements. " * 200,
+    "A long first line " * 100,
+])
+def test_find_history_title_is_bounded_but_full_request_is_preserved(web, criteria):
+    run = Orchestrator(web.store).create(web.config(), workflow=Workflow.FIND, discovery_request=criteria)
+    summary = web.summary(run)
+    assert len(summary["title"]) <= 120
+    assert "\n" not in summary["title"]
+    assert summary["title"].removesuffix("…") in criteria
+    detail = web.detail(run.id)
+    assert detail["discovery_request"] == criteria
+    assert web.store.load(run.id).discovery_request == criteria
+
+
 @pytest.mark.parametrize("title", ["A custom problem", None])
 def test_http_custom_problem_starts_at_solve_and_keeps_review_in_same_group(web, title):
     statement = "For every positive integer n, determine whether P(n) holds."
@@ -521,6 +536,69 @@ def test_bounded_progress_and_path_escape(web, tmp_path):
     target.symlink_to(tmp_path / "config.yaml")
     with pytest.raises(ValueError, match="inside"):
         web.detail(run.id)
+
+
+@pytest.mark.parametrize("kind", ["selection", "review"])
+@pytest.mark.parametrize("answer_available", [False, True])
+def test_pending_independent_checks_keep_current_visible_progress(web, kind, answer_available):
+    run = Orchestrator(web.store).create(web.config(), workflow=Workflow.FIND)
+    root = web.store.run_dir(run.id)
+    directory = root / "tasks/task-current/attempt-current"
+    directory.mkdir(parents=True)
+    (directory / "progress.md").write_text("Current visible research progress")
+    if answer_available:
+        (directory / "answer.md").write_text("Current final research answer")
+    (root / "old-answer.md").write_text("Stale previous milestone")
+    run.native.history = [{"answer": "old-answer.md", "role": "research", "status": "COMPLETED"}]
+    run.native.active_attempt = None
+    run.native.pending_result = {"directory": "tasks/task-current/attempt-current",
+                                 "milestone": {"kind": kind}}
+    web.store.save(run, "pending_fixture")
+    progress = web.detail(run.id)["progress"]
+    expected = "Current final research answer" if answer_available else "Current visible research progress"
+    assert progress == {"text": expected, "truncated": False, "checking_evidence": True}
+    assert web.store.load(run.id).native.pending_result == run.native.pending_result
+    run.native.pending_result = None
+    web.store.save(run, "fixture_consumed")
+    assert web.detail(run.id)["progress"]["checking_evidence"] is False
+
+
+@pytest.mark.parametrize("limits", [{}, {"formal_memory_mb": 16384}, {
+    "formal_memory_mb": 16384, "formal_address_space_mb": 24576, "formal_timeout_seconds": 1800,
+}])
+def test_resume_can_adjust_formal_limits_without_replacing_saved_run_settings(web, monkeypatch, limits):
+    config = web.config()
+    config.backend.model = "saved-review-model"
+    config.verification.formal_max_object_mb = 128
+    run = Orchestrator(web.store).create(config, workflow=Workflow.FIND)
+    saved = web.store.load(run.id).config
+    launches = []
+    monkeypatch.setattr(web.jobs, "launch", lambda *args, **kwargs: launches.append((args, kwargs)))
+    summary = web.resume(run.id, ResumeRequest(message="Retry the check", **limits))
+    assert summary["id"] == run.id and len(launches) == 1
+    args, kwargs = launches[0]
+    assert args == (run.id, "resume")
+    expected = {**saved["verification"], **limits}
+    assert kwargs["config"]["verification"] == expected
+    assert kwargs["config"]["backend"] == saved["backend"]
+    assert kwargs["message"] == "Retry the check"
+    assert web.store.load(run.id).config == saved  # Applied by the worker, not a partial HTTP write.
+    assert len(web.store.list_runs()) == 1
+
+
+@pytest.mark.parametrize("limits", [
+    {"formal_memory_mb": 0}, {"formal_memory_mb": 32769},
+    {"formal_address_space_mb": 1023}, {"formal_address_space_mb": 32769},
+    {"formal_timeout_seconds": 0}, {"formal_timeout_seconds": 1801},
+])
+def test_invalid_formal_resume_limits_never_launch_a_worker(web, monkeypatch, limits):
+    run = Orchestrator(web.store).create(web.config(), workflow=Workflow.FIND)
+    monkeypatch.setattr(web.jobs, "launch", lambda *a, **k: pytest.fail("Must reject invalid limits"))
+    with serving(web, account_status=SIGNED_IN) as (client, server):
+        response = client.post(f"/api/runs/{run.id}/resume", json={"message": "Retry", **limits},
+                               headers={"X-MathLottery-Token": server.csrf_token})
+        assert response.status_code == 400
+    assert len(web.store.list_runs()) == 1
 
 
 def test_serve_cli_passes_workspace_and_port(tmp_path, monkeypatch):

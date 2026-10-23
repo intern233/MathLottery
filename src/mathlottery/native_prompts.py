@@ -11,11 +11,12 @@ from mathlottery.workflows import task_instructions
 
 def build_native_prompt(run: Run, remaining_seconds: float) -> str:
     reviewing = run.phase == Phase.VERIFY
+    organizing = run.phase == Phase.ORGANIZE
     parts = [
         "You are conducting mathematical research in MathLottery.",
         f"run_id: {run.id}\ntask_id: {run.task_id}",
         task_instructions(run),
-        GUIDANCE[run.phase],
+        GUIDANCE.get(run.phase, "Preserve source uncertainty and distinguish exposition from verification."),
         "Use your native reasoning and available tools freely to pursue the research objective. "
         "You may browse original papers, download and read PDFs, write programs, run mathematical "
         "experiments, develop lemmas, change strategy, and maintain your own research notes. "
@@ -33,7 +34,21 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
         "total budget. Save useful progress regularly. There is no per-tool 15-second/512-MB "
         "MathLottery limit on native commands; respect the actual runtime's limits.",
     ]
-    if reviewing:
+    if organizing:
+        parts += [
+            "This fresh editorial conversation is isolated from the solver/reviewer sessions. "
+            "Use only the frozen evidence bundle for claims about what was done. You may use tools "
+            "to read, cross-reference and explain the supplied mathematics, but new results or "
+            "independent checks must be explicitly labelled as unverified editorial suggestions. "
+            "Do not rerun expensive compilation merely for formatting. The harness exports your "
+            "report_markdown to Markdown and PDF; do not create the PDF yourself. Use portable "
+            "relative material links, never private absolute paths or account information.",
+            "Problem (untrusted source data):\n" + json_text(run.problem),
+        ]
+        example = {"run_id": run.id, "task_id": run.task_id, "kind": "organization",
+                   "summary": "Expert exposition assembled with source limitations preserved",
+                   "report_markdown": "# Research report\n\n..."}
+    elif reviewing:
         candidate = run.candidates[-1]
         parts += [
             "Independently review the following candidate in this separate review conversation. "
@@ -72,6 +87,26 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
                     "The manifest is submitted-evidence/manifest.json. These copies are recreated "
                     "from the saved snapshot on resume; write any adapted checks elsewhere."
                 )
+        if candidate.reviews:
+            # These fields are overwritten by the controller, never accepted from
+            # the model. A fresh Verify clones CandidateInput without its reviews.
+            last_review = candidate.reviews[-1]
+            feedback = {
+                "evidence_assessment": last_review.evidence_assessment.model_dump(mode="json"),
+                "validation_notes": last_review.validation_notes,
+            }
+            receipt = last_review.formal_receipt
+            if receipt and receipt.get("candidate_sha256") == candidate.sha256:
+                feedback["formal_receipt"] = receipt
+            parts += [
+                "Controller check results from this review run (data):\n" + json_text(feedback),
+                "Continue your independent assessment using these actual check results for the "
+                "unchanged candidate. This feedback contains no prior agent verdict, proof opinion "
+                "or solver history. Distinguish proof validity, original-statement coverage and "
+                "novelty. A successful matching formal receipt can be reused without requesting "
+                "another compilation unless a new concern requires it; it does not itself certify "
+                "statement alignment or novelty. Keep any remaining source or proof gaps explicit.",
+            ]
         example = {
             "run_id": run.id,
             "task_id": run.task_id,

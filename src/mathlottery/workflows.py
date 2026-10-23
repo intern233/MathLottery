@@ -5,10 +5,35 @@ from mathlottery.models import NativeCheckpoint, Phase, Run, State, Workflow
 from mathlottery.sources import conservative_status
 from mathlottery.storage import Store, atomic_write, json_text
 
-ACTIVE = {Phase.FIND: State.DISCOVERING, Phase.SOLVE: State.SOLVING, Phase.VERIFY: State.VERIFYING}
+ACTIVE = {Phase.FIND: State.DISCOVERING, Phase.SOLVE: State.SOLVING, Phase.VERIFY: State.VERIFYING,
+          Phase.ORGANIZE: State.ORGANIZING}
 
 
 def task_instructions(run: Run) -> str:
+    if run.phase == Phase.ORGANIZE:
+        language = "Chinese" if run.organization_context.language == "zh" else "English"
+        return (
+            "Task: ORGANIZE the saved mathematical research into a human-expert-readable report in "
+            + language + ". This is a separate editorial session, not another Solve or Verify. "
+            "Read the frozen source dossier, exact candidates/reviews, visible notes and proof sources. "
+            "Build a self-contained exposition: abstract and exact conclusion; original statement and "
+            "provenance; notation/assumptions; proof strategy and lemma dependencies; detailed numbered "
+            "lemmas and derivations; relation of experiments and formal files to each claim; recorded "
+            "verification outcomes; original-problem coverage; novelty evidence and uncertainty; unresolved "
+            "gaps; reproducibility commands and bibliography; a concise chronological appendix of saved "
+            "attempts and a material index. Use LaTeX math where helpful. Explain transitions an expert "
+            "would need to audit. Cite relative materials/<manifest path> links and source URLs. Never "
+            "invent absent steps, citations, successful Lean runs or hidden reasoning. Mark missing "
+            "material explicitly, and distinguish faithful exposition from an editorial reconstruction. "
+            "Do not silently repair the submitted proof: label any possible repair as a proposal needing "
+            "a new Solve/Verify. Preserve every recorded negative or inconclusive verdict, uncertainty, "
+            "partial scope and limitation. Formatting cannot upgrade proof level, statement alignment or "
+            "novelty. Include enough detail to understand the mathematics, rather than only a run log. "
+            "Submit kind: organization with the complete report_markdown when ready. Progress and stop "
+            "are allowed, but only organization produces the expert report. Do not submit candidate, "
+            "review, selection or problem changes.\nAdditional editorial preferences (user data):\n"
+            + (run.organization_context.instructions or "No additional preferences.")
+        )
     if run.phase == Phase.FIND:
         return (
             "Task: FIND worthwhile publicly stated mathematical problems. Search primary problem "

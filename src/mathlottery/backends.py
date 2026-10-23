@@ -61,6 +61,24 @@ class ChatInteractiveBackend(AgentBackend):
         return BackendResult(BackendStatus.PENDING_USER, artifacts=[str(directory / "prompt.md")])
 
 
+class CodexCLIError(ValueError):
+    """Safe installation diagnostics, without executable paths or raw process output."""
+
+    messages = {
+        "CLI_NOT_FOUND": "No working Codex CLI found. Install the official CLI in the environment "
+        "running MathLottery, then restart MathLottery from that environment and refresh.",
+        "CLI_UNAVAILABLE": "The installed Codex CLI could not run. Repair the official CLI "
+        "installation in the environment running MathLottery, then refresh.",
+        "CLI_PLATFORM_DEPENDENCY_MISSING": "The Codex npm launcher is missing its platform package. "
+        "Install the official CLI in the environment running MathLottery. In WSL, install the "
+        "Linux CLI inside WSL, then refresh the account status.",
+    }
+
+    def __init__(self, code):
+        self.code = code
+        super().__init__(self.messages[code])
+
+
 def resolve_codex(
     command: str, deadline: float | None = None, *, env: dict | None = None
 ) -> str:
@@ -68,8 +86,9 @@ def resolve_codex(
     candidates = [command]
     if command == "codex":
         candidates = [
-            str(Path(p) / "codex") for p in os.get_exec_path() if (Path(p) / "codex").is_file()
+            str(Path(p) / "codex") for p in os.get_exec_path(env) if (Path(p) / "codex").is_file()
         ]
+    failure = "CLI_NOT_FOUND"
     for candidate in dict.fromkeys(candidates):
         available = 8 if deadline is None else min(8, deadline - time.monotonic())
         if available <= 0:
@@ -80,17 +99,24 @@ def resolve_codex(
                 env=env,
             )
             if result.returncode == 0 and "codex" in result.stdout.lower():
-                return str(Path(shutil.which(candidate) or candidate).absolute())
+                search_path = os.pathsep.join(os.get_exec_path(env))
+                return str(Path(shutil.which(candidate, path=search_path) or candidate).absolute())
+            if "Missing optional dependency @openai/codex-" in result.stderr:
+                failure = "CLI_PLATFORM_DEPENDENCY_MISSING"
+            elif failure != "CLI_PLATFORM_DEPENDENCY_MISSING":
+                failure = "CLI_UNAVAILABLE"
         except subprocess.TimeoutExpired:
             if deadline is not None and time.monotonic() >= deadline:
                 raise
+            if failure != "CLI_PLATFORM_DEPENDENCY_MISSING":
+                failure = "CLI_UNAVAILABLE"
+            continue
+        except FileNotFoundError:
             continue
         except OSError:
-            continue
-    raise ValueError(
-        "No working Codex CLI found. Install the official Codex CLI, then sign in "
-        "through MathLottery's account panel."
-    )
+            if failure != "CLI_PLATFORM_DEPENDENCY_MISSING":
+                failure = "CLI_UNAVAILABLE"
+    raise CodexCLIError(failure)
 
 
 class WorkBackend(AgentBackend):
