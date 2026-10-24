@@ -1,0 +1,327 @@
+{
+  "run_id": "reviewed-source",
+  "workflow": "verify",
+  "created_at": "2026-10-21T10:39:24.866489+00:00",
+  "updated_at": "2026-10-21T10:50:50.747153+00:00",
+  "state": "COMPLETED",
+  "problem": {
+    "id": "fang_fu_kitaev_li_su_sun_2026_v2_conjecture_1",
+    "title": "Corrected Conjecture 1: four length-two mesh patterns are equidistributed on involutions",
+    "statement": "Fang–Fu–Kitaev–Li–Su–Sun, arXiv:2606.14367v2, Section 4, printed page 17, Conjecture 1 (corrected version, 2026-10-11): The patterns in the set {p1,p2,p3,p4} are equidistributed on involutions. In the original printed order, p1=(12,{(1,2),(1,1),(2,1),(0,0)}), p2=(12,{(2,2),(0,1),(1,1),(1,0)}), p3=(21,{(2,2),(1,1),(0,1),(1,0)}), p4=(21,{(1,2),(2,1),(1,1),(0,0)}). Here a mesh pattern (tau,R) has underlying permutation tau in S_2, and each (a,b) in R is the bottom-left coordinate of a shaded unit cell of the 3 by 3 mesh. For sigma in S_n, an occurrence is a pair 1<=i<j<=n whose values have relative order tau, subject to the following empty-rectangle condition. Put x=(0,i,j,n+1) and y=(0,min(sigma(i),sigma(j)),max(sigma(i),sigma(j)),n+1). For every (a,b) in R there is no t in {1,...,n} with x_a<t<x_(a+1) and y_b<sigma(t)<y_(b+1). Let occ_p(sigma) count all such pairs. Put I_n={sigma in S_n : sigma composed with sigma is the identity}. The full assertion is: for EVERY n,k in the nonnegative integers and EVERY p,q in {p1,p2,p3,p4}, |{sigma in I_n : occ_p(sigma)=k}| = |{sigma in I_n : occ_q(sigma)=k}|. S_0 contains the empty permutation. Thus the statement includes all occurrence counts, not just avoidance. It asserts equality of the four marginal count distributions, not a joint-distribution identity.",
+    "source_url": "https://arxiv.org/abs/2606.14367v2",
+    "field": "enumerative combinatorics; permutation patterns; involutions",
+    "status": "UNKNOWN",
+    "status_checked_at": null,
+    "status_evidence": [],
+    "difficulty_estimate": "Rank 1; a plausible but substantial finite-bijection project, not an easy consequence of statement length. Reverse-complement already handles p1~p2 and p3~p4. The unresolved cross-pair identity requires a marked bijection compatible with inversion and a rigorous way to recover every k. Controller-reported n<=7 tests support feasibility only. A complete affirmative proof plus Lean in one sustained session is plausible if the equivariance and substitution arguments are short, but neither step has been proved or reviewed here. Ranking is not a success probability.",
+    "verification_feasibility": "Good foundational fit: Equiv.Perm (Fin n), Function.Involutive, finite subsets of ordered index pairs, Finset.card/filter, finite sums, equivalences, Polynomial or MvPolynomial over Z. Define the mesh occurrence predicate explicitly; no analytic or geometric foundations are required. Main burden: prove the combinatorial map, inverse, preservation of shaded empty rectangles, inversion equivariance including marked edges, and coefficient/substitution recovery. Use the literal all-n all-k target; a theorem about only invariant marked subsets or avoiders is insufficient. No Lean code was run in FIND.",
+    "lean_feasibility": "unknown",
+    "prerequisites": [],
+    "known_obstacles": [],
+    "initial_approach": "",
+    "selection_reason": "Recommended: accessible versioned primary PDF plus TeX, correction read in context, explicit author conjecture only ten days before the cutoff, and accessible complete neighboring July solution whose scope has been distinguished. The controller now supplies a specific inversion-equivariant marked-map route. This improves both the status evidence and the practical route relative to the previous geometry selection. Global novelty is not certified; no full solution is claimed.",
+    "references": [
+      {
+        "url": "https://arxiv.org/pdf/2606.14367v2",
+        "title": "On mesh patterns of short length: Equidistribution and enumeration, v2",
+        "authors": [
+          "Qi Fang",
+          "Shishuo Fu",
+          "Sergey Kitaev",
+          "Haijun Li",
+          "Xinyu Su",
+          "Ziyao Sun"
+        ],
+        "published_at": "2026-10-11",
+        "retrieved_at": null,
+        "summary": "Definition 2.1 pp.5–6; equidistribution quantifiers p.2; corrected Conjecture 1, Remark 4.1 and footnote 3 p.17; concluding discussion pp.17–18.",
+        "source": "primary_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://arxiv.org/abs/2606.14367v2",
+        "title": "arXiv version history for 2606.14367v2",
+        "authors": [
+          "Qi Fang",
+          "Shishuo Fu",
+          "Sergey Kitaev",
+          "Haijun Li",
+          "Xinyu Su",
+          "Ziyao Sun"
+        ],
+        "published_at": "2026-10-11",
+        "retrieved_at": null,
+        "summary": "Authenticates the primary version and revision time.",
+        "source": "primary_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://arxiv.org/src/2606.14367v2",
+        "title": "TeX source for arXiv:2606.14367v2",
+        "authors": [
+          "Qi Fang",
+          "Shishuo Fu",
+          "Sergey Kitaev",
+          "Haijun Li",
+          "Xinyu Su",
+          "Ziyao Sun"
+        ],
+        "published_at": "2026-10-11",
+        "retrieved_at": null,
+        "summary": "Member mesh_pattern_arXiv_version_1011.tex; corrected conjecture at extracted lines 1007–1012. Extraction SHA256 recorded in provenance.",
+        "source": "primary_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://arxiv.org/pdf/2607.04111",
+        "title": "The last distribution-equivalence class of mesh patterns of length 2",
+        "authors": [
+          "Zuo-Ru Zhang",
+          "Hongkuan Zhao"
+        ],
+        "published_at": "2026-07-05",
+        "retrieved_at": null,
+        "summary": "Theorem 1.1, p.2, and marked-occurrence construction pp.3–4 settle the all-S_n statement. Not selected as an open problem.",
+        "source": "primary_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://arxiv.symmetricfunctions.com/author/xinyu-su",
+        "title": "Current Xinyu Su arXiv index",
+        "authors": [],
+        "published_at": null,
+        "retrieved_at": null,
+        "summary": "Independently maintained metadata index displaying the 2026-10-11 revision; not independent proof of open status.",
+        "source": "public_index",
+        "artifact": null,
+        "sha256": null
+      }
+    ],
+    "formal_target": null,
+    "educational": false,
+    "citations": [],
+    "literature_search": {
+      "queries": [],
+      "conclusion": "",
+      "unresolved": [],
+      "limitations": []
+    },
+    "evidence_assessment": {
+      "policy_version": null,
+      "assessed_at": null,
+      "supported": false,
+      "reasons": [],
+      "checked_citations": [],
+      "observed_queries": [],
+      "limitations": []
+    }
+  },
+  "candidates": [
+    {
+      "claim": "The entire corrected Conjecture 1 of Fang–Fu–Kitaev–Li–Su–Sun, arXiv:2606.14367v2 (2026-10-11), holds: for every n,k>=0 the four exact mesh patterns p1=(12,R), p2=(12,Rprime), p3=(21,Rprime), p4=(21,R), with R={(0,0),(1,1),(1,2),(2,1)} and Rprime={(2,2),(1,1),(1,0),(0,1)}, have equal numbers of n-involutions with exactly k occurrences. This submission is an ordinary mathematical proof; no full Lean certificate is claimed.",
+      "proof": "# An equivariant marked-occurrence proof of corrected Conjecture 1\n\n## Claim and provenance\n\nFor every integer $n\\geq0$, let $I_n$ be the permutations of $[n]$ whose\nsquare is the identity. Let\n\n\\[\nR=\\{(0,0),(1,1),(1,2),(2,1)\\},\\qquad\nR'=\\{(2,2),(1,1),(1,0),(0,1)\\}.\n\\]\n\nIn the printed order of corrected Conjecture 1 of Fang–Fu–Kitaev–Li–Su–Sun,\narXiv:2606.14367v2 (11 October 2026), the four patterns are\n\n\\[\np_1=(12,R),\\quad p_2=(12,R'),\\quad\np_3=(21,R'),\\quad p_4=(21,R).\n\\]\n\nWe prove, for every $n,k\\geq0$ and every $s,t\\in\\{1,2,3,4\\}$,\n\n\\[\n\\#\\{\\pi\\in I_n:\\operatorname{occ}_{p_s}(\\pi)=k\\}\n=\\#\\{\\pi\\in I_n:\\operatorname{occ}_{p_t}(\\pi)=k\\}.                 \\tag{1}\n\\]\n\nThe occurrence convention is exactly the strict empty-rectangle convention in\nthe question. The proof below is an ordinary mathematical proof submitted as a\ncandidate for separate review, not a claim of independent verification or a\ncomplete Lean certificate.\n\nThe supplied controller drafts proposed the star/path rotation, its inversion\nequivariance, and the two-variable refinement used here. They were unverified\nassistance, not premises. All needed structural assertions and both directions\nof the construction are proved below. The use of marked occurrences and a\npath/star rotation is indebted to Zhang–Zhao, *The last distribution-equivalence\nclass of mesh patterns of length 2*, arXiv:2607.04111, Sections 1–2. Their\nwhole-permutation result is already known. The additional argument here concerns\ninversion, individual edges, and the restriction to involutions. No finite probe\nis used as a premise, and no claim of global priority is made.\n\n## 1. The literal occurrence predicate\n\nWrite $A=p_1$ and $B=p_4$. For a permutation $\\pi$ and indices $i<j$,\nput $l=\\min(\\pi(i),\\pi(j))$, $h=\\max(\\pi(i),\\pi(j))$. The shading $R$\nis equivalent to the following three conditions:\n\n\\[\n\\begin{array}{ll}\n\\mathrm L:& t<i\\ \\Longrightarrow\\ \\pi(t)>l,\\\\\n\\mathrm M:& i<t<j\\ \\Longrightarrow\\ \\pi(t)<l,\\\\\n\\mathrm Q:& t>j\\ \\Longrightarrow\\ \\pi(t)\\notin(l,h).\n\\end{array}                                                        \\tag{2}\n\\]\n\nIndeed cell $(0,0)$ excludes precisely $t<i,\\ \\pi(t)<l$. Cells $(1,1)$\nand $(1,2)$ together exclude precisely $i<t<j,\\ \\pi(t)>l$: their only\npotential missing boundary is the value $h$, which is already used at an\nendpoint. Cell $(2,1)$ excludes precisely $t>j,\\ l<\\pi(t)<h$.\nInjectivity also excludes the value $l$ at every nonendpoint. The outer\nboundaries $0,n+1$ add no exceptions, since all entries and indices lie in\n$[n]$. Thus (2) is equivalent in both directions to all four strict empty\nrectangles. An $A$-occurrence additionally has $\\pi(i)<\\pi(j)$, and a\n$B$-occurrence has $\\pi(i)>\\pi(j)$.\n\nWe represent an occurrence by its ordered pair of indices, called an edge.\nA marked object is a pair $(\\pi,M)$, where $M$ is any subset of the\noccurrence set of the specified pattern. No maximality condition is imposed.\n\n## 2. Shapes of marked components and their nesting\n\nConsider the directed graph with edge set $M$, oriented from the smaller\nindex to the larger index, discarding isolated vertices.\n\nFor $A$, a vertex has at most one outgoing edge. If both $(i,j)$ and\n$(i,k)$ were edges with $j<k$, condition M for $(i,k)$ would give\n$\\pi(j)<\\pi(i)$, contrary to the ascent at $(i,j)$. Every starting vertex\nis a left-to-right minimum by L. A terminal vertex of an edge cannot be a\nstarting vertex: it has an earlier entry smaller than itself, whereas L for an\noutgoing $A$-edge would require every earlier entry to be larger. Thus each\nnontrivial connected component is a star with a single terminal root. To see\nthat there cannot be two roots in a connected component, each non-root has\nonly one edge, and roots connect only to such degree-one vertices. Write a\ncomponent as\n\n\\[\nx_0<x_1<\\cdots<x_m,\\qquad m\\geq1,\n\\]\n\nwith edges $(x_{h-1},x_m)$, $1\\leq h\\leq m$. Its values have the form\n\n\\[\n\\bigl(\\pi(x_0),\\ldots,\\pi(x_m)\\bigr)=(v_1,\\ldots,v_m,v_0),\n\\qquad v_0>v_1>\\cdots>v_m.                                    \\tag{3}\n\\]\n\nThe decreasing order of the leaves follows from L at each later leaf, and\nthe root exceeds every leaf because each marked edge is an ascent.\n\nFor $B$, a vertex has at most one incoming edge. If $(i,j)$ and $(k,j)$\nwere edges with $i<k<j$, M for the first would give $\\pi(k)<\\pi(j)$,\ncontrary to the descent of the second. It also has at most one outgoing edge.\nIf $(i,j)$ and $(i,k)$ were edges with $j<k$, M for the second and its\ndescent would give $\\pi(j)<\\pi(k)<\\pi(i)$, forbidden by Q for the first.\nSince each edge increases the index, there are no directed cycles. In a finite\ncomponent, repeatedly following predecessors must terminate, and following\nsuccessors from that initial vertex then visits the whole component: any\nextra attached edge would violate one of the degree bounds. Therefore every\ncomponent is a path\n\n\\[\nx_0<x_1<\\cdots<x_m,\\qquad\nM_C=\\{(x_{h-1},x_h):1\\leq h\\leq m\\},\n\\]\n\nwith values\n\n\\[\n\\bigl(\\pi(x_0),\\ldots,\\pi(x_m)\\bigr)=(v_0,v_1,\\ldots,v_m),\n\\qquad v_0>v_1>\\cdots>v_m.                                    \\tag{4}\n\\]\n\nIn either graph, edges in different components cannot cross. Suppose edges\n$(i,j),(k,l)$ had $i<k<j<l$. In the $A$ case, M for the first gives\n$\\pi(k)<\\pi(i)<\\pi(j)$, while M for the second gives\n$\\pi(j)<\\pi(k)$, a contradiction. In the $B$ case, M for the first,\ndescent of the second, and M for the second give respectively\n$\\pi(k)<\\pi(j)$, $\\pi(l)<\\pi(k)$, and $\\pi(j)<\\pi(l)$, again a\ncontradiction. Reversing the names covers the other crossing order.\n\nConsequently, two distinct components have disjoint closed position intervals,\nor one is contained in a single open gap between consecutive vertices of the\nother. Here is a proof of this stronger consequence, which will be needed\nbelow. Write their vertices as $c_0<\\cdots<c_m$ and $d_0<\\cdots<d_r$,\nand assume $c_0<d_0<c_m$, the only case remaining after interchanging names\nand excluding disjoint intervals. Endpoints of distinct components are never\nequal.\n\nFor stars, the edges $(c_0,c_m)$, $(d_0,d_r)$ show that $d_r<c_m$,\nsince otherwise they cross. If a vertex $c_t$ lay in $(d_0,d_r)$, it\nwould be a leaf, and $(d_0,d_r)$, $(c_t,c_m)$ would cross. Thus no\n$c_t$ lies in the closed interval $[d_0,d_r]$, so that interval is wholly\nin one open gap of the $c$'s. For paths, choose $t$ with\n$c_t<d_0<c_{t+1}$. If $d_r>c_{t+1}$, consecutive $d$-vertices must\nstraddle $c_{t+1}$; write $d_a<c_{t+1}<d_{a+1}$. Then\n$c_t<d_a<c_{t+1}<d_{a+1}$ makes two path edges cross. Hence\n$d_r<c_{t+1}$, proving the asserted gap containment for paths too.\n\n## 3. A common characterization of a star and a path\n\nFix positions $x_0<\\cdots<x_m$ and distinct values $v_0>\\cdots>v_m$,\nwhere $m\\geq1$. Consider either the star arrangement (3) or the path\narrangement (4). The designated edges are all occurrences of the appropriate\npattern if and only if every entry at a position outside\n$\\{x_0,\\ldots,x_m\\}$ satisfies the following conditions:\n\n\\[\n\\begin{array}{ll}\n\\mathrm{O}_0:& t<x_0\\ \\Longrightarrow\\ \\pi(t)>v_1;\\\\\n\\mathrm{O}_k:& x_{k-1}<t<x_k\\ \\Longrightarrow\\\n                     v_{k+1}<\\pi(t)<v_k\\quad(1\\leq k<m);\\\\\n\\mathrm{O}_m:& x_{m-1}<t<x_m\\ \\Longrightarrow\\ \\pi(t)<v_m;\\\\\n\\mathrm{O}_{m+1}:& t>x_m\\ \\Longrightarrow\\ \\pi(t)\\notin(v_m,v_0).\n\\end{array}                                                        \\tag{5}\n\\]\n\nFor necessity in the star arrangement, L for the first edge gives\n$\\mathrm O_0$. In gap $k<m$, M for leaf $x_{k-1}$ gives the upper\nbound $v_k$, and L for leaf $x_k$ gives the lower bound $v_{k+1}$.\nM for the last leaf gives $\\mathrm O_m$; Q for that leaf gives\n$\\mathrm O_{m+1}$.\n\nFor necessity in the path arrangement, L for the first edge again gives\n$\\mathrm O_0$. In gap $k<m$, M for the $k$-th edge and L for the\n$(k+1)$-st give its two bounds. M for the last edge gives\n$\\mathrm O_m$. After $x_m$, Q for every path edge forbids all intervals\n$(v_h,v_{h-1})$, $1\\leq h\\leq m$. Their union is $(v_m,v_0)$\nexcept for $v_1,\\ldots,v_{m-1}$. Those values are already occupied at\ndesignated vertices, and injectivity excludes them at the outside entry.\nThis proves $\\mathrm O_{m+1}$.\n\nFor sufficiency in the star arrangement, consider the edge\n$(x_{h-1},x_m)$, whose low and high values are $v_h,v_0$. Every entry\nto its left is either before $x_0$, at an earlier designated leaf, or in\na gap $k<h$. The respective lower bounds are $>v_1\\geq v_h$, a leaf\nvalue strictly greater than $v_h$, and $>v_{k+1}\\geq v_h$. Every\nentry strictly between its endpoints is a later leaf with smaller value,\nor is in a gap $k\\geq h$, where its value is $<v_k\\leq v_h$\n(including the final gap). Entries after the root avoid $(v_m,v_0)$\nand therefore avoid $(v_h,v_0)$. Thus L, M, Q all hold.\n\nFor sufficiency in the path arrangement, consider $(x_{h-1},x_h)$, whose\nlow and high values are $v_h,v_{h-1}$. Before its first endpoint,\n$\\mathrm O_0$, earlier vertex values, and earlier gap bounds give values\nstrictly greater than $v_h$, by the same inequalities just used. Its open\ninterior is gap $h$, whose values are $<v_h$. To its right, later\ndesignated vertices have values $<v_h$, as do later gaps; entries after\n$x_m$ avoid ($v_m,v_0$\\supseteq$v_h,v_{h-1}$). Hence Q also holds.\nThis proves the characterization in both directions, including $m=1$,\nwhen there are no gaps of the intermediate kind.\n\n## 4. Simultaneous rotations and their inverse\n\nFor a marked $A$-object, replace the values on every star (3) by the path\narrangement (4), and replace its marks by consecutive path edges. Explicitly,\n\n\\[\n(v_1,\\ldots,v_m,v_0)\\longmapsto(v_0,v_1,\\ldots,v_m),\\qquad\ne_h=(x_{h-1},x_m)\\longmapsto f_h=(x_{h-1},x_h).                 \\tag{6}\n\\]\n\nDistinct components have disjoint vertices, and each replacement only permutes\nthe values on its vertices, so this defines a permutation $\\sigma$ and a\nset $N$ of distinct marked edges. The correspondence $e_h\\mapsto f_h$\nis a bijection $M\\longrightarrow N$.\n\nConversely, for a marked $B$-object, on each descending path replace\n$(v_0,v_1,\\ldots,v_m)$ by $(v_1,\\ldots,v_m,v_0)$, and replace\n$(x_{h-1},x_h)$ by $(x_{h-1},x_m)$. Denote the first operation by\n$\\Phi$ and the second by $\\Psi$. We now prove that both are well-defined\non all marked objects, including arbitrary nested collections of components.\n\nFix any component $C$. Its own rotation preserves the ordered positions,\nthe decreasing list of its values, and hence the bounds in (5). It suffices\nto show that every other component's rotation keeps each of its entries in\nthe allowed region of (5) relative to $C$. The position intervals have the\nnesting property proved in Section 2.\n\nIf the intervals of $C,D$ are disjoint, all vertices of $D$ are on the\nsame exterior side of $C$. Beforehand all their values satisfy that side's\ncondition of (5); permuting those values leaves the condition true at each\nvertex. This works even when the allowed values form two disjoint intervals.\n\nIf $D$ is in gap $k<m$ of $C$, all its values lie in\n$(v_{k+1},v_k)$ by (5), so its rotation keeps them in that interval.\nIf it is in the final gap, all its values are $<v_m$, also preserved.\nThus inner rotations preserve all outside conditions of the outer component.\n\nIt remains to check the effect of an outer rotation on an inner component;\nthis cannot be inferred just from disjoint vertex sets. Suppose $D$ lies\nin gap $k$ of $C$, and write $a=\\min\\{\\pi(d):d\\in D\\}$,\n$b=\\max\\{\\pi(d):d\\in D\\}$. Rotations of $D$ do not change $a,b$.\nFor $k<m$, (5) gives\n\n\\[\nv_{k+1}<a\\leq b<v_k.                                         \\tag{7}\n\\]\n\nFor each vertex $x_t$ of $C$, its two possible values, in the star and\npath arrangements respectively, are\n\n\\[\n\\begin{cases}\n(v_{t+1},v_t),&0\\leq t<m,\\\\\n(v_0,v_m),&t=m.\n\\end{cases}                                                   \\tag{8}\n\\]\n\nIf $t\\leq k-1$, both values in (8) are at least $v_k>b$; these vertices\nare before $D$. The vertex $x_k$, after $D$, has possible values\n$v_{k+1}<a$ and $v_k>b$. Vertices with $k<t<m$, also after $D$,\nhave both values at most $v_{k+1}<a$. The final vertex $x_m$, after\n$D$, has possibilities $v_0>b$ and $v_m<a$. Thus, before $D$,\nevery $C$-value is greater than every $D$-value; after $D$, every\n$C$-value is outside the whole interval $[a,b]$. Such values satisfy\nthe two exterior conditions for $D$ in either arrangement. No $C$-vertex\nis inside $D$'s interval, so its interior conditions are untouched.\n\nFor the final gap $k=m$, every value of $D$ is $<v_m$. Each vertex\n$x_t$ with $t<m$ is before $D$, and both values in (8) are\n$\\geq v_m>b$. The only $C$-vertex after $D$ is $x_m$, whose two\npossible values $v_0,v_m$ are both $>b$. Again all exterior conditions\nfor $D$ hold in both arrangements.\n\nThese checks use only positions, value sets, and the two possible values of\neach vertex. They are therefore valid simultaneously, not merely for a\nchosen order of rotations. An untouched point keeps its original allowed\nvalue, and a point in another component satisfies the appropriate case just\nproved. Conditions (5) survive for every component. Section 3 now shows that\nall new marks of $\\Phi$ are $B$-occurrences and all new marks of $\\Psi$\nare $A$-occurrences. This proves well-definedness in both directions.\n\nThe marked graph produced by (6) has exactly the same component vertex sets:\neach star was replaced by a connected path on those vertices, and no edge\nbetween components was introduced. The analogous assertion holds backwards.\nApplying $\\Psi$ to $\\Phi(\\pi,M)$ therefore finds precisely those paths,\nrotates each value list back, and restores precisely the original star marks.\nThus $\\Psi\\Phi=\\mathrm{id}$. Starting with a $B$-object gives\n$\\Phi\\Psi=\\mathrm{id}$ by the same explicit componentwise computation.\nFor the empty marked set both maps leave the permutation unchanged. We have\nproved a bijection of all marked objects, with its explicit edge bijection.\n\n## 5. Inversion and individual edges\n\nFor a permutation $\\pi$, transposition of its plot gives $\\pi^{-1}$.\nFor an edge $e=(i,j)$, write\n\n\\[\nT_\\pi(e)=\\bigl(\\min(\\pi(i),\\pi(j)),\\max(\\pi(i),\\pi(j))\\bigr).\n                                                                    \\tag{9}\n\\]\n\nBoth underlying patterns $12,21$ are their own inverses, and $R$ is\ninvariant under $(a,b)\\mapsto(b,a)$. A forbidden point in one rectangle\ntransposes to a forbidden point in the transposed rectangle, and conversely.\nHence (9) bijects the $A$-occurrences of $\\pi$ with those of\n$\\pi^{-1}$, and likewise for $B$. Its inverse is $T_{\\pi^{-1}}$.\nThis also follows directly by sorting the two endpoint positions and values:\ntransposition interchanges those sorted boundary lists, so each cell's two\nstrict interval inequalities are exchanged. Put\n$(\\pi,M)^T=(\\pi^{-1},T_\\pi(M))$.\n\nWe prove the stronger assertion that $\\Phi$ commutes with transposition\nincluding its edge correspondence. Take an $A$-star (3). Its transpose is\nthe $A$-star with increasing positions\n\n\\[\nv_m<v_{m-1}<\\cdots<v_1<v_0\n\\]\n\nand values\n\n\\[\nx_{m-1},x_{m-2},\\ldots,x_0,x_m.\n\\]\n\nIndeed each original leaf/root edge becomes $(v_h,v_0)$, and the original\nroot $x_m$ is the largest of these values. Rotating this transposed star\ngives values\n\n\\[\nx_m,x_{m-1},\\ldots,x_0\n\\]\n\nat positions $v_m,v_{m-1},\\ldots,v_0$, respectively. The original\nrotation has $\\sigma(x_t)=v_t$ for every $0\\leq t\\leq m$, so this\nis exactly the inverse of the rotated component. Under inversion the sets of\nvertices of distinct components become disjoint sets of values; thus these\nare precisely all transposed components. Any point outside their vertex sets\nis unchanged in the original permutation and also unchanged after inversion.\nWe conclude at the permutation level that the output is $\\sigma^{-1}$.\n\nFor individual edges, the original star edge\n$e_h=(x_{h-1},x_m)$ transposes to $(v_h,v_0)$. Its index within the\nincreasingly ordered transposed star is $m-h+1$, so its image under the\ntransposed rotation is $(v_h,v_{h-1})$. On the other hand its original\nimage is $f_h=(x_{h-1},x_h)$, whose values in $\\sigma$ are\n$(v_{h-1},v_h)$. Hence its transpose is also $(v_h,v_{h-1})$.\nWriting $\\theta_{\\pi,M}:M\\longrightarrow N$ for (6), we have proved\n\n\\[\n\\Phi((\\pi,M)^T)=\\Phi(\\pi,M)^T,\\qquad\n\\theta_{\\pi^{-1},T_\\pi M}(T_\\pi e)\n       =T_\\sigma(\\theta_{\\pi,M}(e)).                         \\tag{10}\n\\]\n\nThis is an identity for every individual marked edge, including edges in\nself-transposed components. No orientation or middle-edge exception is needed.\nSince $\\Psi=\\Phi^{-1}$, the object-level identity also holds for $\\Psi$:\napply $\\Phi$ to the two possible inverse images and use its injectivity.\nThe inverse edge bijections intertwine transposition as well, by inverting\nthe second identity in (10).\n\nIn particular, fixed marked objects under $T$ are carried bijectively to\nfixed marked objects. Such objects are exactly those with\n$\\pi\\in I_n$ and $T_\\pi(M)=M$. On any such $M$, transposition is an\ninvolution on its edges. By (10), $\\theta_{\\pi,M}$ is an equivariant\nbijection with the marked edges of the image. It carries every fixed edge to\na fixed edge and every two-element orbit to a two-element orbit. Conversely,\nif an image edge is fixed, injectivity in (10) forces its preimage to be\nfixed. Thus both orbit counts are preserved separately.\n\n## 6. Recovering every occurrence count\n\nFor $\\pi\\in I_n$, let $f_A(\\pi)$ be the number of fixed edges of\n$T_\\pi$ on its entire $A$-occurrence set, and $d_A(\\pi)$ the number of\ntwo-element orbits. Define $f_B,d_B$ likewise. An involution of a finite\nset partitions it into singleton and two-element orbits: each element lies\nin $\\{e,T_\\pi(e)\\}$, and two such sets are equal or disjoint. Therefore\n\n\\[\n\\operatorname{occ}_A(\\pi)=f_A(\\pi)+2d_A(\\pi),\\qquad\n\\operatorname{occ}_B(\\pi)=f_B(\\pi)+2d_B(\\pi).                 \\tag{11}\n\\]\n\nA transpose-invariant marked subset is exactly a union of these orbits.\nIn the polynomial ring $\\mathbb Z[u,v]$, give a chosen singleton orbit\nweight $u$, a chosen two-element orbit weight $v$, and an unchosen\norbit weight (1). Each orbit is chosen independently, so the sum of weights\nover all invariant marked subsets of a fixed permutation is\n\n\\[\n(1+u)^{f_A(\\pi)}(1+v)^{d_A(\\pi)}\n\\]\n\non the $A$ side, and the analogous expression on the $B$ side. This is\njust the distributive expansion of a finite product, including the empty\nproduct. Section 5 supplies a weight-preserving bijection on all invariant\nmarked objects with underlying permutation in $I_n$. Consequently\n\n\\[\n\\sum_{\\pi\\in I_n}(1+u)^{f_A(\\pi)}(1+v)^{d_A(\\pi)}\n=\\sum_{\\pi\\in I_n}(1+u)^{f_B(\\pi)}(1+v)^{d_B(\\pi)}.           \\tag{12}\n\\]\n\nApply the ring homomorphism $\\mathbb Z[u,v]\\longrightarrow\\mathbb Z[y]$\nwhich sends $u\\mapsto y-1$ and $v\\mapsto y^2-1$. By (11), (12) becomes\n\n\\[\n\\sum_{\\pi\\in I_n}y^{\\operatorname{occ}_A(\\pi)}\n=\\sum_{\\pi\\in I_n}y^{\\operatorname{occ}_B(\\pi)}.               \\tag{13}\n\\]\n\nAll sums are finite, so this substitution is an ordinary polynomial\nsubstitution, with no convergence or division issue. The coefficient of\n$y^k$ on each side is exactly the number of permutations with that\noccurrence count, proving the required all-$k$ equality between $p_1$\nand $p_4$. Weighting invariant subsets only by total number of edges would\ngive $(1+t)^f(1+t^2)^d$ and would not justify this step; the separate\nweights in (12) are essential to this argument.\n\n## 7. The other two corrected patterns and boundary cases\n\nLet $r(i)=n+1-i$ on $[n]$, and let $\\operatorname{rc}(\\pi)=r\\pi r$.\nSince $r^2=\\mathrm{id}$, this operation is its own inverse and\n$(r\\pi r)^2=r\\pi^2r$. It therefore bijects $I_n$ to itself. The\nposition pair $(i,j)$ corresponds to $(r(j),r(i))$. Both index order\nand value order are reversed, so an ascent remains an ascent and a descent\nremains a descent. The rank cell $(a,b)$ is sent to $(2-a,2-b)$.\nFor completeness, on the full boundary lists including $0,n+1$, the\nmap $s\\mapsto n+1-s$ reverses the four boundaries; an open interval\nwith rank $a$ is the open interval of rank $2-a$ after reflection.\nThus an empty shaded rectangle corresponds to an empty shaded rectangle\nin both directions. This sends $R$ to $R'$ and bijects occurrences\nof $p_1$ with $p_2$, and occurrences of $p_4$ with $p_3$.\nTogether with (13) this proves (1) for every pair of the four patterns.\n\nFor $n=0$, the single empty permutation is an involution, all occurrence\nsets and marked sets are empty, the maps are the unique empty maps, and the\ngenerating polynomial is (1). For $n=1$ there are likewise no pairs of\nindices. All the constructions and formulas above include these cases\nwithout a nonempty-component assumption. For every $n$, coefficients at\nunattainable $k$ are zero on both sides. This completes the ordinary proof.\n\n## Sources and review scope\n\n1. Fang–Fu–Kitaev–Li–Su–Sun, *On mesh patterns of short length: Equidistribution\n   and enumeration*, [arXiv:2606.14367v2](https://arxiv.org/abs/2606.14367v2),\n   corrected Conjecture 1 and Remark 4.1, printed p.17; Definition 2.1,\n   pp.5–6. Local primary PDF: `inputs/discovery/sources/mesh_patterns.pdf`;\n   SHA256 `d019d71fbb265fc0fc4619d9849855c644811498dd0812c34a2c0e741a04c57a`.\n   TeX: `inputs/discovery/text/mesh_source_0.tex`; SHA256\n   `a104f63c5186abffcf8efde9329e119135d49540afedeb1c0e15d0613e1759f4`.\n   Version and shadings were visually checked against the PDF and TeX.\n2. Zhang–Zhao, *The last distribution-equivalence class of mesh patterns of\n   length 2*, [arXiv:2607.04111](https://arxiv.org/abs/2607.04111),\n   5 July 2026, Theorem 1.1 and Sections 1–2. Local PDF:\n   `inputs/discovery/sources/mesh_general_resolution.pdf`; SHA256\n   `380cc56b2d9b6b8ab65abc2f5bf2fd4acfe88058ac1212e7a5d80378bd931fc1`.\n3. Controller assistance: `inputs/mesh-controller-route.md` and\n   `inputs/mesh-structural-draft.md`, explicitly unverified drafts. They are\n   acknowledged as assistance only; this proof is self-contained and does not\n   require the reviewer to accept or consult them.\n\nThe v2 source explicitly acknowledges the July whole-permutation result while\nretaining the corrected involution conjecture. Supplied status evidence and\nthe additional narrow search are recorded in `research/status-check.json`.\nThis supports the scope distinction but does not certify global novelty.\nFormalization coverage and exact compiled claims are recorded separately;\nthe existence of this ordinary proof must not be read as full Lean verification.\n",
+      "assumptions": [],
+      "references": [
+        {
+          "url": "https://arxiv.org/pdf/2606.14367v2",
+          "title": "On mesh patterns of short length: Equidistribution and enumeration, v2",
+          "authors": [
+            "Qi Fang",
+            "Shishuo Fu",
+            "Sergey Kitaev",
+            "Haijun Li",
+            "Xinyu Su",
+            "Ziyao Sun"
+          ],
+          "published_at": "2026-10-11",
+          "retrieved_at": null,
+          "summary": "Definition 2.1 pp.5–6; equidistribution quantifiers p.2; corrected Conjecture 1, Remark 4.1 and footnote 3 p.17; concluding discussion pp.17–18.",
+          "source": "primary_source",
+          "artifact": null,
+          "sha256": null
+        },
+        {
+          "url": "https://arxiv.org/abs/2606.14367v2",
+          "title": "arXiv version history for 2606.14367v2",
+          "authors": [
+            "Qi Fang",
+            "Shishuo Fu",
+            "Sergey Kitaev",
+            "Haijun Li",
+            "Xinyu Su",
+            "Ziyao Sun"
+          ],
+          "published_at": "2026-10-11",
+          "retrieved_at": null,
+          "summary": "Authenticates the primary version and revision time.",
+          "source": "primary_source",
+          "artifact": null,
+          "sha256": null
+        },
+        {
+          "url": "https://arxiv.org/src/2606.14367v2",
+          "title": "TeX source for arXiv:2606.14367v2",
+          "authors": [
+            "Qi Fang",
+            "Shishuo Fu",
+            "Sergey Kitaev",
+            "Haijun Li",
+            "Xinyu Su",
+            "Ziyao Sun"
+          ],
+          "published_at": "2026-10-11",
+          "retrieved_at": null,
+          "summary": "Member mesh_pattern_arXiv_version_1011.tex; corrected conjecture at extracted lines 1007–1012. Extraction SHA256 recorded in provenance.",
+          "source": "primary_source",
+          "artifact": null,
+          "sha256": null
+        },
+        {
+          "url": "https://arxiv.org/pdf/2607.04111",
+          "title": "The last distribution-equivalence class of mesh patterns of length 2",
+          "authors": [
+            "Zuo-Ru Zhang",
+            "Hongkuan Zhao"
+          ],
+          "published_at": "2026-07-05",
+          "retrieved_at": null,
+          "summary": "Theorem 1.1, p.2, and marked-occurrence construction pp.3–4 settle the all-S_n statement. Not selected as an open problem.",
+          "source": "primary_source",
+          "artifact": null,
+          "sha256": null
+        }
+      ],
+      "scope": "UNKNOWN",
+      "remaining_obligations": [],
+      "id": "candidate-record-005",
+      "sha256": "74183c541d86feb6ecc57151b1cfc661663afb1d50b985c806defec3bf0c4e6f",
+      "source_iteration": 0,
+      "level": "SELF_CHECKED",
+      "reviews": [
+        {
+          "verdict": "NO_ISSUES_FOUND",
+          "truth_assessment": "The exact all-n, all-k marginal equidistribution of the four corrected patterns on involution permutations follows from the supplied ordinary argument, as assessed in this LLM review. The literal strict empty-rectangle statement matches the independently retrieved v2 diagrams and TeX. No additional mathematical hypothesis or counterexample was found. Finite experiments are corroborative only.",
+          "proof_assessment": "All universal steps were reconstructed and challenged: rectangle equivalence; star/path degree bounds and single-gap nesting for arbitrary markings; necessity and sufficiency of outside conditions; simultaneous rotations in both nesting directions and explicit mutual inverses; transposition of components and every marked edge, including self-transposed components; restriction to transpose-fixed marked objects; separate singleton/doubleton orbit weights; polynomial substitution and full coefficient recovery; reverse-complement and boundary cases. No substantive gap or circularity was found. A malformed interval parenthesis at snapshot line 199 is typographical only. This verdict covers this immutable ordinary-proof snapshot alone, with no full Lean certificate, external expert review, or later formalization assessment.",
+          "issues": [],
+          "evidence": [
+            "review/independent-report.md provides the detailed independent mathematical audit; review/evidence.json records all 18 proof checks, source comparisons, queries, experiments and limitations.",
+            "Candidate SHA256 independently reproduced as SHA256(UTF8(claim + newline + proof)): 74183c541d86feb6ecc57151b1cfc661663afb1d50b985c806defec3bf0c4e6f. Embedded proof equals inputs/ordinary-proof-snapshot.md byte for byte; proof SHA256 8c6844e8b904f446524ec16aea6baf94343d317ba3b6b089fca5305b66e1a01b. See review/snapshot-identity.json.",
+            "Fresh arXiv metadata confirms v2 dated 2026-10-11 12:48:29 UTC. PDF SHA256 d019d71fbb265fc0fc4619d9849855c644811498dd0812c34a2c0e741a04c57a; extracted TeX SHA256 a104f63c5186abffcf8efde9329e119135d49540afedeb1c0e15d0613e1759f4. Both exactly match supplied comparison copies. Printed p.17 diagrams and TeX lines 1007-1012 match all four patterns. See review/retrievals.json and review/source-patterns.json.",
+            "Exhaustive independent literal-rectangle challenges: every marked subset for A and B on all 46,234 permutations of sizes 0 through 8, totaling 130,354 marked objects per side; all inverse and object/individual-edge equivariance checks passed. The outside-condition iff passed for 199,630 eligible star/path arrangements through n=7. All four distributions agree on all 48,928 involutions through n=11. See review/check_candidate.py and review/*-results.json. These finite checks do not prove the theorem.",
+            "The naive restriction fails on pi=213 with A mark {(1,3)}, whose rotation is 312. The candidate correctly excludes that non-invariant marking and proves the needed transpose-fixed-object restriction. The substitution u=y-1, v=y^2-1 then recovers y^(f+2d) and every occurrence-count coefficient.",
+            "review/web-tool-log.json retains the actual web calls and 19 search queries; review/retrievals.json records actual HTTP retrieval timestamps, statuses and hashes. No solver/controller history was consulted. One research agent was used; the candidate was not modified. No full Lean evidence or external expert review is supplied."
+          ],
+          "novelty": "POTENTIALLY_NEW",
+          "novelty_notes": "The authenticated 11 October 2026 primary-author v2 explicitly retains corrected Conjecture 1 on involutions after acknowledging Zhang-Zhao's July whole-permutation result. The latter supplies the known marked-occurrence method, but not the full involution restriction or separate-orbit argument. Nineteen targeted queries and primary-source follow-up checks through 2026-10-21 identified no earlier complete public solution. A recent layered-permutation paper was inspected and has a different domain. An alternating-permutation preprint was located, but its full text was inaccessible through HAL/SSRN; no claim is made to exclude every result in that text. This supports potentially new mathematical scope, not absolute global priority; indexing lag, inaccessible, unindexed and unpublished work remain limitations.",
+          "novelty_references": [
+            {
+              "url": "https://arxiv.org/pdf/2606.14367v2",
+              "title": "On mesh patterns of short length: Equidistribution and enumeration, v2",
+              "authors": [
+                "Qi Fang",
+                "Shishuo Fu",
+                "Sergey Kitaev",
+                "Haijun Li",
+                "Xinyu Su",
+                "Ziyao Sun"
+              ],
+              "published_at": "2026-10-11",
+              "retrieved_at": "2026-10-21T10:40:20.984541+00:00",
+              "summary": "Corrected Conjecture 1 remains stated on involutions; Remark 4.1 distinguishes the false earlier version; p.17 footnote 3 acknowledges the July whole-permutation result.",
+              "source": "primary_source",
+              "artifact": "review/sources/fang-v2.pdf",
+              "sha256": "d019d71fbb265fc0fc4619d9849855c644811498dd0812c34a2c0e741a04c57a"
+            },
+            {
+              "url": "https://arxiv.org/pdf/2607.04111",
+              "title": "The last distribution-equivalence class of mesh patterns of length 2",
+              "authors": [
+                "Zuo-Ru Zhang",
+                "Hongkuan Zhao"
+              ],
+              "published_at": "2026-07-05",
+              "retrieved_at": "2026-10-21T10:40:20.986780+00:00",
+              "summary": "Theorem 1.1 and Sections 1-2 establish the all-S_n result through marked occurrences. The entire five-page text was inspected; it does not establish the corrected I_n statement.",
+              "source": "primary_source",
+              "artifact": "review/sources/zhang-zhao.pdf",
+              "sha256": "380cc56b2d9b6b8ab65abc2f5bf2fd4acfe88058ac1212e7a5d80378bd931fc1"
+            },
+            {
+              "url": "https://strathprints.strath.ac.uk/97484/7/Zhang-etal-DM-2026-Equidistribution-of-mesh-patterns-of-short-length-on-layered-permutations.pdf",
+              "title": "Equidistribution of mesh patterns of short length on layered permutations",
+              "authors": [
+                "Jiahao Zhang",
+                "Sergey Kitaev",
+                "Artem Pyatkin",
+                "Xinyu Su"
+              ],
+              "published_at": "2026-10-15",
+              "retrieved_at": "2026-10-21T10:45:03.790707+00:00",
+              "summary": "Precise recent follow-up inspected: domain is layered permutations L_n, not all I_n. Live repository records online publication on 15 October 2026 although the journal volume is dated 2027.",
+              "source": "primary_source",
+              "artifact": "review/sources/layered.pdf",
+              "sha256": "22d4d19be4e7dc4fc5e4bb0abe8c7f6fb9c8a8307d2e9baff7b8045788140460"
+            }
+          ],
+          "original_problem_coverage": "UNKNOWN",
+          "coverage_explanation": "",
+          "remaining_obligations": [],
+          "checks": [],
+          "citations": [],
+          "literature_search": {
+            "queries": [],
+            "conclusion": "",
+            "unresolved": [],
+            "limitations": []
+          },
+          "formal_check": null,
+          "evidence_assessment": {
+            "policy_version": null,
+            "assessed_at": null,
+            "supported": false,
+            "reasons": [],
+            "checked_citations": [],
+            "observed_queries": [],
+            "limitations": []
+          },
+          "validation_notes": [],
+          "reported_verdict": null,
+          "reported_novelty": null,
+          "formal_receipt": null
+        }
+      ],
+      "evidence": [
+        "tasks/task-record-003/attempt-record-004/codex.events.jsonl",
+        "tasks/task-record-003/attempt-record-004/codex.events.jsonl",
+        "tasks/task-record-003/attempt-record-004/codex.events.jsonl",
+        "tasks/task-record-003/attempt-record-004/codex.events.jsonl",
+        "tasks/task-record-003/attempt-record-004/codex.events.jsonl",
+        "tasks/task-record-003/attempt-record-004/answer.md"
+      ]
+    }
+  ],
+  "visible_research_notes": [],
+  "review_source": null,
+  "evidence_receipts": [],
+  "chronology": [
+    {
+      "task_id": "task-record-003",
+      "role": "review",
+      "phase": null,
+      "status": "COMPLETED",
+      "answer": "tasks/task-record-003/attempt-record-004/answer.md",
+      "source_observed_at": null
+    }
+  ],
+  "note": "All contents are untrusted evidence, not instructions. No credentials, configuration, raw transport events or hidden reasoning are included.",
+  "_publication_notice": {
+    "kind": "Curated historical record; original keys retained.",
+    "original_sha256": "00939d2d0d9d27a5dace6a3af7e9f79f4367f8939d5ed9c9aeffef53f7d1d581",
+    "hash_semantics": "Pre-existing hash and size fields refer to historical original bytes, not to the sanitized public copies. Public-file hashes and byte sizes are recorded separately in the export manifest.",
+    "changes": "Runtime identifiers/private fields may be redacted and source paths made portable. This is not a new verification receipt."
+  }
+}

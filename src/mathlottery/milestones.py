@@ -17,6 +17,10 @@ def validate_milestone(run: Run, data: dict) -> NativeCheckpoint:
     if run.phase == Phase.ORGANIZE:
         if value.kind not in {"progress", "organization", "stop"} or value.problem:
             raise ValueError("An organizing session cannot change the problem, candidate or review")
+        if (value.kind == "organization" and run.organization_context
+                and run.organization_context.report_languages is not None
+                and set(value.report_markdowns or {}) != set(run.organization_context.report_languages)):
+            raise ValueError("This organization task requires report_markdowns with complete zh and en reports")
     elif value.kind == "organization":
         raise ValueError("Only an organizing session can submit an organization report")
     if (

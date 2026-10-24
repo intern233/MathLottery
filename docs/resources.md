@@ -43,7 +43,7 @@ The RAM figure covers **one module's compiler process**, excluding the UI, agent
 
 ## Optional expert report PDF setup
 
-Organize uses the configured remote model to write the expert report. Markdown is saved without a PDF renderer; PDF export runs Chromium locally. In the active MathLottery environment, from the project directory:
+Organize uses the configured remote model to write both Chinese and English expert reports. Markdown is saved without a PDF renderer; PDF export runs Chromium locally. In the active MathLottery environment, from the project directory:
 
 ```bash
 python -m pip install -e '.[reports]'
@@ -52,11 +52,11 @@ python -m playwright install chromium
 
 If Linux reports missing browser libraries, install them with `python -m playwright install-deps chromium`; this may require administrator privileges. Chinese reports also need installed CJK fonts. For Debian/Ubuntu/WSL Ubuntu, `sudo apt-get install fonts-noto-cjk` is one option. Installing browser dependencies and fonts is a machine setup step, not a model call.
 
-Chromium adds a platform-dependent browser download and cache occupying hundreds of MB; reserve additional disk beyond the basic Python environment. Each export launches a local browser process tree. Start with one export at a time and measure its RAM for long reports; there is no measured universal minimum or process-tree RAM cap. Organize's model work uses its ordinary task budget. PDF export and local retries use local CPU, RAM and disk, without another model call or a Lean compilation.
+Chromium adds a platform-dependent browser download and cache occupying hundreds of MB; reserve additional disk beyond the basic Python environment. Each language export launches a local browser process tree; the two versions are rendered sequentially. Start with one task’s export at a time and measure its RAM for long reports; there is no measured universal minimum or process-tree RAM cap. Organize's model work uses its ordinary task budget; producing both complete versions requires more output tokens than a single-language report. PDF export and local retries use local CPU, RAM and disk, without another model call or a Lean compilation.
 
 The renderer supports headings, tables, code, page numbers and common TeX mathematics in `$…$`, `$$…$$`, `\(…\)` and `\[…\]`. Mathematics assets are bundled, so rendering does not fetch scripts or fonts from a CDN. Unsupported TeX remains visible as source text with a warning. Images are replaced with descriptive text; review the captured original materials separately. Raw HTML is not executed, and embedded remote/local resources are not fetched.
 
-If dependencies, Chromium or rendering fail, the saved Markdown remains available. Fix the environment, then click **Retry PDF export** or run `mathlottery export <organize-run-id> --format pdf`. Review export warnings and the first generated PDF before sharing, especially mathematical symbols, long formulas and Chinese text. PDF success is a formatting result, not proof validation. [Organize usage and output paths](usage.md#organize)
+If dependencies, Chromium or rendering fail, the saved Markdown remains available. Fix the environment, then click **Retry PDF export** or run `mathlottery export <organize-run-id> --format pdf`. Review export warnings and both generated PDFs before sharing, especially mathematical symbols, long formulas and Chinese text. PDF success is a formatting result, not proof validation. [Organize usage and output paths](usage.md#organize)
 
 ## Prepare Lean without rebuilding everything
 

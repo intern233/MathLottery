@@ -76,7 +76,7 @@ MathLottery 是一个本地数学研究项目：让 agent 自己找公开问题�
 - **证据核对**：独立抓取引用原文，记录缺口与原题覆盖范围，限额重验附件中的 Lean 源码并保留执行回执。详见[证据规则](docs/evidence.cn.md)。
 - **本地浏览器工作台**：运行 `mathlottery serve`，在浏览器中找题、求解、验真、整理专家阅读报告和管理研究历史。
 
-代码对应四个独立功能：**find 找题、solve 求解、verify 验真、organize 整理**。`run` 串联找题、求解与验真；整理是另行选择启动的后续步骤。找题留下可复用的题目，求解保存候选证明，验真给出独立审查结论，整理生成供专家阅读的报告。
+代码对应四个独立功能：**find 找题、solve 求解、verify 验真、organize 整理**。`run` 串联找题、求解与验真；整理是另行选择启动的后续步骤。找题留下可复用的题目，求解保存候选证明，验真给出独立审查结论，整理生成供专家阅读的中英文报告，各有 Markdown 和 PDF。
 
 **使用入口**与 **agent 接入方式**分别选择：浏览器和终端都可以使用 **codex**（官方 Codex 持续会话与原生工具）或 **chat**（Responses API、连续上下文及配置的托管工具）。API 接入需要单独提供凭据；可另行配置兼容 Responses 的提供方，其他原生协议需增加适配器。详见[接入与模型配置](docs/configuration.cn.md)。
 
@@ -90,7 +90,7 @@ MathLottery 是一个本地数学研究项目：让 agent 自己找公开问题�
 
 ## 开始抽奖
 
-建议从[浏览器快速上手](docs/usage.cn.md#本地浏览器工作台)开始：安装后运行 `mathlottery serve`，打开打印的地址。使用 Codex 时，在「MathLottery 账号」面板登录、选择模型，再按 **找题 → 选题 → 求解 → 验真**操作，需要专家阅读报告时再选择 [**Organize 整理**](docs/usage.cn.md#organize)。此工作区的登录与平时使用的 Codex CLI / IDE 隔离。
+建议从[浏览器快速上手](docs/usage.cn.md#本地浏览器工作台)开始：安装后运行 `mathlottery serve`，打开打印的地址。使用 Codex 时，在「MathLottery 账号」面板登录、选择模型，再按 **找题 → 选题 → 求解 → 验真**操作，需要中英文专家阅读报告时再选择 [**Organize 整理**](docs/usage.cn.md#organize)。此工作区的登录与平时使用的 Codex CLI / IDE 隔离。
 
 喜欢终端的话，可以使用 [`find`、`solve`、`verify`、`organize` 或 `run`](docs/usage.cn.md#cli)，与浏览器共用工作区和配置。`run` 自动串联研究阶段；独立命令允许你在找题后先选择问题，并在验真后选择整理报告。
 

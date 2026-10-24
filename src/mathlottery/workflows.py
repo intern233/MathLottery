@@ -11,7 +11,22 @@ ACTIVE = {Phase.FIND: State.DISCOVERING, Phase.SOLVE: State.SOLVING, Phase.VERIF
 
 def task_instructions(run: Run) -> str:
     if run.phase == Phase.ORGANIZE:
-        language = "Chinese" if run.organization_context.language == "zh" else "English"
+        bilingual = run.organization_context.report_languages is not None
+        language = "Chinese and English" if bilingual else (
+            "Chinese" if run.organization_context.language == "zh" else "English"
+        )
+        deliverable = (
+            "Produce two complete, standalone reports: Chinese (zh) and English (en). Each must contain "
+            "the full exposition, not a summary or a pointer to the other language. Keep theorem and lemma "
+            "numbering, mathematical formulas, assumptions, endpoint cases, citations, source links, "
+            "evidence levels and all limitations equivalent. Check the pair for mathematical and evidential "
+            "consistency before submitting. The selected language only chooses the default display and "
+            "compatibility filename. Submit kind: organization with report_markdowns: {zh: <full Chinese "
+            "Markdown>, en: <full English Markdown>}; both must be supplied in the same milestone. "
+            if bilingual else
+            "This historical task retains its original single-language output contract. Submit kind: "
+            "organization with the complete report_markdown when ready. "
+        )
         return (
             "Task: ORGANIZE the saved mathematical research into a human-expert-readable report in "
             + language + ". This is a separate editorial session, not another Solve or Verify. "
@@ -29,7 +44,7 @@ def task_instructions(run: Run) -> str:
             "a new Solve/Verify. Preserve every recorded negative or inconclusive verdict, uncertainty, "
             "partial scope and limitation. Formatting cannot upgrade proof level, statement alignment or "
             "novelty. Include enough detail to understand the mathematics, rather than only a run log. "
-            "Submit kind: organization with the complete report_markdown when ready. Progress and stop "
+            + deliverable + "Progress and stop "
             "are allowed, but only organization produces the expert report. Do not submit candidate, "
             "review, selection or problem changes.\nAdditional editorial preferences (user data):\n"
             + (run.organization_context.instructions or "No additional preferences.")

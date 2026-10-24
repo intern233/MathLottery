@@ -14,6 +14,8 @@ from mathlottery.milestones import validate_milestone
 from mathlottery.models import (
     CandidateInput,
     Level,
+    NativeCheckpoint,
+    OrganizationReport,
     Phase,
     Review,
     ReviewProvenance,
@@ -71,7 +73,10 @@ class Editor:
                       if line.startswith(("run_id: ", "task_id: ")))
         milestone = {**fields, "kind": self.kind, "summary": "Visible editorial work"}
         if self.kind == "organization":
-            milestone["report_markdown"] = "# A readable exposition\n\nThe missing lemma remains unproved.\n"
+            milestone["report_markdowns"] = {
+                "zh": "# 可读的论证\n\n缺失的引理仍然未经证明。\n",
+                "en": "# A readable exposition\n\nThe missing lemma remains unproved.\n",
+            }
         text = "Draft saved.\n```mathlottery\n" + json.dumps(milestone) + "\n```\n"
         return BackendResult(BackendStatus.COMPLETED, text=text, invoked=True,
                              usage={"input_tokens": 12, "output_tokens": 5})
@@ -90,7 +95,7 @@ def test_editorial_workflow_preserves_source_and_review_evidence(store, reviewed
     result = engine.drive(run.id)
     assert result.state == State.COMPLETED
     assert result.organization_report.pdf_status == "ready"
-    assert len(backend.calls) == len(pdf) == 1
+    assert len(backend.calls) == 1 and len(pdf) == 2
     assert backend.calls[0]["reviewer"] is True  # Disables shared mutable model memories.
     assert backend.calls[0]["session_id"] is None
     assert "Task: ORGANIZE" in backend.calls[0]["prompt"]
@@ -105,6 +110,14 @@ def test_editorial_workflow_preserves_source_and_review_evidence(store, reviewed
     manifest = json.loads((store.run_dir(run.id) / "organized/manifest.json").read_text())
     assert manifest["candidate_hashes"][0]["sha256"] == source.candidates[0].sha256
     assert manifest["report"]["pdf"] == "report.pdf"
+    assert manifest["report_languages"] == ["zh", "en"]
+    assert set(manifest["reports"]) == {"zh", "en"}
+    assert manifest["reports"]["zh"]["pdf"] == "report.zh.pdf"
+    assert manifest["reports"]["en"]["pdf"] == "report.en.pdf"
+    directory = store.run_dir(run.id) / "organized"
+    assert (directory / "report.md").read_bytes() == (directory / "report.en.md").read_bytes()
+    assert (directory / "report.pdf").read_bytes() == (directory / "report.en.pdf").read_bytes()
+    assert "缺失的引理" in (directory / "report.zh.md").read_text()
     assert (store.run_dir(run.id) / f"organized/materials/{source.id}/dossier.json").is_file()
 
 
@@ -291,7 +304,7 @@ def test_linked_and_oversized_files_are_not_silently_copied(store, reviewed, mon
 def test_pdf_projection_rejects_link_swapped_by_renderer(store, reviewed, pdf, monkeypatch, tmp_path):
     config, engine, source = reviewed
     run = engine.organize(config, source.id)
-    organization.accept(run, "# Exposition\n\nA remaining proof gap.")
+    organization.accept(run, {"zh": "# 论证\n\n尚有证明缺口。", "en": "# Exposition\n\nA remaining proof gap."})
     store.save(run, "fixture_draft")
     outside = tmp_path / "outside-export"
     outside.mkdir()
@@ -396,3 +409,109 @@ def test_controlled_pdf_setup_instructions_are_visible(reviewed, pdf, monkeypatc
     assert result.organization_report.pdf_status == "failed"
     assert "playwright install chromium" in result.organization_report.pdf_error
     assert "Markdown is available" in result.organization_report.pdf_error
+
+
+@pytest.mark.parametrize("payload", [
+    {"report_markdowns": {"zh": "中文"}},
+    {"report_markdowns": {"zh": "中文", "en": "   "}},
+    {"report_markdowns": {"zh": "中文", "en": "English", "fr": "Français"}},
+    {"report_markdowns": {"zh": "中文", "en": "English"}, "report_markdown": "Duplicate"},
+    {"report_markdowns": {"zh": "中文", "en": "x" * 400001}},
+])
+def test_bilingual_milestone_rejects_missing_blank_extra_or_conflicting_reports(payload):
+    with pytest.raises(ValueError):
+        NativeCheckpoint.model_validate({"run_id": "fixture", "task_id": "fixture",
+                                         "kind": "organization", **payload})
+
+
+def test_new_task_rejects_single_language_before_accepting_milestone(reviewed):
+    config, engine, source = reviewed
+    run = engine.organize(config, source.id)
+    run.task_id = "task-fixture"
+    with pytest.raises(ValueError, match="complete zh and en"):
+        validate_milestone(run, {"run_id": run.id, "task_id": run.task_id,
+                                "kind": "organization", "report_markdown": "Only one language"})
+    with pytest.raises(ValueError, match="both zh and en"):
+        organization.accept(run, "Only one language")
+    assert run.organization_report is None
+
+
+def test_legacy_single_language_checkpoint_keeps_original_paths(store, reviewed, pdf):
+    config, engine, source = reviewed
+    run = engine.organize(config, source.id, language="en")
+    run.organization_context.report_languages = None
+    run.task_id = "task-fixture"
+    validated = validate_milestone(run, {"run_id": run.id, "task_id": run.task_id,
+                                       "kind": "organization", "report_markdown": "Legacy exposition"})
+    organization.accept(run, validated.report_markdown)
+    # Loading a pre-bilingual document must not imply a translated result exists.
+    serialized = run.organization_report.model_dump(exclude={"translations"})
+    run.organization_report = OrganizationReport.model_validate(serialized)
+    organization.export(store, run)
+    assert set(organization.report_documents(run)) == {"en"}
+    assert organization.report_filename(run, "en", "md") == "report.md"
+    directory = store.run_dir(run.id) / "organized"
+    assert (directory / "report.md").exists() and (directory / "report.pdf").exists()
+    assert not (directory / "report.en.md").exists()
+    assert not (directory / "report.zh.md").exists()
+    assert len(pdf) == 1
+
+
+@pytest.mark.parametrize("failed_language", ["zh", "en"])
+def test_failure_of_one_pdf_preserves_other_language_and_both_markdowns(store, reviewed, pdf, monkeypatch,
+                                                                      failed_language):
+    config, engine, source = reviewed
+    engine.backend_override = Editor()
+    module = sys.modules["mathlottery.report_pdf"]
+    regular = module.render_pdf
+
+    def fail_one_language(markdown, destination, **kwargs):
+        marker = "# A readable exposition" if failed_language == "en" else "# 可读的论证"
+        if marker in markdown:
+            raise RuntimeError("PRIVATE_RENDERER_PATH")
+        return regular(markdown, destination, **kwargs)
+
+    monkeypatch.setattr(module, "render_pdf", fail_one_language)
+    run = engine.drive(engine.organize(config, source.id).id)
+    docs = organization.report_documents(run)
+    assert run.state == State.COMPLETED
+    ready_language = "zh" if failed_language == "en" else "en"
+    assert docs[ready_language].pdf_status == "ready" and docs[failed_language].pdf_status == "failed"
+    assert "PRIVATE_RENDERER_PATH" not in json_text(run.organization_report)
+    directory = store.run_dir(run.id) / "organized"
+    assert (directory / "report.zh.md").exists() and (directory / "report.en.md").exists()
+    assert (directory / f"report.{ready_language}.pdf").exists()
+    assert not (directory / f"report.{failed_language}.pdf").exists()
+    manifest = json.loads((directory / "manifest.json").read_text())
+    assert manifest["reports"][failed_language]["pdf"] is None
+    assert manifest["reports"][ready_language]["pdf"] == f"report.{ready_language}.pdf"
+    hashes = {lang: item.markdown_sha256 for lang, item in docs.items()}
+    monkeypatch.setattr(module, "render_pdf", regular)
+    retried = engine.export_organized(run.id)
+    assert all(item.pdf_status == "ready" for item in organization.report_documents(retried).values())
+    assert {lang: item.markdown_sha256 for lang, item in organization.report_documents(retried).items()} == hashes
+    assert len(engine.backend_override.calls) == 1
+
+
+def test_report_helper_checks_translations_and_rejects_duplicate_primary(reviewed):
+    config, engine, source = reviewed
+    run = engine.organize(config, source.id)
+    organization.accept(run, {"zh": "完整中文论证。", "en": "Complete English exposition."})
+    original = run.organization_report.model_copy(deep=True)
+    run.organization_report.translations["en"].markdown = "Modified translation"
+    with pytest.raises(ValueError, match="integrity"):
+        organization.report_documents(run)
+    run.organization_report = original
+    run.organization_report.translations["zh"] = organization.build_document(run, "Duplicate", "zh")
+    with pytest.raises(ValueError, match="duplicates"):
+        organization.report_documents(run)
+
+
+def test_bilingual_accept_is_atomic_when_second_report_is_invalid(reviewed):
+    config, engine, source = reviewed
+    run = engine.organize(config, source.id)
+    organization.accept(run, {"zh": "初稿。", "en": "First draft."})
+    original = run.organization_report.model_copy(deep=True)
+    with pytest.raises(ValueError, match="nonblank"):
+        organization.accept(run, {"zh": "更新的中文。", "en": " "})
+    assert run.organization_report == original

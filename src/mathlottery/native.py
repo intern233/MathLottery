@@ -170,7 +170,7 @@ class NativeRunner:
                 else:
                     run.phase = Phase.SOLVE
             elif milestone.kind == "organization":
-                organization.accept(run, milestone.report_markdown)
+                organization.accept(run, milestone.report_markdowns or milestone.report_markdown)
                 finish = "Expert reading report organized; original verification outcomes are unchanged"
             elif milestone.kind == "stop":
                 finish = milestone.summary or "Researcher ended the investigation"

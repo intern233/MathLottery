@@ -1,0 +1,458 @@
+{
+  "schema_version": 1,
+  "case": "mesh-involutions",
+  "kind": "Curated bilingual editorial export",
+  "source_review_snapshot_sha256": "4ce5daf7372702857b360f01df36d7cc22b9504774d51afa9e19d4359a48a6f1",
+  "source_candidate_content_sha256": [
+    "74183c541d86feb6ecc57151b1cfc661663afb1d50b985c806defec3bf0c4e6f"
+  ],
+  "source_report_markdown_sha256": {
+    "zh": "fc1000cc16c8a26b5145117efcc42d5c20fd4fe1d520c37a6906582918cd9894",
+    "en": "e75c6a26ee54624ba6b184f9c550b71c4aa869d765dcf1bdaebd4bd203fd458f"
+  },
+  "evidence_policy": "Editorial organization, redaction, translation and PDF rendering do not upgrade mathematical correctness, original-problem coverage, formal scope, open status or novelty.",
+  "publication_policy": [
+    "Private runtime identifiers use stable public aliases; the real-identifier mapping remains in an ignored local audit.",
+    "Original source/run records are unchanged. Original hashes identify their historical bytes; exported file hashes identify this public edition.",
+    "Hashes and byte sizes quoted in the report body/appendices refer to original frozen inputs; validate public files using files[].sha256/bytes in this manifest.",
+    "Historical JSON records retain original keys and disclose that their pre-existing hash fields describe original evidence, not redacted copies.",
+    "Showcase supplements document separately dated controller work and are not retroactively included in an older independent review.",
+    "Downloaded papers, raw sessions, credentials, toolchains, compiled objects and caches are excluded.",
+    "PDFs are rendered afresh from these sanitized Markdown files; local relative links remain navigable in Markdown, with material filenames retained for PDF readers."
+  ],
+  "review_outcomes": [
+    {
+      "candidate_alias": "candidate-record-005",
+      "level": "SELF_CHECKED",
+      "scope": "UNKNOWN",
+      "reviews": [
+        {
+          "verdict": "NO_ISSUES_FOUND",
+          "coverage": "UNKNOWN",
+          "novelty": "POTENTIALLY_NEW",
+          "remaining_obligations": [],
+          "formal_status": null
+        }
+      ]
+    }
+  ],
+  "source_limitations": [
+    "This is an editorial reconstruction of visible saved evidence, not hidden reasoning, an independent mathematical verification, or a certification of novelty.",
+    "reviewed-source: only saved answers, named notes, proof/formal files and source receipts are included; arbitrary workspace files, binaries and caches are excluded.",
+    "This historical Verify has no saved solver linkage. The original Solve history is unavailable; matching titles or proofs were not used to guess it."
+  ],
+  "source_omissions": [],
+  "publication_omissions": [
+    {
+      "source_alias": "review/independent-report.md",
+      "reason": "A link in an original answer refers to a local artifact not captured in this public export; consult the preserved review dossier and public showcase supplement.",
+      "reference_from": "reviewed-source/tasks/task-record-003/attempt-record-004/answer.md"
+    },
+    {
+      "source_alias": "review/evidence.json",
+      "reason": "A link in an original answer refers to a local artifact not captured in this public export; consult the preserved review dossier and public showcase supplement.",
+      "reference_from": "reviewed-source/tasks/task-record-003/attempt-record-004/answer.md"
+    },
+    {
+      "source_alias": "submissions/task-record-003.json",
+      "reason": "A link in an original answer refers to a local artifact not captured in this public export; consult the preserved review dossier and public showcase supplement.",
+      "reference_from": "reviewed-source/tasks/task-record-003/attempt-record-004/answer.md"
+    }
+  ],
+  "files": [
+    {
+      "path": "materials/reviewed-source/dossier.json",
+      "bytes": 43024,
+      "sha256": "a67d8a7f468caa108512132ccf0d862e8d1192db8ac16c6e25dd1178b82c007e",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/dossier.json",
+      "original_sha256": "00939d2d0d9d27a5dace6a3af7e9f79f4367f8939d5ed9c9aeffef53f7d1d581",
+      "original_bytes": 42515,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/reviewed-source/tasks/task-record-003/attempt-record-004/answer.md",
+      "bytes": 1665,
+      "sha256": "73fb60fdc9b17dd134752cd19ce7af485d7fa2c1c18c5bf36260bac9d99f6d02",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/tasks/task-record-003/attempt-record-004/answer.md",
+      "original_sha256": "e8f3b667a21802cc3c6d30e52f4bf6af1424bc20c0b3e0f7c8cfd6ce6a4f2033",
+      "original_bytes": 1657,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/README.cn.md",
+      "bytes": 2117,
+      "sha256": "9e6ae536b3574f0e4994a52a7934509aa162a6058a84b09d1adcbaab860a650a",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/README.cn.md",
+      "original_sha256": "0b78e1af82f07e7ea67a462bcf454a21a536acf927877d00c30b1c59d0634646",
+      "original_bytes": 2099,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/README.md",
+      "bytes": 2582,
+      "sha256": "96cd21890f6bd9af0d615e04affccbae34a6bc32f01116e7e070ae7e3c9bae44",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/README.md",
+      "original_sha256": "ddd34f98b8171d4ec4e5607541c73147df844559dd357f2810f7724c14c11487",
+      "original_bytes": 2564,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/formal/MeshCompatibility.lean",
+      "bytes": 6674,
+      "sha256": "ff83da03043b8d8ed8fb3030a69da09cd63355efe2f7e74b2fdb392f71c02d9d",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshCompatibility.lean",
+      "original_sha256": "ff83da03043b8d8ed8fb3030a69da09cd63355efe2f7e74b2fdb392f71c02d9d",
+      "original_bytes": 6674,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshComponents.lean",
+      "bytes": 10675,
+      "sha256": "3882654f5bf911ae8b5efc37140cfad3b2d8208252776495ffe7fbbb48f412a2",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshComponents.lean",
+      "original_sha256": "3882654f5bf911ae8b5efc37140cfad3b2d8208252776495ffe7fbbb48f412a2",
+      "original_bytes": 10675,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshDefinitions.lean",
+      "bytes": 5780,
+      "sha256": "9bac2a293d768004d0a8507ad5c71167e7db67fe517d6e99f3ebd535a8ac0a4e",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshDefinitions.lean",
+      "original_sha256": "9bac2a293d768004d0a8507ad5c71167e7db67fe517d6e99f3ebd535a8ac0a4e",
+      "original_bytes": 5780,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshEquivariance.lean",
+      "bytes": 4463,
+      "sha256": "997a9f7d8de69ad255debd6003863dc5901677d6a4a4aff1c70a986963eef4de",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshEquivariance.lean",
+      "original_sha256": "997a9f7d8de69ad255debd6003863dc5901677d6a4a4aff1c70a986963eef4de",
+      "original_bytes": 4463,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshNesting.lean",
+      "bytes": 2752,
+      "sha256": "81055e6a56ccdbfec4c3a24d4215c00e64cc7280df41fa56804541fa887b5cbc",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshNesting.lean",
+      "original_sha256": "81055e6a56ccdbfec4c3a24d4215c00e64cc7280df41fa56804541fa887b5cbc",
+      "original_bytes": 2752,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshOrbitCounting.lean",
+      "bytes": 6033,
+      "sha256": "24c82721a9c6621a5f3439051d97bd3d186d77c10f91d1a1b13be1fc6f0e1ac6",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshOrbitCounting.lean",
+      "original_sha256": "24c82721a9c6621a5f3439051d97bd3d186d77c10f91d1a1b13be1fc6f0e1ac6",
+      "original_bytes": 6033,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshPartial.lean",
+      "bytes": 4677,
+      "sha256": "d91e8f23ff1ce50cd72ef2ef101bb88a47d1bfcf32efaef5e20ed84694965b50",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshPartial.lean",
+      "original_sha256": "d91e8f23ff1ce50cd72ef2ef101bb88a47d1bfcf32efaef5e20ed84694965b50",
+      "original_bytes": 4677,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshPolynomial.lean",
+      "bytes": 4138,
+      "sha256": "33f6ed655e248b43c76604cfdc208be500468d6e6f95f73d7e279c54b9ea8501",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshPolynomial.lean",
+      "original_sha256": "33f6ed655e248b43c76604cfdc208be500468d6e6f95f73d7e279c54b9ea8501",
+      "original_bytes": 4138,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshReduction.lean",
+      "bytes": 3516,
+      "sha256": "57a2b6b1a4354a46eaf70b1cabc909ef52b9936ab5bb8488150887626910edc4",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshReduction.lean",
+      "original_sha256": "57a2b6b1a4354a46eaf70b1cabc909ef52b9936ab5bb8488150887626910edc4",
+      "original_bytes": 3516,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshRotation.lean",
+      "bytes": 6677,
+      "sha256": "8222189953c3eb36ce96a5e349cd23e4679f0350359067c7d78457ca83e3af90",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshRotation.lean",
+      "original_sha256": "8222189953c3eb36ce96a5e349cd23e4679f0350359067c7d78457ca83e3af90",
+      "original_bytes": 6677,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshStructure.lean",
+      "bytes": 2076,
+      "sha256": "3e2f503183ddbd1f621b017652b7b14c2fe056707b5b5889686a2e9ce896d60a",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshStructure.lean",
+      "original_sha256": "3e2f503183ddbd1f621b017652b7b14c2fe056707b5b5889686a2e9ce896d60a",
+      "original_bytes": 2076,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshSymmetry.lean",
+      "bytes": 6750,
+      "sha256": "8143c05a87b737470e57a8a584d08e4b437534b90d3d211f00cdf2c7ad181ffc",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshSymmetry.lean",
+      "original_sha256": "8143c05a87b737470e57a8a584d08e4b437534b90d3d211f00cdf2c7ad181ffc",
+      "original_bytes": 6750,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MeshTransport.lean",
+      "bytes": 2051,
+      "sha256": "b5e2d2b6ed53b8194895336338264a6d5df2cdc68f18f8f70c2d5be40254576b",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MeshTransport.lean",
+      "original_sha256": "b5e2d2b6ed53b8194895336338264a6d5df2cdc68f18f8f70c2d5be40254576b",
+      "original_bytes": 2051,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/README.cn.md",
+      "bytes": 2573,
+      "sha256": "9e15297a2a4a24fce53ecb497d3a8d8d8af642a51d86d3ab682e51b7f9d2f31b",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/README.cn.md",
+      "original_sha256": "a80a05b73c5c540bf8a14f202110af4489f50c84860f82a0193b6e45bf8c6355",
+      "original_bytes": 2564,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/formal/README.md",
+      "bytes": 3115,
+      "sha256": "01db90e88aa3626f378552aec5d5cc85d162cc0fca5e9514ff0909ce8e61251c",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/README.md",
+      "original_sha256": "6b87f8ab73b054a13b4f5df28620ca506cc2dd2d09087acc40677489ed45159b",
+      "original_bytes": 3106,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/formal/lake-manifest.json",
+      "bytes": 3557,
+      "sha256": "35d978fa9cd26856313ac3a248bc9fb971cdf59479f62ec5e18974009e30709f",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/lake-manifest.json",
+      "original_sha256": "35d978fa9cd26856313ac3a248bc9fb971cdf59479f62ec5e18974009e30709f",
+      "original_bytes": 3557,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/lakefile.toml",
+      "bytes": 498,
+      "sha256": "87aac4742e53482b220372dd308d75daf644d1c174f0defd87faf5be9e69665e",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/lakefile.toml",
+      "original_sha256": "87aac4742e53482b220372dd308d75daf644d1c174f0defd87faf5be9e69665e",
+      "original_bytes": 498,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/lean-toolchain",
+      "bytes": 25,
+      "sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/lean-toolchain",
+      "original_sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+      "original_bytes": 25,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/proof.md",
+      "bytes": 22270,
+      "sha256": "0788dc26255153faaab5e5458b373d279767b950bd702204534ce6d7cba26e47",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/proof.md",
+      "original_sha256": "0788dc26255153faaab5e5458b373d279767b950bd702204534ce6d7cba26e47",
+      "original_bytes": 22270,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/review.cn.md",
+      "bytes": 2383,
+      "sha256": "6925fc5e92f2c6e528a2b56567ff060636eb65997812fc77e60b9ec6d2e91519",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/review.cn.md",
+      "original_sha256": "c94f9195beaf311f8472b76307f52d8a7dd8cc64e0d8964f61aabc0962246a5e",
+      "original_bytes": 2374,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/review.md",
+      "bytes": 3105,
+      "sha256": "7d6b31f70bef3beb97fad5b41cf3cc7121be4df0825c88e5ef24c869cff6fd2c",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/review.md",
+      "original_sha256": "93f8010f5572f547d53eddfc6109f17366fea4e2a913cd07755f24947c8919a3",
+      "original_bytes": 3096,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/verification.json",
+      "bytes": 8324,
+      "sha256": "86025a4dd48809b125eb1357f05699bf5488e8c054065bec03d7da68ea1b3b4b",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/verification.json",
+      "original_sha256": "f1579a2ca1d6ac9e6f8a2cd7c03c691dd52959fa0ae790b75920f9f0028bd5b6",
+      "original_bytes": 7782,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/omitted-sources.md",
+      "bytes": 1210,
+      "sha256": "d6da3b56103b3e06c5fde4f1fab424f334e7b114bcf6ad1ae2ab2e7922c99f79",
+      "origin_kind": "publication_note",
+      "source_alias": "source-omission-note",
+      "original_sha256": "d6da3b56103b3e06c5fde4f1fab424f334e7b114bcf6ad1ae2ab2e7922c99f79",
+      "original_bytes": 1210,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "report.zh.md",
+      "bytes": 50904,
+      "sha256": "3d18bd294003642c8d38fe92c219f020773f73f1ac5e1b96b956828ed000b692",
+      "origin_kind": "native_organize_report",
+      "source_alias": "editorial-report-zh",
+      "original_sha256": "fc1000cc16c8a26b5145117efcc42d5c20fd4fe1d520c37a6906582918cd9894",
+      "original_bytes": 50414,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "report.en.md",
+      "bytes": 57000,
+      "sha256": "a82c5fdb0bbbd5d609634ec8be95258b15e60c48401e7c5ec398d3c8527425a4",
+      "origin_kind": "native_organize_report",
+      "source_alias": "editorial-report-en",
+      "original_sha256": "e75c6a26ee54624ba6b184f9c550b71c4aa869d765dcf1bdaebd4bd203fd458f",
+      "original_bytes": 56417,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "report.zh.pdf",
+      "bytes": 567536,
+      "sha256": "8c58d8a151dc5da57f2794de58c89c06b280b15d8a13b71190c608511bc39c40",
+      "origin_kind": "fresh_pdf_of_sanitized_markdown",
+      "markdown_sha256": "3d18bd294003642c8d38fe92c219f020773f73f1ac5e1b96b956828ed000b692",
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Fresh offline Chromium/KaTeX rendering of the public Markdown edition."
+      ]
+    },
+    {
+      "path": "report.en.pdf",
+      "bytes": 426720,
+      "sha256": "45e7c4b8dd52fac4b3cac16c2268104c3d1ad9e50d1fcbe7113e45b7d95721e2",
+      "origin_kind": "fresh_pdf_of_sanitized_markdown",
+      "markdown_sha256": "a82c5fdb0bbbd5d609634ec8be95258b15e60c48401e7c5ec398d3c8527425a4",
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Fresh offline Chromium/KaTeX rendering of the public Markdown edition."
+      ]
+    }
+  ],
+  "pdf_exports": {
+    "zh": {
+      "filename": "report.zh.pdf",
+      "pages": 20,
+      "bytes": 567536,
+      "sha256": "8c58d8a151dc5da57f2794de58c89c06b280b15d8a13b71190c608511bc39c40",
+      "renderer": "chromium+katex-0.19.0",
+      "formula_count": 338,
+      "warnings": []
+    },
+    "en": {
+      "filename": "report.en.pdf",
+      "pages": 24,
+      "bytes": 426720,
+      "sha256": "45e7c4b8dd52fac4b3cac16c2268104c3d1ad9e50d1fcbe7113e45b7d95721e2",
+      "renderer": "chromium+katex-0.19.0",
+      "formula_count": 338,
+      "warnings": []
+    }
+  },
+  "redactions": {
+    "credentials": 0,
+    "email_addresses": 0,
+    "local_endpoints": 0,
+    "local_host": 0,
+    "local_paths": 0,
+    "local_user": 0,
+    "private_addresses": 0,
+    "runtime_identifiers": 43,
+    "sensitive_text_fields": 0
+  }
+}

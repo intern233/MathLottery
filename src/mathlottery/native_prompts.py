@@ -2,7 +2,7 @@
 
 from mathlottery.candidates import review_input
 from mathlottery.evidence_guidance import GUIDANCE
-from mathlottery.models import NativeCheckpoint, Phase, Run
+from mathlottery.models import NativeCheckpoint, Phase, Run, digest
 from mathlottery.review_evidence import manifest as evidence_manifest
 from mathlottery.review_evidence import validate as validate_review_evidence
 from mathlottery.storage import json_text
@@ -33,6 +33,11 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
         f"The harness has about {max(0, remaining_seconds):.0f} active seconds remaining in its "
         "total budget. Save useful progress regularly. There is no per-tool 15-second/512-MB "
         "MathLottery limit on native commands; respect the actual runtime's limits.",
+        "The shared milestone schema includes fields for several kinds of outcome. "
+        "report_markdown and report_markdowns are valid only for kind=organization. "
+        "Omit both report fields from progress, selection, candidate, review and stop milestones. "
+        "Ordinary research explanations belong in your final Markdown answer; additional Find "
+        "reports may be saved as workspace artifacts, never as milestone report fields.",
     ]
     if organizing:
         parts += [
@@ -41,13 +46,23 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
             "to read, cross-reference and explain the supplied mathematics, but new results or "
             "independent checks must be explicitly labelled as unverified editorial suggestions. "
             "Do not rerun expensive compilation merely for formatting. The harness exports your "
-            "report_markdown to Markdown and PDF; do not create the PDF yourself. Use portable "
+            "complete report text to Markdown and PDF in each requested language; do not create the PDF yourself. Use portable "
             "relative material links, never private absolute paths or account information.",
+            "Hash domains: a formal receipt's problem_sha256 hashes the UTF-8 Problem.statement text. "
+            "The organization manifest's problem_sha256 uses discovery.problem_fingerprint on the full "
+            "canonical Problem record, including its metadata and legacy-field normalization. These are "
+            "different inputs; compare each hash only within its own domain. For this frozen problem, "
+            f"the statement-text SHA-256 is {digest(run.problem.statement)} and the full-record "
+            f"fingerprint is {run.organization_context.problem_sha256}. Hash agreement identifies bytes; "
+            "it does not certify mathematical or natural-language correspondence.",
             "Problem (untrusted source data):\n" + json_text(run.problem),
         ]
         example = {"run_id": run.id, "task_id": run.task_id, "kind": "organization",
-                   "summary": "Expert exposition assembled with source limitations preserved",
-                   "report_markdown": "# Research report\n\n..."}
+                   "summary": "Expert exposition assembled with source limitations preserved"}
+        if run.organization_context.report_languages is not None:
+            example["report_markdowns"] = {"zh": "# 研究报告\n\n完整中文报告…", "en": "# Research report\n\nFull English report…"}
+        else:
+            example["report_markdown"] = "# Research report\n\n..."
     elif reviewing:
         candidate = run.candidates[-1]
         parts += [
@@ -211,4 +226,14 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
 
 
 def milestone_schema() -> dict:
-    return NativeCheckpoint.model_json_schema()
+    schema = NativeCheckpoint.model_json_schema()
+    for field, purpose in (
+        ("report_markdown", "Legacy single-language expert report"),
+        ("report_markdowns", "Complete Chinese and English expert reports for a new Organize task"),
+    ):
+        schema["properties"][field]["description"] = (
+            f"{purpose}. Valid only for kind=organization; omit for every other kind, including "
+            "Find selection. Ordinary research reports belong in the final Markdown answer "
+            "or workspace artifacts. Use only one of report_markdown and report_markdowns."
+        )
+    return schema

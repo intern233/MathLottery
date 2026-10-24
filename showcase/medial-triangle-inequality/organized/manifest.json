@@ -1,0 +1,480 @@
+{
+  "schema_version": 1,
+  "case": "medial-triangle-inequality",
+  "kind": "Curated bilingual editorial export",
+  "source_review_snapshot_sha256": "7bf4659e47fe84d432486386a76ea14f69c50e013900e336c22b9e8d8db65aad",
+  "source_candidate_content_sha256": [
+    "8a1a465483ee0d4b4417caa826e81a510a3060418209cb7305f31bdced5d1267"
+  ],
+  "source_report_markdown_sha256": {
+    "zh": "159fda90e8f379fa993291d2feba0feda678801da09630fcd49c0af1e6f08013",
+    "en": "4166a069a67c2a8a2fcf5f1e1399657f1382fb55e47a76ccc122a86ad62f02b0"
+  },
+  "evidence_policy": "Editorial organization, redaction, translation and PDF rendering do not upgrade mathematical correctness, original-problem coverage, formal scope, open status or novelty.",
+  "publication_policy": [
+    "Private runtime identifiers use stable public aliases; the real-identifier mapping remains in an ignored local audit.",
+    "Original source/run records are unchanged. Original hashes identify their historical bytes; exported file hashes identify this public edition.",
+    "Hashes and byte sizes quoted in the report body/appendices refer to original frozen inputs; validate public files using files[].sha256/bytes in this manifest.",
+    "Historical JSON records retain original keys and disclose that their pre-existing hash fields describe original evidence, not redacted copies.",
+    "Showcase supplements document separately dated controller work and are not retroactively included in an older independent review.",
+    "Downloaded papers, raw sessions, credentials, toolchains, compiled objects and caches are excluded.",
+    "PDFs are rendered afresh from these sanitized Markdown files; local relative links remain navigable in Markdown, with material filenames retained for PDF readers."
+  ],
+  "review_outcomes": [
+    {
+      "candidate_alias": "candidate-record-006",
+      "level": "SELF_CHECKED",
+      "scope": "UNKNOWN",
+      "reviews": [
+        {
+          "verdict": "NO_ISSUES_FOUND",
+          "coverage": "UNKNOWN",
+          "novelty": "UNKNOWN",
+          "remaining_obligations": [],
+          "formal_status": null
+        }
+      ]
+    }
+  ],
+  "source_limitations": [
+    "This is an editorial reconstruction of visible saved evidence, not hidden reasoning, an independent mathematical verification, or a certification of novelty.",
+    "reviewed-source: only saved answers, named notes, proof/formal files and source receipts are included; arbitrary workspace files, binaries and caches are excluded.",
+    "This historical Verify has no saved solver linkage. The original Solve history is unavailable; matching titles or proofs were not used to guess it."
+  ],
+  "source_omissions": [],
+  "publication_omissions": [
+    {
+      "source_alias": "[private-path]",
+      "reason": "A link in an original answer refers to a local artifact not captured in this public export; consult the preserved review dossier and public showcase supplement.",
+      "reference_from": "reviewed-source/tasks/task-record-003/attempt-record-005/answer.md"
+    },
+    {
+      "source_alias": "[private-path]",
+      "reason": "A link in an original answer refers to a local artifact not captured in this public export; consult the preserved review dossier and public showcase supplement.",
+      "reference_from": "reviewed-source/tasks/task-record-003/attempt-record-005/answer.md"
+    },
+    {
+      "source_alias": "[private-path]",
+      "reason": "A link in an original answer refers to a local artifact not captured in this public export; consult the preserved review dossier and public showcase supplement.",
+      "reference_from": "reviewed-source/tasks/task-record-003/attempt-record-005/answer.md"
+    }
+  ],
+  "files": [
+    {
+      "path": "materials/reviewed-source/dossier.json",
+      "bytes": 32545,
+      "sha256": "b8237275411c2412b515e62ed00068346dc12265a9542bdb959afa9e837da2d7",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/dossier.json",
+      "original_sha256": "24a3b3d93149c23f32a7c30ce945f0a14f130e6cad2d2aa51667acb69cd0edbf",
+      "original_bytes": 32022,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/reviewed-source/tasks/task-record-003/attempt-record-004/answer.md",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/tasks/task-record-003/attempt-record-004/answer.md",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/tasks/task-record-003/attempt-record-005/answer.md",
+      "bytes": 1801,
+      "sha256": "599b9477e88e007f1d951f415e3fc7efc139d19d98855fa1e4c0014c1362e215",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/tasks/task-record-003/attempt-record-005/answer.md",
+      "original_sha256": "9e7e8e6f733f46a09efc39050aea9f565dcd19e85a0f377cff637a221f7b775f",
+      "original_bytes": 2150,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/Conjecture5.lean",
+      "bytes": 3376,
+      "sha256": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/Conjecture5.lean",
+      "original_sha256": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+      "original_bytes": 3376,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/MedialAlgebra.lean",
+      "bytes": 4564,
+      "sha256": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/MedialAlgebra.lean",
+      "original_sha256": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+      "original_bytes": 4564,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/MedialGeometry.lean",
+      "bytes": 6895,
+      "sha256": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/MedialGeometry.lean",
+      "original_sha256": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94",
+      "original_bytes": 6895,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/lakefile.toml",
+      "bytes": 320,
+      "sha256": "1da73d302f0b4f22653b2f4629bf4537f7b634a4748b77b72c5286324d0927fb",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/lakefile.toml",
+      "original_sha256": "1da73d302f0b4f22653b2f4629bf4537f7b634a4748b77b72c5286324d0927fb",
+      "original_bytes": 320,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/lean-toolchain",
+      "bytes": 25,
+      "sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/inputs/final-formal/lean-toolchain",
+      "original_sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+      "original_bytes": 25,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/review-build/AuditScope.lean",
+      "bytes": 2040,
+      "sha256": "af0f4743f1c5912d842fb30c7b098122e03bd784ab83a7439950b5d93c1ad450",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/review-build/AuditScope.lean",
+      "original_sha256": "af0f4743f1c5912d842fb30c7b098122e03bd784ab83a7439950b5d93c1ad450",
+      "original_bytes": 2040,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/review-build/Conjecture5.lean",
+      "bytes": 3376,
+      "sha256": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/review-build/Conjecture5.lean",
+      "original_sha256": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+      "original_bytes": 3376,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/review-build/MedialAlgebra.lean",
+      "bytes": 4564,
+      "sha256": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/review-build/MedialAlgebra.lean",
+      "original_sha256": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+      "original_bytes": 4564,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/review-build/MedialGeometry.lean",
+      "bytes": 6895,
+      "sha256": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/review-build/MedialGeometry.lean",
+      "original_sha256": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94",
+      "original_bytes": 6895,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/review-build/lakefile.toml",
+      "bytes": 320,
+      "sha256": "1da73d302f0b4f22653b2f4629bf4537f7b634a4748b77b72c5286324d0927fb",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/review-build/lakefile.toml",
+      "original_sha256": "1da73d302f0b4f22653b2f4629bf4537f7b634a4748b77b72c5286324d0927fb",
+      "original_bytes": 320,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/reviewed-source/review-workspaces/candidate-record-006/review-build/lean-toolchain",
+      "bytes": 25,
+      "sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+      "origin_kind": "frozen_source",
+      "source_alias": "reviewed-source/review-workspaces/candidate-record-006/review-build/lean-toolchain",
+      "original_sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+      "original_bytes": 25,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/README.cn.md",
+      "bytes": 1928,
+      "sha256": "b612c6d15062a789ec53d438eab66611e47030feded7be9944a41e6d7d6d49c2",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/README.cn.md",
+      "original_sha256": "b6aac808da54f408ea28aedd107e43951fe05758caca6a94013666396c20b536",
+      "original_bytes": 1910,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/README.md",
+      "bytes": 2271,
+      "sha256": "e767c6e9243f9559138089e813f718b8874d089e54b9cffafce5efdaf7d2806b",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/README.md",
+      "original_sha256": "98ec5d645ab72a677f7e03af46d3b8b41e1e4b16d948c8a36872577d7cd47722",
+      "original_bytes": 2253,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/formal/Conjecture5.lean",
+      "bytes": 3376,
+      "sha256": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/Conjecture5.lean",
+      "original_sha256": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+      "original_bytes": 3376,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MedialAlgebra.lean",
+      "bytes": 4564,
+      "sha256": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MedialAlgebra.lean",
+      "original_sha256": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+      "original_bytes": 4564,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/MedialGeometry.lean",
+      "bytes": 6895,
+      "sha256": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/MedialGeometry.lean",
+      "original_sha256": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94",
+      "original_bytes": 6895,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/README.cn.md",
+      "bytes": 2262,
+      "sha256": "e23a9b2dd60c8433321ecde4a10c2630599995e23436c786d30f9724ae13c668",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/README.cn.md",
+      "original_sha256": "6ce59a7a25c0e59bc1db0b330630c30b03ceb3789caeaa36d3f304f56ec60ce2",
+      "original_bytes": 2253,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/formal/README.md",
+      "bytes": 2688,
+      "sha256": "ba38d3e3eb82ac38d3275e8cae1e2a1212fa43ac91455d8049ea35b4d62e1fa6",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/README.md",
+      "original_sha256": "f62a5d1cbf5591e676bdb768a64e226bb54b60f64726893b4407cb8d59db825f",
+      "original_bytes": 2679,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/formal/lake-manifest.json",
+      "bytes": 3176,
+      "sha256": "aa4cc3535b3cf43b3d9bf708642595e2fc5fa51cac8bd432f2be35c836640576",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/lake-manifest.json",
+      "original_sha256": "aa4cc3535b3cf43b3d9bf708642595e2fc5fa51cac8bd432f2be35c836640576",
+      "original_bytes": 3176,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/lakefile.toml",
+      "bytes": 320,
+      "sha256": "1da73d302f0b4f22653b2f4629bf4537f7b634a4748b77b72c5286324d0927fb",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/lakefile.toml",
+      "original_sha256": "1da73d302f0b4f22653b2f4629bf4537f7b634a4748b77b72c5286324d0927fb",
+      "original_bytes": 320,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/formal/lean-toolchain",
+      "bytes": 25,
+      "sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/formal/lean-toolchain",
+      "original_sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+      "original_bytes": 25,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/proof.md",
+      "bytes": 6573,
+      "sha256": "fdd130c5ce90d2497196c9c03e1c42841b4422594e8852820fad25092b671833",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/proof.md",
+      "original_sha256": "fdd130c5ce90d2497196c9c03e1c42841b4422594e8852820fad25092b671833",
+      "original_bytes": 6573,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "materials/showcase/review.cn.md",
+      "bytes": 1919,
+      "sha256": "4d0712ee7c68d9c474c0cc6d1f4545abce8ad42fa1b874da40cd4e6ec39b115e",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/review.cn.md",
+      "original_sha256": "3cab8f0c578e6f19407d4d1569ee750ed094b8d91f2ee5eecfa7466d06838650",
+      "original_bytes": 1910,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/review.md",
+      "bytes": 2469,
+      "sha256": "d228d174ca63efb6b4000034dd4764768477ac4ac78415cf6d6d1639bd1ffc43",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/review.md",
+      "original_sha256": "3acb0c48a408006d609066b2669734ad31c75c04dfa4345d51cb65319e4bd7aa",
+      "original_bytes": 2460,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/showcase/verification.json",
+      "bytes": 8600,
+      "sha256": "7b44962b7c241fe37837690d5947c41982e911559aa4aa857eb19a49db23b4fd",
+      "origin_kind": "showcase_supplement",
+      "source_alias": "showcase/verification.json",
+      "original_sha256": "20285e38b8c9f430ecdf0f96f8de3bb4cc527a68299280b24f0f10aaa2662ee5",
+      "original_bytes": 8058,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "materials/omitted-sources.md",
+      "bytes": 1320,
+      "sha256": "e9955034fafe5e521aa973716702f2d64b7e84953413fce0f04a9e6bcb9f7c84",
+      "origin_kind": "publication_note",
+      "source_alias": "source-omission-note",
+      "original_sha256": "e9955034fafe5e521aa973716702f2d64b7e84953413fce0f04a9e6bcb9f7c84",
+      "original_bytes": 1320,
+      "unchanged_bytes": true,
+      "presentation_changes": []
+    },
+    {
+      "path": "report.zh.md",
+      "bytes": 44100,
+      "sha256": "a02c85c097b9c7f092a5892511260f097e59d7159ee5a9a439682d45b746f42a",
+      "origin_kind": "native_organize_report",
+      "source_alias": "editorial-report-zh",
+      "original_sha256": "159fda90e8f379fa993291d2feba0feda678801da09630fcd49c0af1e6f08013",
+      "original_bytes": 43631,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "report.en.md",
+      "bytes": 51308,
+      "sha256": "8588b5bf7c9c4b85a92c6f2485a4a4f405946416edb0122a8cd244e47a82df54",
+      "origin_kind": "native_organize_report",
+      "source_alias": "editorial-report-en",
+      "original_sha256": "4166a069a67c2a8a2fcf5f1e1399657f1382fb55e47a76ccc122a86ad62f02b0",
+      "original_bytes": 50746,
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Portable links and private runtime data redaction; see publication policy."
+      ]
+    },
+    {
+      "path": "report.zh.pdf",
+      "bytes": 521305,
+      "sha256": "b6a3a9381f579a4643c4e08cca086a9a35d65661c23b06657f22ffaedee85918",
+      "origin_kind": "fresh_pdf_of_sanitized_markdown",
+      "markdown_sha256": "a02c85c097b9c7f092a5892511260f097e59d7159ee5a9a439682d45b746f42a",
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Fresh offline Chromium/KaTeX rendering of the public Markdown edition."
+      ]
+    },
+    {
+      "path": "report.en.pdf",
+      "bytes": 402433,
+      "sha256": "09536a1df8e3acb09f52aafd5f681dd3e042ce1b5120d3b77c1ea71e2dd991b7",
+      "origin_kind": "fresh_pdf_of_sanitized_markdown",
+      "markdown_sha256": "8588b5bf7c9c4b85a92c6f2485a4a4f405946416edb0122a8cd244e47a82df54",
+      "unchanged_bytes": false,
+      "presentation_changes": [
+        "Fresh offline Chromium/KaTeX rendering of the public Markdown edition."
+      ]
+    }
+  ],
+  "pdf_exports": {
+    "zh": {
+      "filename": "report.zh.pdf",
+      "pages": 19,
+      "bytes": 521305,
+      "sha256": "b6a3a9381f579a4643c4e08cca086a9a35d65661c23b06657f22ffaedee85918",
+      "renderer": "chromium+katex-0.19.0",
+      "formula_count": 165,
+      "warnings": []
+    },
+    "en": {
+      "filename": "report.en.pdf",
+      "pages": 23,
+      "bytes": 402433,
+      "sha256": "09536a1df8e3acb09f52aafd5f681dd3e042ce1b5120d3b77c1ea71e2dd991b7",
+      "renderer": "chromium+katex-0.19.0",
+      "formula_count": 165,
+      "warnings": []
+    }
+  },
+  "redactions": {
+    "credentials": 0,
+    "email_addresses": 0,
+    "local_endpoints": 0,
+    "local_host": 0,
+    "local_paths": 3,
+    "local_user": 0,
+    "private_addresses": 0,
+    "runtime_identifiers": 92,
+    "sensitive_text_fields": 0
+  }
+}

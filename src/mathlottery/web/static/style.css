@@ -231,6 +231,12 @@ pre { font: 13px/1.9 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; w
 .organized-report > h3 { margin: 0; font-size: 17px; }
 .organized-origin { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; color: var(--muted); font-size: 12px; }
 .organized-origin .text-button { overflow-wrap: anywhere; text-align: left; }
+.organize-output-note { margin: 18px 0 8px; color: var(--green); font-weight: 600; font-size: 13px; }
+.organized-versions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.organized-version { min-width: 0; padding: 16px; border: 1px solid #dce5d6; border-radius: 8px; background: var(--paper); }
+.organized-version h4 { margin: 0; font-size: 15px; }
+.organized-version .organized-downloads { margin: 12px 0; }
+.organized-version .source-binding { overflow-wrap: anywhere; }
 .organized-downloads { display: flex; flex-wrap: wrap; gap: 10px; margin: 17px 0; }
 .organized-downloads a { display: inline-flex; align-items: center; text-decoration: none; color: var(--green); }
 .snapshot-manifest { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow: auto; }
@@ -330,6 +336,7 @@ footer > span:first-child { font-weight: 650; }
   .problem-metrics { grid-template-columns: 1fr; gap: 16px; }
   .candidate-card, .problem-card { padding: 16px; }
   .organized-report { padding: 16px; }
+  .organized-versions { grid-template-columns: 1fr; }
   .card-heading h3, .result-heading h3 { font-size: 15px; }
   .candidate-card p, .problem-card p { font-size: 13px; }
   pre { padding: 14px; font-size: 12px; }

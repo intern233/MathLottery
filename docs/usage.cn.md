@@ -68,7 +68,7 @@ mathlottery serve
 | **找题 Find** | 输入倾向，例如：“找一个公开未解决的数学问题，陈述精确、范围较小，最好能用 Lean 验证；检查原始来源和后续进展。” | 候选列表、来源、开放状态证据，以及难度、验真和 Lean 可行性评价。 |
 | **选题 → 求解 Solve** | 点击**选择这道题**，确认**你选择的题目**，再点击**开始求解**；可补充任务要求。 | 研究过程与候选证明，也可能只有部分结果或未成功的尝试。选题本身不会启动求解。 |
 | **验真 Verify** | 点击**验真最新候选**，选择需要的证明源文件，确认审查设置后启动。 | 独立审查结果、发现的问题、证据缺口和实际检查范围。 |
-| **整理 Organize · 可选** | 审查后点击**整理为专家阅读报告**，选择报告语言和模型，再点击**生成专家阅读报告**。 | 解释论证、支持材料与审查发现的 Markdown 和 PDF 报告。[报告配置](#organize) |
+| **整理 Organize · 可选** | 审查后点击**整理为专家阅读报告**，选择模型，再点击**生成专家阅读报告**。 | 中英文各一份 Markdown 和 PDF 报告，解释论证、支持材料与审查发现。[报告配置](#organize) |
 
 也可以跳过 Find：在 **Solve** 中选择**输入一个新问题**并填写陈述。第一次可用“证明对每个非负整数 n，前 n 个正奇数之和等于 n²”测试流程。这是已知结论，用来检查系统是否跑通，不是开放问题发现。
 
@@ -87,7 +87,7 @@ mathlottery serve
 | `mathlottery find` | 找题并保存候选列表，然后等待你选题。 |
 | `mathlottery solve --problem <problem-id>` | 求解已保存的问题；新陈述用 `--prompt`。 |
 | `mathlottery verify --from-run <solve-run-id>` | 独立审查某次 Solve 的最新候选证明。 |
-| `mathlottery organize --from-run <verify-run-id> --language zh` | 整理已审查研究，生成供专家阅读的报告。 |
+| `mathlottery organize --from-run <verify-run-id> --language zh` | 生成中英文专家报告，默认导出中文版本。 |
 | `mathlottery run` | 自动找题、求解、审查，不在选题处等待用户。 |
 
 ### 找题 → 选题 → 求解 → 验真
@@ -127,19 +127,29 @@ mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
 
 ```bash
 mathlottery organize --from-run <verify-run-id> --language zh
-mathlottery export <organize-run-id> --format markdown --output expert-report.md
-mathlottery export <organize-run-id> --format pdf
+mathlottery export <organize-run-id> --format markdown --language zh --output report.zh.md
+mathlottery export <organize-run-id> --format pdf --language en
+mathlottery export <organize-run-id> --format bundle --output expert-reports.zip
 ```
 
-将任务 ID 占位符换成实际值。`--language` 支持 `zh` 和 `en`；`--instructions` 可以指定读者背景或重点。Organize 使用同一套模型配置，也支持 `--backend`、`--model`、`--reasoning-effort`、`--reasoning-mode`、`--budget-time` 和 `--max-iterations` 覆盖参数。启动整理会创建独立模型任务并消耗额度，选择来源本身不会调用模型。
+将任务 ID 占位符换成实际值。Organize 始终根据同一份证据生成**中英文两版**。它的 `--language zh|en` 只设置默认导出语言，不限制生成版本；`export --language` 则选择要导出的已保存版本。`--instructions` 可以指定读者背景或重点。Organize 使用同一套模型配置，也支持 `--backend`、`--model`、`--reasoning-effort`、`--reasoning-mode`、`--budget-time` 和 `--max-iterations` 覆盖参数。启动整理会创建独立模型任务并消耗额度，选择来源本身不会调用模型。
 
 来源任务必须处于空闲状态，且包含审查记录；未能确认或发现问题的审查也可以整理。报告说明原题、假设、证明思路、引理与推导，并保留审查问题、形式检查范围和新颖性不确定性。它根据已保存的可见材料重构说明，不是隐藏思维过程，也不构成新的验证。
 
-需要 PDF 时，先安装一次[可选报告依赖](resources.cn.md#reports)。两种入口均保存 `runs/<organize-run-id>/organized/report.md`；PDF 导出成功后保存 `report.pdf`。同目录的 `manifest.json` 记录来源、哈希和遗漏，`materials/` 保存捕获的小型源文件。二进制依赖、缓存，以及没有明确来源关联的历史 Solve 记录可能未被收集；分享前请检查清单。
+需要 PDF 时，先安装一次[可选报告依赖](resources.cn.md#reports)。两种入口都在 `runs/<organize-run-id>/organized/` 保存：
 
-交给他人审阅时，建议在浏览器点击**下载报告与材料（ZIP）**，或分享整个 `organized/` 目录。打包下载保留相对链接，并在 PDF 可用时一并包含它；单独下载 Markdown 或 PDF 不会附带引用的源文件。
+| 语言 | Markdown | PDF（导出成功时） |
+| --- | --- | --- |
+| 中文 | `report.zh.md` | `report.zh.pdf` |
+| English | `report.en.md` | `report.en.pdf` |
 
-PDF 导出失败不会丢失 Markdown。修复渲染环境后，点击**重新导出 PDF**或执行上述 PDF 导出命令，**无需再次调用模型**。Markdown 导出得到专家报告；`mathlottery report <organize-run-id>` 仍然生成任务摘要。
+`report.md` 和 `report.pdf` 保留为默认导出语言的兼容副本。同目录的 `manifest.json` 记录来源、哈希和遗漏，`materials/` 保存捕获的小型源文件。二进制依赖、缓存，以及没有明确来源关联的历史 Solve 记录可能未被收集；分享前请检查清单。
+
+交给他人审阅时，建议在浏览器点击**下载报告与材料（ZIP）**，或分享整个 `organized/` 目录。一个 ZIP 包含中英文已保存版本、可用的 PDF 和共用材料，保留相对链接；单独下载 Markdown 或 PDF 不会附带引用的源文件。
+
+某一版 PDF 导出失败不会丢失两版 Markdown，也不妨碍另一版 PDF 导出。修复渲染环境后，点击**重新导出 PDF**或执行上述 PDF 导出命令，根据已保存版本重新生成，**无需再次调用模型**。Markdown 导出得到专家报告；`mathlottery report <organize-run-id>` 仍然生成任务摘要。
+
+历史单语言报告仍可读取，页面会注明缺失版本。重新导出 PDF 不会翻译；需要双语时，从已审查来源重新启动 Organize。
 
 ### 自动串联各阶段
 
@@ -242,7 +252,7 @@ mathlottery doctor
 | `runs/<run-id>/report.md` | 结果与证据摘要 |
 | `runs/<run-id>/candidates/` / `verification/` | 候选版本和审查记录 |
 | `runs/<run-id>/workspace/` | 研究文件和可见回答 |
-| `runs/<organize-run-id>/organized/` | 专家报告、PDF 导出状态、来源清单和已收集材料 |
+| `runs/<organize-run-id>/organized/` | 中英文专家报告、各版本 PDF 导出状态、来源清单和已收集材料 |
 | `.mathlottery/` | 本地状态、会话和独立 Codex 登录 |
 
 这些工作目录和 `config.yaml` 都已被 Git 忽略。浏览器可下载报告和小型证明源文件；有源文件不代表已通过形式化验证。整理后的小型案例放在纳入版本管理的 [showcase](../showcase/README.cn.md)。

@@ -76,7 +76,7 @@ We want to preserve as much of GPT's native agent capability as possible, leavin
 - **Evidence checks:** independently retrieve quoted sources, record missing evidence and original-problem coverage, and recheck attached Lean sources with bounded execution receipts. See the [evidence policy](docs/evidence.md).
 - **Local browser workspace:** launch `mathlottery serve` to find problems, start solutions, review proofs, organize expert reports, and manage research history from your browser.
 
-The code provides four independent workflows: **`find`, `solve`, `verify`, and `organize`**. The `run` workflow connects finding, solving and verification; organizing is an explicit, optional follow-up. Finding produces reusable problem statements, solving saves candidate proofs, verification produces a separate review, and organizing prepares an expert reading report.
+The code provides four independent workflows: **`find`, `solve`, `verify`, and `organize`**. The `run` workflow connects finding, solving and verification; organizing is an explicit, optional follow-up. Finding produces reusable problem statements, solving saves candidate proofs, verification produces a separate review, and organizing prepares matching Chinese and English expert reports, each in Markdown and PDF.
 
 Choose an entry point independently of the agent connection: use the **browser** or **terminal** with either **`codex`** (official Codex sessions and native tools) or **`chat`** (the Responses API with persistent context and configured hosted tools). API connections require their own credentials. Compatible Responses providers can be configured separately; other native protocols require an adapter. See [backend and model configuration](docs/configuration.md).
 
@@ -90,7 +90,7 @@ Each case states its formal verification scope and novelty status. The mesh-patt
 
 ## Take your first shot
 
-Start with the [browser quickstart](docs/usage.md#local-browser-workspace): install MathLottery, run `mathlottery serve`, and open the printed address. Sign in through the **MathLottery account** panel for Codex, choose a model, then **Find → choose a problem → Solve → Verify**. Follow with [**Organize**](docs/usage.md#organize) when you want an expert reading report. This workspace's login is separate from your ordinary Codex CLI / IDE login.
+Start with the [browser quickstart](docs/usage.md#local-browser-workspace): install MathLottery, run `mathlottery serve`, and open the printed address. Sign in through the **MathLottery account** panel for Codex, choose a model, then **Find → choose a problem → Solve → Verify**. Follow with [**Organize**](docs/usage.md#organize) when you want expert reading reports in Chinese and English. This workspace's login is separate from your ordinary Codex CLI / IDE login.
 
 In the terminal, use [`find`, `solve`, `verify`, `organize`, or `run`](docs/usage.md#cli) with the same workspace and configuration. `run` automatically connects the research stages; separate commands let you choose the problem between Find and Solve and request a report after Verify.
 

@@ -4,6 +4,8 @@ English | [简体中文](README.cn.md)
 
 [All result samples](../README.md) · [Project overview](../../README.md)
 
+**Expert reports:** [English Markdown](organized/report.en.md) · [English PDF](organized/report.en.pdf) · [中文 Markdown](organized/report.zh.md) · [中文 PDF](organized/report.zh.pdf). Full bilingual exposition of the saved proof and evidence; editorial organization does not upgrade verification or novelty. [Publication manifest](organized/manifest.json).
+
 This case presents a **complete counterexample to Conjecture 1** in Bera–Paul–Subramanian's *Some properties of stepwise irregular graphs*. The separate AI review returned **NO_ISSUES_FOUND**. Novelty is **UNKNOWN**, and there is no Lean formalization.
 
 The paper appeared in EJGTA 14(1) (2026). The conjecture is on printed page 223; the simple-connected-graph convention and SI definition are on page 216. [Original paper](https://www.ejgta.org/index.php/ejgta/article/download/1077/pdf_357)

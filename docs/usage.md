@@ -68,7 +68,7 @@ Select the provider, model and reasoning effort in **Model for this task**. For 
 | **Find** | Enter preferences, for example: “Find a precisely stated public open problem with recent status evidence, a small scope, and potential for Lean verification.” | A shortlist with sources, open-status evidence, difficulty, verification and Lean feasibility estimates. |
 | **Choose → Solve** | Click **Choose this problem**, check **Your choice**, then **Start solving**. Add task instructions if needed. | Research records and candidate proofs, or a recorded partial/unsuccessful attempt. Choosing alone does not start solving. |
 | **Verify** | Click **Verify latest candidate**, select any needed proof source files, choose review settings, then start verification. | A separate review with issues, evidence gaps and the scope actually checked. |
-| **Organize · optional** | After a review, click **Organize for expert review**. Choose the report language and model, then **Create expert report**. | Markdown and PDF reports explaining the argument, its materials and the review findings. [Report setup](#organize) |
+| **Organize · optional** | After a review, click **Organize for expert review**. Choose the model, then **Create expert report**. | Chinese and English reports, each in Markdown and PDF, explaining the argument, its materials and the review findings. [Report setup](#organize) |
 
 You can also skip Find: in **Solve**, choose **Enter a new problem** and supply its statement. For a small first test, try “Prove that the sum of the first n positive odd integers is n² for every nonnegative integer n.” This tests the workflow using a known result; it is not an open-problem discovery.
 
@@ -87,7 +87,7 @@ Activate the environment and run commands from the **MathLottery project directo
 | `mathlottery find` | Find and save a shortlist, then stop for your choice. |
 | `mathlottery solve --problem <problem-id>` | Solve a saved problem. Use `--prompt` for a new statement. |
 | `mathlottery verify --from-run <solve-run-id>` | Independently review the latest candidate from a Solve run. |
-| `mathlottery organize --from-run <verify-run-id> --language en` | Explain and collect reviewed research for a human expert. |
+| `mathlottery organize --from-run <verify-run-id> --language en` | Create Chinese and English expert reports; prefer English for default exports. |
 | `mathlottery run` | Automatically find a problem, solve and review; it does not pause for your selection. |
 
 ### Find → choose → solve → verify
@@ -127,19 +127,29 @@ Choose **Organize** in the browser, or run:
 
 ```bash
 mathlottery organize --from-run <verify-run-id> --language en
-mathlottery export <organize-run-id> --format markdown --output expert-report.md
-mathlottery export <organize-run-id> --format pdf
+mathlottery export <organize-run-id> --format markdown --language en --output report.en.md
+mathlottery export <organize-run-id> --format pdf --language zh
+mathlottery export <organize-run-id> --format bundle --output expert-reports.zip
 ```
 
-Replace the run-ID placeholders with actual IDs. `--language` accepts `en` or `zh`; `--instructions` can specify an audience or emphasis. Organize uses the same model configuration and `--backend`, `--model`, `--reasoning-effort`, `--reasoning-mode`, `--budget-time` and `--max-iterations` overrides as research commands. It starts a separate model task and uses quota; merely selecting a source does not.
+Replace the run-ID placeholders with actual IDs. Organize always generates **both Chinese and English** versions from the same evidence. Its `--language en|zh` option selects the default export language; it does not restrict the generated versions. On `export`, `--language` selects one saved version. `--instructions` can specify an audience or emphasis. Organize uses the same model configuration and `--backend`, `--model`, `--reasoning-effort`, `--reasoning-mode`, `--budget-time` and `--max-iterations` overrides as research commands. It starts a separate model task and uses quota; merely selecting a source does not.
 
 The source must be idle and contain a recorded review. An inconclusive or negative review is also eligible. The report explains the statement, assumptions, proof strategy, lemmas and derivations, and preserves review issues, formal-check scope and novelty uncertainty. It reconstructs saved visible work; it is not hidden model reasoning or a new verification.
 
-For PDF output, install the [optional report dependencies](resources.md#reports) once. Both entry points save `runs/<organize-run-id>/organized/report.md` and, when export succeeds, `report.pdf`. The adjacent `manifest.json` records provenance, hashes and omissions; `materials/` holds the captured small source files. Binary dependencies, caches and historical Solve records without an explicit source link may be absent—check the manifest before sharing.
+For PDF output, install the [optional report dependencies](resources.md#reports) once. Both entry points save reports under `runs/<organize-run-id>/organized/`:
 
-For handoff, use **Download report + materials (ZIP)** in the browser, or share the whole `organized/` directory. The bundle preserves relative links and includes the PDF when available. Downloading only Markdown or PDF does not include the referenced source files.
+| Language | Markdown | PDF, when export succeeds |
+| --- | --- | --- |
+| Chinese | `report.zh.md` | `report.zh.pdf` |
+| English | `report.en.md` | `report.en.pdf` |
 
-If PDF export fails, Markdown remains available. After fixing the renderer, use **Retry PDF export** or the PDF export command above; this does **not** call the model again. Markdown export returns the expert report; `mathlottery report <organize-run-id>` continues to produce the task summary.
+`report.md` and `report.pdf` remain aliases for the preferred export language. The adjacent `manifest.json` records provenance, hashes and omissions; `materials/` holds the captured small source files. Binary dependencies, caches and historical Solve records without an explicit source link may be absent—check the manifest before sharing.
+
+For handoff, use **Download report + materials (ZIP)** in the browser, or share the whole `organized/` directory. One bundle includes both saved language versions, their available PDFs and shared materials, preserving relative links. Downloading only Markdown or PDF does not include the referenced source files.
+
+If one PDF export fails, both saved Markdown versions remain available and the other PDF can still succeed. After fixing the renderer, use **Retry PDF export** or the PDF export command above to rebuild the saved versions; this does **not** call the model again. Markdown export returns the expert report; `mathlottery report <organize-run-id>` continues to produce the task summary.
+
+Older single-language reports remain readable and are labeled accordingly. PDF export does not translate them; start Organize from the reviewed source to create both versions.
 
 ### Automate the stages
 
@@ -242,7 +252,7 @@ Terminal research runs in the foreground; browser tasks use background workers. 
 | `runs/<run-id>/report.md` | Result and evidence summary |
 | `runs/<run-id>/candidates/` / `verification/` | Candidate versions and review records |
 | `runs/<run-id>/workspace/` | Research files and visible answers |
-| `runs/<organize-run-id>/organized/` | Expert report, PDF export status, source manifest and captured materials |
+| `runs/<organize-run-id>/organized/` | Chinese and English reports, per-version PDF status, source manifest and captured materials |
 | `.mathlottery/` | Local state, sessions and the isolated Codex login |
 
 These working directories and `config.yaml` are Git-ignored. The browser offers reports and small proof-source downloads; a source file alone does not establish successful formal verification. Curated, compact examples live in the versioned [showcase](../showcase/README.md).

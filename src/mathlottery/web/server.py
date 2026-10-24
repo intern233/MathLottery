@@ -199,17 +199,20 @@ class Handler(BaseHTTPRequestHandler):
                 from mathlottery.organized_reports import read_report
 
                 query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
-                if set(query) != {"format"} or len(query["format"]) != 1:
-                    raise ValueError("Supply exactly one report format: markdown, pdf or bundle")
+                if ("format" not in query or set(query) - {"format", "language"}
+                        or any(len(values) != 1 for values in query.values())):
+                    raise ValueError("Supply one report format and optionally one language: zh or en")
                 format = query["format"][0]
-                data = read_report(self.server.service.store, run_id, format)
+                language = query.get("language", [None])[0]
+                data = read_report(self.server.service.store, run_id, format, language=language)
                 extension, content_type = {
                     "pdf": ("pdf", "application/pdf"),
                     "markdown": ("md", "text/markdown; charset=utf-8"),
                     "bundle": ("zip", "application/zip"),
                 }[format]
+                suffix = f".{language}" if language is not None else ""
                 self.respond(200, data, content_type,
-                             Content_Disposition=f'attachment; filename="{run_id}-expert-report.{extension}"')
+                             Content_Disposition=f'attachment; filename="{run_id}-expert-report{suffix}.{extension}"')
             elif action == "artifact":
                 service = self.server.service
                 service.store.load(run_id)

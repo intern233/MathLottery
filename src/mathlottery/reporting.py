@@ -66,13 +66,19 @@ def report(store: Store, run: Run):
             "This does not add an independent verification or upgrade proof, novelty or open-status claims.",
         ]
         if document:
-            sections += ["[Expert report (Markdown)](organized/report.md)",
-                         "[Evidence manifest](organized/manifest.json)",
-                         f"PDF export: `{document.pdf_status}`."]
-            if document.pdf_status == "ready":
-                sections.append("[Expert report (PDF)](organized/report.pdf)")
-            elif document.pdf_error:
-                sections.append(document.pdf_error)
+            from mathlottery.organization import report_documents, report_filename
+
+            sections.append("[Evidence manifest](organized/manifest.json)")
+            for language, item in report_documents(run).items():
+                label = "中文" if language == "zh" else "English"
+                filename = report_filename(run, language, "md")
+                sections += [f"[{label} expert report (Markdown)](organized/{filename})",
+                             f"{label} PDF export: `{item.pdf_status}`."]
+                if item.pdf_status == "ready":
+                    filename = report_filename(run, language, "pdf")
+                    sections.append(f"[{label} expert report (PDF)](organized/{filename})")
+                elif item.pdf_error:
+                    sections.append(item.pdf_error)
         else:
             sections.append("The expert report has not been produced yet.")
     if run.shortlist:

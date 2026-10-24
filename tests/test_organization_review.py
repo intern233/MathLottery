@@ -23,6 +23,8 @@ def arranged(store, reviewed):
     source.environment["private"] = "PRIVATE_ENVIRONMENT_SENTINEL"
     store.save(source, "fixture_private_config")
     run = engine.organize(config, source.id, language="en")
+    # Preserve coverage for historical reports saved before bilingual output existed.
+    run.organization_context.report_languages = None
     organization.accept(run, "# Exposition\n\nThe missing lemma remains open.")
     run.state, run.phase = State.COMPLETED, Phase.REPORT
     run.organization_report.pdf_status = "failed"

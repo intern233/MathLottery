@@ -150,29 +150,33 @@ Object.assign(words.en, {
   organize: "Organize the research", stageOrganize: "Organize", ORGANIZING: "Organizing",
   organizeDescription: "Turn the proof and its review into a report for a human expert, with traceable supporting materials.",
   startOrganize: "Create expert report", organizeReviewed: "Organize for expert review",
-  organizeSource: "Run with a reviewed candidate", organizeLanguage: "Report language",
+  organizeSource: "Run with a reviewed candidate", organizeLanguages: "Chinese + English · Markdown and PDF for each",
   organizeChoose: "Choose a run with at least one reviewed candidate.", organizeNone: "No reviewed candidates yet — run Verify first",
   organizeSourceHint: "Choose a completed review to organize. Unresolved findings and rejected candidates can also be documented.",
   organizeSourceCount: "{n} reviewed candidate(s). The report retains the findings and remaining gaps.",
   organizeScope: "Organizes the statement, proof, supporting materials and review findings for expert reading. This editorial step does not establish correctness or novelty.",
   organizeReport: "Expert reading report", organizeOrigin: "Source research & review", organizePending: "No expert report has been saved yet.", downloadTaskReport: "Download task summary ↓",
   organizeMarkdown: "Download Markdown", organizePdf: "Download PDF", organizeBundle: "Download report + materials (ZIP)", organizePdfFailed: "PDF is unavailable. The Markdown report is still available.",
-  organizeRetryPdf: "Retry PDF export", organizeRetryingPdf: "Exporting PDF…", organizeRetryHint: "Rebuilds the PDF from the saved Markdown without another model call.",
-  organizePdfWarnings: "PDF export notes", organizeDigest: "Markdown SHA-256", organizePrepared: "Source selected. Review the language and model settings, then start organizing.",
+  organizeRetryPdf: "Retry PDF export", organizeRetryingPdf: "Exporting PDF…", organizeRetryHint: "Rebuilds PDFs for all saved language versions without another model call. It does not translate missing versions.",
+  organizePdfWarnings: "PDF export notes", organizeDigest: "Markdown SHA-256", organizePrepared: "Source selected. Review the model settings, then create both language versions.",
+  organizeMissingLanguage: "This language version has not been generated. Start Organize from the reviewed source to create both versions.",
+  organizeLegacy: "This saved report contains one language version. PDF export does not add a translation.",
 });
 Object.assign(words.zh, {
   organize: "整理研究材料", stageOrganize: "整理", ORGANIZING: "正在整理",
   organizeDescription: "将证明过程与审查结果整理为供人类专家阅读的报告，并保留可追溯的支持材料。",
   startOrganize: "生成专家阅读报告", organizeReviewed: "整理为专家阅读报告",
-  organizeSource: "包含已审查候选证明的任务", organizeLanguage: "报告语言",
+  organizeSource: "包含已审查候选证明的任务", organizeLanguages: "中文 + English · 各一份 Markdown 和 PDF",
   organizeChoose: "请选择至少包含一份已审查候选证明的任务。", organizeNone: "暂无已审查候选，请先运行验真",
   organizeSourceHint: "选择要整理的审查记录。尚存疑点或被否定的候选证明也可以整理。",
   organizeSourceCount: "包含 {n} 份已审查候选证明。报告会保留审查发现与未解决的缺口。",
   organizeScope: "整理原命题、证明、支持材料与审查结论，便于专家阅读。这一步不新增正确性或新颖性认证。",
   organizeReport: "专家阅读报告", organizeOrigin: "来源研究与审查", organizePending: "尚未保存专家阅读报告。", downloadTaskReport: "下载任务摘要 ↓",
   organizeMarkdown: "下载 Markdown", organizePdf: "下载 PDF", organizeBundle: "下载报告与材料（ZIP）", organizePdfFailed: "PDF 暂不可用，仍可下载 Markdown 报告。",
-  organizeRetryPdf: "重新导出 PDF", organizeRetryingPdf: "正在导出 PDF…", organizeRetryHint: "根据已保存的 Markdown 重新导出，不再次调用模型。",
-  organizePdfWarnings: "PDF 导出说明", organizeDigest: "Markdown SHA-256", organizePrepared: "已选择来源。确认报告语言与模型配置后，点击开始整理。",
+  organizeRetryPdf: "重新导出 PDF", organizeRetryingPdf: "正在导出 PDF…", organizeRetryHint: "重新导出各已保存语言版本的 PDF，不再次调用模型；不会翻译缺失的语言版本。",
+  organizePdfWarnings: "PDF 导出说明", organizeDigest: "Markdown SHA-256", organizePrepared: "已选择来源。确认模型配置后，生成中英文两版报告。",
+  organizeMissingLanguage: "尚未生成此语言版本。请从已审查来源启动整理，生成中英文两版报告。",
+  organizeLegacy: "这份已保存的报告只有一种语言；重新导出 PDF 不会补充翻译。",
 });
 
 function preference(key, value) {
@@ -188,7 +192,6 @@ const accountState = { data: null, busy: false, operation: "status", error: "" }
 const reviewSource = { generation: 0, runId: "", loading: false, error: "", run: null, candidate: null, files: [], selected: new Set(), filesKey: "" };
 const pdfExports = new Set();
 if (!words[state.language]) state.language = "en";
-$("#organize-language").value = state.language;
 const t = (key) => words[state.language][key] || key;
 const compact = (value) => value == null ? t("unknown") : new Intl.NumberFormat(state.language, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 const date = (value) => new Date(value).toLocaleString(state.language === "zh" ? "zh-CN" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -774,18 +777,44 @@ function renderOrganizedReport(run) {
     const origin = node("p", "organized-origin", `${t("organizeOrigin")}: `), link = node("button", "text-button", report.source_run_id);
     link.type = "button"; link.addEventListener("click", () => selectRun(report.source_run_id, true)); origin.append(link); section.append(origin);
   }
-  if (report?.language) section.append(node("p", "field-hint", `${t("organizeLanguage")}: ${report.language === "zh" ? "中文" : "English"}`));
-  if (!report?.markdown_available) section.append(node("p", "notice", t("organizePending")));
-  const downloads = node("div", "organized-downloads");
-  for (const [format, label, available, extension] of [["markdown", "organizeMarkdown", report?.markdown_available, "md"], ["pdf", "organizePdf", report?.pdf_available, "pdf"], ["bundle", "organizeBundle", report?.markdown_available, "zip"]]) {
-    if (!available) continue;
-    const link = node("a", "secondary", t(label));
-    link.href = `/api/runs/${encodeURIComponent(run.id)}/organized?format=${format}`;
-    link.download = `expert-report.${extension}`; downloads.append(link);
+  const reports = report?.reports || (report?.markdown_available ? { [report.language || "zh"]: report } : {});
+  const available = ["zh", "en"].filter((language) => reports[language]?.markdown_available);
+  if (!available.length) {
+    section.append(node("p", "notice", t("organizePending")));
+    return section;
   }
-  if (downloads.childElementCount) section.append(downloads);
-  if (report?.markdown_available && !report.pdf_available) {
-    section.append(node("p", "notice", [t("organizePdfFailed"), report.pdf_error].filter(Boolean).join("\n")));
+  if (available.length < 2) section.append(node("p", "notice", t("organizeLegacy")));
+  const versions = node("div", "organized-versions");
+  for (const language of ["zh", "en"]) {
+    const edition = reports[language], panel = node("section", "organized-version");
+    panel.dataset.language = language;
+    panel.append(node("h4", "", language === "zh" ? "中文" : "English"));
+    if (!edition?.markdown_available) {
+      panel.append(node("p", "field-hint", t("organizeMissingLanguage"))); versions.append(panel); continue;
+    }
+    const downloads = node("div", "organized-downloads");
+    for (const [format, label, ready, extension] of [["markdown", "organizeMarkdown", edition.markdown_available, "md"], ["pdf", "organizePdf", edition.pdf_available, "pdf"]]) {
+      if (!ready) continue;
+      const link = node("a", "secondary", t(label));
+      link.href = `/api/runs/${encodeURIComponent(run.id)}/organized?format=${format}&language=${language}`;
+      link.download = `report.${language}.${extension}`; downloads.append(link);
+    }
+    panel.append(downloads);
+    if (!edition.pdf_available) panel.append(node("p", "notice", [t("organizePdfFailed"), edition.pdf_error].filter(Boolean).join("\n")));
+    if (edition.pdf_warnings?.length) appendEvidenceList(panel, t("organizePdfWarnings"), edition.pdf_warnings);
+    if (edition.markdown_sha256) {
+      const provenance = node("details", "inline-help"); provenance.dataset.key = `organized-digest-${language}`;
+      provenance.append(node("summary", "", t("organizeDigest")), node("p", "source-binding", edition.markdown_sha256)); panel.append(provenance);
+    }
+    versions.append(panel);
+  }
+  section.append(versions);
+  if (report?.bundle_available ?? report?.markdown_available) {
+    const downloads = node("div", "organized-downloads"), bundle = node("a", "secondary", t("organizeBundle"));
+    bundle.href = `/api/runs/${encodeURIComponent(run.id)}/organized?format=bundle`;
+    bundle.download = "expert-reports.zip"; downloads.append(bundle); section.append(downloads);
+  }
+  if (available.some((language) => !reports[language].pdf_available)) {
     const retry = node("button", "secondary", t(pdfExports.has(run.id) ? "organizeRetryingPdf" : "organizeRetryPdf"));
     retry.id = "retry-pdf"; retry.type = "button"; retry.disabled = run.busy || pdfExports.has(run.id);
     retry.addEventListener("click", async () => {
@@ -796,11 +825,6 @@ function renderOrganizedReport(run) {
       finally { pdfExports.delete(run.id); if (state.detail?.id === run.id) renderResults(state.detail); }
     });
     section.append(retry, node("p", "field-hint", t("organizeRetryHint")));
-  }
-  if (report?.pdf_warnings?.length) appendEvidenceList(section, t("organizePdfWarnings"), report.pdf_warnings);
-  if (report?.markdown_sha256) {
-    const provenance = node("details", "inline-help"); provenance.dataset.key = "organized-digest";
-    provenance.append(node("summary", "", t("organizeDigest")), node("p", "source-binding", report.markdown_sha256)); section.append(provenance);
   }
   return section;
 }
@@ -1027,7 +1051,7 @@ $("#task-form").addEventListener("submit", async (event) => {
   if (state.workflow === "find") { body.count = Number($("#count").value); if ($("#query").value.trim()) body.query = $("#query").value.trim(); if ($("#source").value.trim()) body.source = $("#source").value.trim(); }
   else if (state.workflow === "organize") {
     body.from_run = $("#organize-from-run").value;
-    body.language = $("#organize-language").value;
+    body.language = state.language; // Preferred export alias; Organize always creates both languages.
   }
   else if (state.workflow === "verify" && $("#verify-mode").value === "saved") {
     body.from_run = reviewSource.runId;

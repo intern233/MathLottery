@@ -42,6 +42,16 @@ Assess original_problem_coverage separately: FULL, PARTIAL, DIFFERENT or UNKNOWN
 coverage_explanation comparing the exact candidate claim to the original problem, and list
 remaining_obligations. Distinguish a correct partial result from a complete solution. Use UNKNOWN
 when the comparison cannot be established. Do not accept the solver's scope label without checking.
+Use remaining_obligations only for unresolved mathematical proof or original-statement coverage
+obligations, such as an unproved lemma, omitted boundary case or missing implication. If none remain,
+use an empty list []; do not insert a sentence saying there are no remaining obligations.
+Record pending or failed compilation in FORMAL checks and proof_assessment, with blocking=true when
+essential to accepting the proof, and request formal_check where appropriate. Put specific literature
+gaps in literature_search.unresolved and explain their effect in novelty_notes. Record the absence of
+external expert review or formal/natural-language alignment certification in proof_assessment or
+coverage_explanation; these certification limits are not themselves missing mathematical cases.
+Keep actual doubts about statement alignment explicit in checks and coverage. Never reclassify an
+unproved mathematical step as a tooling or certification limitation to obtain FULL coverage.
 
 For novelty include citations: [{url, role, locator, excerpt, explanation, source_date, relation}],
 using roles ORIGINAL_STATEMENT/EXPLICIT_OPEN/PRIOR_RESULT/SOLUTION/CORRECTION and a short verbatim

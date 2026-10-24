@@ -40,7 +40,7 @@ _STYLE = """
 body { color: #1c2925; font: 11pt/1.7 Georgia, "Noto Serif CJK SC",
   "Noto Sans CJK SC", "WenQuanYi Zen Hei", "Microsoft YaHei", serif;
   overflow-wrap: anywhere; margin: 0; }
-h1,h2,h3,h4,h5,h6 { line-height: 1.3; break-after: avoid; color: #173c32; }
+h1,h2,h3,h4,h5,h6 { line-height: 1.3; break-inside: avoid; break-after: avoid; color: #173c32; }
 h1 { font-size: 24pt; border-bottom: 2px solid #286450; padding-bottom: 12pt; }
 h2 { font-size: 15pt; margin-top: 23pt; }
 h3 { font-size: 12pt; margin-top: 17pt; }

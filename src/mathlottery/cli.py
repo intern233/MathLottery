@@ -343,11 +343,17 @@ def start_task(store, config, *, task=None, review_source=None, **kwargs):
     result = engine.drive(task.id)
     show_run(store, result)
     if result.organization_report is not None:
-        typer.echo(f"Expert report: {store.run_dir(result.id) / 'organized/report.md'}")
-        if result.organization_report.pdf_status == "ready":
-            typer.echo(f"PDF: {store.run_dir(result.id) / 'organized/report.pdf'}")
-        else:
-            typer.echo(result.organization_report.pdf_error or "PDF export is pending.")
+        from mathlottery.organization import report_documents, report_filename
+
+        documents = report_documents(result)
+        for language, document in documents.items():
+            root = store.run_dir(result.id) / "organized"
+            typer.echo(f"Expert report ({language}): {root / report_filename(result, language, 'md')}")
+            if document.pdf_status == "ready":
+                typer.echo(f"PDF ({language}): {root / report_filename(result, language, 'pdf')}")
+            else:
+                typer.echo(f"{language}: {document.pdf_error or 'PDF export is pending.'}")
+        if any(document.pdf_status != "ready" for document in documents.values()):
             typer.echo(f"Retry locally: mathlottery export {result.id} --format pdf")
     if result.state in {State.FAILED, State.RATE_LIMITED}:
         raise typer.Exit(1)
@@ -604,7 +610,7 @@ def verify(
 def organize(
     ctx: typer.Context,
     from_run: Annotated[str, typer.Option(help="Reviewed source task to explain and collect")],
-    language: Annotated[ReportLanguage, typer.Option(help="Report language")] = ReportLanguage.zh,
+    language: Annotated[ReportLanguage, typer.Option(help="Default export language; both Chinese and English are produced")] = ReportLanguage.zh,
     instructions: Annotated[str | None, typer.Option(help="Audience, emphasis or editorial requirements")] = None,
     mode: BackendOption = None,
     model: ModelOption = None,
@@ -613,7 +619,7 @@ def organize(
     budget_time: TimeOption = None,
     max_iterations: RoundsOption = None,
 ):
-    """Organize reviewed research into an expert-readable Markdown/PDF report."""
+    """Organize reviewed research into Chinese and English expert-readable Markdown/PDF reports."""
     store, config = resources(ctx)
     research_options(config, mode, model, reasoning_effort, budget_time, max_iterations,
                      reasoning_mode=reasoning_mode)
@@ -642,12 +648,16 @@ def export(
     run_id: str,
     format: Annotated[str, typer.Option()] = "markdown",
     output: Annotated[Path | None, typer.Option(help="New destination file; no overwrite")] = None,
+    language: Annotated[ReportLanguage | None, typer.Option(help="Organized Markdown/PDF language: zh or en")] = None,
 ):
     """Export Markdown, JSON, or an organized PDF/materials bundle without model calls."""
     store, _ = resources(ctx)
     task = store.load(run_id)
     if format not in {"markdown", "json", "pdf", "bundle"}:
         raise ValueError("--format must be markdown, json, pdf or bundle")
+    selected = language.value if language is not None else None
+    if selected is not None and (task.workflow != Workflow.ORGANIZE or format in {"json", "bundle"}):
+        raise ValueError("--language applies only to organized Markdown/PDF exports; bundles include both languages")
     if format == "bundle":
         from mathlottery.organized_reports import read_report
 
@@ -659,21 +669,25 @@ def export(
         typer.echo(str(output.resolve()))
         return
     if format == "pdf":
+        from mathlottery.organization import report_documents, report_filename
         from mathlottery.organized_reports import read_report
 
+        if selected is not None and selected not in report_documents(task):
+            raise ValueError("This saved task does not contain the requested report language")
         task = Orchestrator(store).export_organized(run_id)
-        content = read_report(store, run_id, "pdf")
+        content = read_report(store, run_id, "pdf", language=selected)
         if output:
             with output.open("xb") as stream:
                 stream.write(content)
             typer.echo(str(output.resolve()))
         else:
-            typer.echo(str(store.run_dir(run_id) / "organized/report.pdf"))
+            filename = report_filename(task, selected, "pdf") if selected is not None else "report.pdf"
+            typer.echo(str(store.run_dir(run_id) / "organized" / filename))
         return
     if format == "markdown" and task.workflow == Workflow.ORGANIZE:
         from mathlottery.organized_reports import read_report
 
-        content = read_report(store, run_id, "markdown").decode("utf-8")
+        content = read_report(store, run_id, "markdown", language=selected).decode("utf-8")
     else:
         content = generate_report(store, task).read_text() if format == "markdown" else json_text(task)
     if output:

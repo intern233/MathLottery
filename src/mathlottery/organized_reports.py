@@ -9,20 +9,19 @@ import zipfile
 
 from mathlottery.artifact_io import read_confined, validate_relative
 from mathlottery.models import Workflow, digest
-from mathlottery.organization import MAX_PDF_BYTES
+from mathlottery.organization import MAX_PDF_BYTES, report_documents, report_filename
 from mathlottery.storage import json_text
 
-MAX_BUNDLE_BYTES = 40_000_000
+# Two language PDFs plus the primary compatibility copy, frozen materials and Markdown.
+MAX_BUNDLE_BYTES = 84_000_000
 
 
-def summary(store, run):
-    context, document = run.organization_context, run.organization_report
-    if context is None:
-        return None
+def _document_summary(store, run, language, document):
     pdf_available = False
     if document and document.pdf_status == "ready":
         root = store.run_dir(run.id)
-        parent, path = root / "organized", root / "organized/report.pdf"
+        parent = root / "organized"
+        path = parent / report_filename(run, language, "pdf")
         try:
             info = path.lstat()
             pdf_available = (not parent.is_symlink() and stat.S_ISREG(info.st_mode)
@@ -30,10 +29,7 @@ def summary(store, run):
         except OSError:
             pass
     return {
-        "source_run_id": context.source_run_id,
-        "language": context.language,
         "markdown_available": bool(document),
-        "bundle_available": bool(document),
         "pdf_available": pdf_available,
         "pdf_status": document.pdf_status if document else "pending",
         "pdf_error": document.pdf_error if document else None,
@@ -43,28 +39,55 @@ def summary(store, run):
     }
 
 
-def read_report(store, run_id, format):
+def summary(store, run):
+    context = run.organization_context
+    if context is None:
+        return None
+    documents = report_documents(run) if run.organization_report else {}
+    reports = {language: _document_summary(store, run, language, document)
+               for language, document in documents.items()}
+    primary = reports.get(context.language) or _document_summary(store, run, context.language, None)
+    return {
+        **primary,
+        "source_run_id": context.source_run_id,
+        "language": context.language,
+        "bundle_available": bool(documents),
+        "report_languages": context.report_languages or [context.language],
+        "languages": list(documents),
+        "bilingual_complete": set(documents) == {"zh", "en"},
+        "reports": reports,
+    }
+
+
+def read_report(store, run_id, format, language=None):
     run = store.load(run_id)
-    document = run.organization_report
-    if run.workflow != Workflow.ORGANIZE or document is None:
+    if run.workflow != Workflow.ORGANIZE or run.organization_report is None:
         raise ValueError("This task has no organized report yet")
-    if digest(document.markdown) != document.markdown_sha256:
-        raise ValueError("The saved organized report failed its integrity check")
-    if format == "markdown":
-        return document.markdown.encode("utf-8")
-    if format == "bundle":
-        return _bundle(store, run)
-    if format != "pdf":
+    if format not in {"markdown", "pdf", "bundle"}:
         raise ValueError("Report format must be markdown, pdf or bundle")
-    return _read_pdf(store, run)
+    if format == "bundle":
+        if language is not None:
+            raise ValueError("The bundle includes every available report language; omit language")
+        return _bundle(store, run)
+    selected = language if language is not None else run.organization_context.language
+    if selected not in {"zh", "en"}:
+        raise ValueError("Report language must be zh or en")
+    documents = report_documents(run)
+    if selected not in documents:
+        raise ValueError("This saved task does not contain the requested report language")
+    if format == "markdown":
+        return documents[selected].markdown.encode("utf-8")
+    return _read_pdf(store, run, language)
 
 
-def _read_pdf(store, run):
-    document = run.organization_report
+def _read_pdf(store, run, language=None):
+    selected = language if language is not None else run.organization_context.language
+    document = report_documents(run)[selected]
     if document.pdf_status != "ready":
         raise ValueError("PDF is not ready; download Markdown or retry PDF export")
     try:
-        data = read_confined(store.run_dir(run.id), "organized/report.pdf", MAX_PDF_BYTES)
+        filename = report_filename(run, selected, "pdf") if language is not None else "report.pdf"
+        data = read_confined(store.run_dir(run.id), "organized/" + filename, MAX_PDF_BYTES)
     except (OSError, ValueError):
         raise ValueError("PDF is missing or unreadable; retry PDF export") from None
     if not data.startswith(b"%PDF-") or hashlib.sha256(data).hexdigest() != document.pdf_details.get("sha256"):
@@ -81,6 +104,10 @@ def _bundle(store, run):
         raise ValueError("The organized report has no frozen material manifest")
     if len(context.files) > MAX_FILES or sum(item.size for item in context.files) > MAX_TOTAL_BYTES:
         raise ValueError("The frozen material bundle exceeds its file count or size limit")
+    documents = report_documents(run)
+    for document in documents.values():
+        if digest(document.markdown) != document.markdown_sha256:
+            raise ValueError("The saved organized report failed its integrity check")
     output = io.BytesIO()
     total = 0
     names = set()
@@ -92,7 +119,7 @@ def _bundle(store, run):
                 raise ValueError("The bundle contains a duplicate or nonportable material path")
             total += len(data)
             if total > MAX_BUNDLE_BYTES:
-                raise ValueError("The expert report bundle exceeds its 40 MB export limit")
+                raise ValueError("The expert report bundle exceeds its 84 MB export limit")
             names.add(name)
             # Fixed archive metadata avoids leaking local timestamps or permissions.
             entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
@@ -103,9 +130,15 @@ def _bundle(store, run):
         add("report.md", run.organization_report.markdown.encode("utf-8"))
         if run.organization_report.pdf_status == "ready":
             add("report.pdf", _read_pdf(store, run))
+        for language, document in documents.items():
+            filename = report_filename(run, language, "md")
+            if filename != "report.md":
+                add(filename, document.markdown.encode("utf-8"))
+                if document.pdf_status == "ready":
+                    add(report_filename(run, language, "pdf"), _read_pdf(store, run, language))
         for item, data in _read_files(store, run):
             add("materials/" + item.path, data)
         add("manifest.json", json_text(export_manifest(run)).encode("utf-8"))
     if output.tell() > MAX_BUNDLE_BYTES:
-        raise ValueError("The expert report bundle exceeds its 40 MB export limit")
+        raise ValueError("The expert report bundle exceeds its 84 MB export limit")
     return output.getvalue()

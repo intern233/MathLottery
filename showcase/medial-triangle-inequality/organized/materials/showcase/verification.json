@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "case": "medial-triangle-inequality",
+  "evidence_date": "2026-10-21",
+  "evidence_kind": "Curated summary of existing local evidence, not a new research run.",
+  "independent_ai_verdict": "NO_ISSUES_FOUND",
+  "stored_candidate_level": "SELF_CHECKED",
+  "external_expert_review": false,
+  "external_statement_equivalence_certification": false,
+  "runtime": {
+    "transport": "codex",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "max",
+    "sandbox": "workspace-write"
+  },
+  "provenance": "Controller-assisted native proof and formalization, independently reviewed and recompiled in a separate session; controller subsequently checked a separate Lake build.",
+  "raw_logs_bundled": false,
+  "new_lean_build_during_showcase_export": false,
+  "source": {
+    "url": "https://ijopcm.zuj.edu.jo/index.php/IJOPCM/article/view/56",
+    "pdf_url": "https://ijopcm.zuj.edu.jo/index.php/IJOPCM/article/download/56/43",
+    "locator": "Conjecture 5, printed page 51, volume 19 issue 1 (2026)"
+  },
+  "result": "Complete proof for all positive real weights and all positive integer exponents, including the medial-triangle boundary.",
+  "novelty": "UNKNOWN",
+  "novelty_limit": "截至2026-10-21，独立检索未识别匹配整个原命题的先前公开完整解答，但这不能证明首次性或当前开放性。2019作者文本给出不同全三角形上界；2025官方录用目录及原论文仅能确认一次幂结果的引用，未取得该文全文；2026-09-15后续论文正式摘要可读，全文直接HTTP 403且网页工具获取失败，未声称已读或已排除重合。发现状态UNKNOWN保持UNKNOWN，没有认证OPEN或首次解决。",
+  "candidate_content_sha256": "8a1a465483ee0d4b4417caa826e81a510a3060418209cb7305f31bdced5d1267",
+  "original_review_report_sha256": "6c1ad072da86a2538c8cd008400030150ac4c92d9bdbd3aede021e3b1fcbca9b",
+  "presentation_edits": "The ordinary proof is copied byte-for-byte from the portable presentation, which previously made three typesetting corrections and added references. The three Lean proof modules are unchanged. Presentation documentation now has English and Chinese editions; written proofs, Lean sources, certificates, checkers, and historical verification evidence are unchanged. Documentation hashes cover the current language editions; translation is not a new proof review.",
+  "source_presentation_proof_sha256": "fdd130c5ce90d2497196c9c03e1c42841b4422594e8852820fad25092b671833",
+  "lean": {
+    "full_stated_theorem_verified": true,
+    "main_theorem": "ZengFeiYang.conjecture5_original",
+    "version": "4.35.0",
+    "mathlib_commit": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "unchanged_source_sha256": {
+      "Conjecture5.lean": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+      "MedialAlgebra.lean": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+      "MedialGeometry.lean": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94"
+    },
+    "axioms": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "historical_independent_checks": [
+      {
+        "label": "compile-MedialAlgebra",
+        "command": [
+          "lean",
+          "-R",
+          ".",
+          "-o",
+          "MedialAlgebra.olean",
+          "MedialAlgebra.lean"
+        ],
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "compile-MedialGeometry",
+        "command": [
+          "lean",
+          "-R",
+          ".",
+          "-o",
+          "MedialGeometry.olean",
+          "MedialGeometry.lean"
+        ],
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "compile-Conjecture5",
+        "command": [
+          "lean",
+          "-R",
+          ".",
+          "-o",
+          "Conjecture5.olean",
+          "Conjecture5.lean"
+        ],
+        "exit_code": 0,
+        "log_sha256": "8180a32f21764c0f771085a34f9d6baf4311b9fac2bf42b2cc7f84ec33f8ef74"
+      },
+      {
+        "label": "leanchecker-modules",
+        "command": [
+          "leanchecker",
+          "--verbose",
+          "MedialAlgebra",
+          "MedialGeometry",
+          "Conjecture5"
+        ],
+        "exit_code": 0,
+        "log_sha256": "8b8ae13cfba362649c71276db63bb616b5e1b939480b3066bda681cafca679e8"
+      },
+      {
+        "label": "independent-scope-check",
+        "command": [
+          "lean",
+          "-R",
+          ".",
+          "AuditScope.lean"
+        ],
+        "exit_code": 0,
+        "log_sha256": "44c78b9a16092e0d5bacf72aa66c9fa857fcd9f315a63df23c6c6e275b930f11"
+      },
+      {
+        "label": "leanchecker-fresh",
+        "command": [
+          "leanchecker",
+          "--fresh",
+          "--verbose",
+          "Conjecture5"
+        ],
+        "exit_code": 0,
+        "log_sha256": "77ff926b9f6cb12cf5f78e7cf26af53b2a11495e6a1d789e0a8646386a72d311"
+      }
+    ],
+    "historical_portable_checks": [
+      {
+        "label": "lake-update",
+        "command": [
+          "lake",
+          "update"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "lake-cache",
+        "command": [
+          "lake",
+          "exe",
+          "cache",
+          "get"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "lake-build",
+        "command": [
+          "lake",
+          "build"
+        ],
+        "exit_code": 1
+      },
+      {
+        "label": "lake-cache-forced",
+        "command": [
+          "lake",
+          "exe",
+          "cache",
+          "get!",
+          "Mathlib.Analysis.Convex.Jensen",
+          "Mathlib.Analysis.Convex.Mul",
+          "Mathlib.Analysis.Convex.Topology",
+          "Mathlib.Analysis.InnerProductSpace.PiL2",
+          "Mathlib.Analysis.Normed.Module.Convex",
+          "Mathlib.Basic.Real.Basic",
+          "Mathlib.Geometry.Euclidean.Triangle",
+          "Mathlib.Tactic.Linarith",
+          "Mathlib.Tactic.Positivity",
+          "Mathlib.Tactic.Ring"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "lake-build",
+        "command": [
+          "lake",
+          "build"
+        ],
+        "exit_code": 0
+      },
+      {
+        "label": "lake-print",
+        "command": [
+          "lake",
+          "env",
+          "lean",
+          "Conjecture5.lean"
+        ],
+        "exit_code": 0
+      }
+    ],
+    "recovery_note": "A dependency Name.ir.sig and some .trace files in the interrupted portable checkout were empty. Ordinary cache get returned 0 but lake build failed with invalid headers. Force-fetching only the required official dependency closure; no proof sources changed.",
+    "independent_ai_statement_correspondence_review": true
+  },
+  "files_sha256": {
+    "README.cn.md": "b6aac808da54f408ea28aedd107e43951fe05758caca6a94013666396c20b536",
+    "README.md": "98ec5d645ab72a677f7e03af46d3b8b41e1e4b16d948c8a36872577d7cd47722",
+    "formal/Conjecture5.lean": "a3bfe87f49abf11394fc1b76c51c54b705c5c4f380273d0018955bbe20d6d5d9",
+    "formal/MedialAlgebra.lean": "676684cccd71e6c2a6294bc9f702137426e02fd68f6a8020d632a4dba9f013b1",
+    "formal/MedialGeometry.lean": "e6879f933d7753421312220f7ad821e968d4a333aadf2139db0344460628bc94",
+    "formal/README.cn.md": "6ce59a7a25c0e59bc1db0b330630c30b03ceb3789caeaa36d3f304f56ec60ce2",
+    "formal/README.md": "f62a5d1cbf5591e676bdb768a64e226bb54b60f64726893b4407cb8d59db825f",
+    "formal/lake-manifest.json": "aa4cc3535b3cf43b3d9bf708642595e2fc5fa51cac8bd432f2be35c836640576",
+    "formal/lakefile.toml": "1da73d302f0b4f22653b2f4629bf4537f7b634a4748b77b72c5286324d0927fb",
+    "formal/lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+    "proof.md": "fdd130c5ce90d2497196c9c03e1c42841b4422594e8852820fad25092b671833",
+    "review.cn.md": "3cab8f0c578e6f19407d4d1569ee750ed094b8d91f2ee5eecfa7466d06838650",
+    "review.md": "3acb0c48a408006d609066b2669734ad31c75c04dfa4345d51cb65319e4bd7aa"
+  },
+  "_publication_notice": {
+    "kind": "Curated historical record; original keys retained.",
+    "original_sha256": "20285e38b8c9f430ecdf0f96f8de3bb4cc527a68299280b24f0f10aaa2662ee5",
+    "hash_semantics": "Pre-existing hash and size fields refer to historical original bytes, not to the sanitized public copies. Public-file hashes and byte sizes are recorded separately in the export manifest.",
+    "changes": "Runtime identifiers/private fields may be redacted and source paths made portable. This is not a new verification receipt."
+  }
+}

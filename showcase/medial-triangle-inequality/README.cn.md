@@ -4,6 +4,8 @@
 
 [全部结果样本](../README.cn.md) · [项目介绍](../../README.cn.md)
 
+**专家报告：** [中文 Markdown](organized/report.zh.md) · [中文 PDF](organized/report.zh.pdf) · [English Markdown](organized/report.en.md) · [English PDF](organized/report.en.pdf)。两版均完整整理已有证明与证据，不提升验证或新颖性等级。[公开材料清单](organized/manifest.json)。
+
 本例给出 Zeng–Fei–Yang **Conjecture 5 的完整证明与实际通过检查的 Lean 形式化**，并把结论扩展到中位三角形的边界。独立 AI 审查未发现问题；新颖性仍为 **UNKNOWN**，不能据此确认首次解决当前开放问题。
 
 原题来自《Tracing the Origins and Generalizations of a Class of Moving Point Inequalities》，2026 年第 19 卷第 1 期，印刷页 51，在线发布日期 2025-11-30。[出版记录](https://ijopcm.zuj.edu.jo/index.php/IJOPCM/article/view/56) · [原文](https://ijopcm.zuj.edu.jo/index.php/IJOPCM/article/download/56/43)

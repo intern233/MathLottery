@@ -4,6 +4,8 @@
 
 [全部结果样本](../README.cn.md) · [项目介绍](../../README.cn.md)
 
+**专家报告：** [中文 Markdown](organized/report.zh.md) · [中文 PDF](organized/report.zh.pdf) · [English Markdown](organized/report.en.md) · [English PDF](organized/report.en.pdf)。两版均完整整理已有证明与证据，不提升验证或新颖性等级。[公开材料清单](organized/manifest.json)。
+
 本例给出 Fang–Fu–Kitaev–Li–Su–Sun 的 corrected Conjecture 1 的完整普通证明稿。独立 AI 审查结论为 **NO_ISSUES_FOUND**，新颖性评估为 **POTENTIALLY_NEW**；Lean 目前只完成部分形式化。
 
 原题见《On mesh patterns of short length: Equidistribution and enumeration》2026-10-11 修订版，印刷页 17。[原论文](https://arxiv.org/abs/2606.14367v2)

@@ -26,7 +26,7 @@
   "candidate_content_sha256": "74183c541d86feb6ecc57151b1cfc661663afb1d50b985c806defec3bf0c4e6f",
   "reviewed_proof_sha256": "8c6844e8b904f446524ec16aea6baf94343d317ba3b6b089fca5305b66e1a01b",
   "original_review_report_sha256": "08956a0884958da8013ac18e1d264a804e72df0fdec1f5e15e2fed64669c68e9",
-  "presentation_edits": "Replaced archive-only references with public citations and local showcase links. The preceding presentation corrected three typographical issues. Mathematical proof body unchanged; no new review claimed. Presentation documentation now has English and Chinese editions; written proofs, Lean sources, certificates, checkers, and historical verification evidence are unchanged. Documentation hashes cover the current language editions; translation is not a new proof review.",
+  "presentation_edits": "Replaced archive-only references with public citations and local showcase links. The preceding presentation corrected three typographical issues. Mathematical proof body unchanged; no new review claimed. Presentation documentation now has English and Chinese editions; written proofs, Lean sources, certificates, checkers, and historical verification evidence are unchanged. Documentation hashes cover the current language editions; translation is not a new proof review. Added complete Chinese and English Organize reports in Markdown and PDF on 2026-10-24, with a curated material index. Publication copies redact private runtime details and use portable links; their manifest distinguishes original-source hashes from public-file hashes. Original proof, formal sources, certificate and checker bytes are unchanged. Editorial organization is not a new proof review, formal verification or novelty assessment.",
   "lean": {
     "full_conjecture_verified": false,
     "proof_modules": 12,
@@ -113,8 +113,8 @@
     "ordinary_verify": "COMPLETED"
   },
   "files_sha256": {
-    "README.cn.md": "0b78e1af82f07e7ea67a462bcf454a21a536acf927877d00c30b1c59d0634646",
-    "README.md": "ddd34f98b8171d4ec4e5607541c73147df844559dd357f2810f7724c14c11487",
+    "README.cn.md": "332fa71719ec858018e5f0ba40253d3126f8c45f0c6890cace34a464e807a100",
+    "README.md": "68c9edb6a2ca73853d4cbefd18fe512b8cb51ffa1aa1670fb2bedb6f9bfc5c65",
     "formal/MeshCompatibility.lean": "ff83da03043b8d8ed8fb3030a69da09cd63355efe2f7e74b2fdb392f71c02d9d",
     "formal/MeshComponents.lean": "3882654f5bf911ae8b5efc37140cfad3b2d8208252776495ffe7fbbb48f412a2",
     "formal/MeshDefinitions.lean": "9bac2a293d768004d0a8507ad5c71167e7db67fe517d6e99f3ebd535a8ac0a4e",
@@ -133,8 +133,60 @@
     "formal/lake-manifest.json": "35d978fa9cd26856313ac3a248bc9fb971cdf59479f62ec5e18974009e30709f",
     "formal/lakefile.toml": "87aac4742e53482b220372dd308d75daf644d1c174f0defd87faf5be9e69665e",
     "formal/lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+    "organized/manifest.json": "2542f10dac93d7736cc34d4ec5085697d5d0c7f0e5b6d1547e33b61fffa97f5d",
+    "organized/materials/omitted-sources.md": "d6da3b56103b3e06c5fde4f1fab424f334e7b114bcf6ad1ae2ab2e7922c99f79",
+    "organized/materials/reviewed-source/dossier.json": "a67d8a7f468caa108512132ccf0d862e8d1192db8ac16c6e25dd1178b82c007e",
+    "organized/materials/reviewed-source/tasks/task-record-003/attempt-record-004/answer.md": "73fb60fdc9b17dd134752cd19ce7af485d7fa2c1c18c5bf36260bac9d99f6d02",
+    "organized/materials/showcase/README.cn.md": "9e6ae536b3574f0e4994a52a7934509aa162a6058a84b09d1adcbaab860a650a",
+    "organized/materials/showcase/README.md": "96cd21890f6bd9af0d615e04affccbae34a6bc32f01116e7e070ae7e3c9bae44",
+    "organized/materials/showcase/formal/MeshCompatibility.lean": "ff83da03043b8d8ed8fb3030a69da09cd63355efe2f7e74b2fdb392f71c02d9d",
+    "organized/materials/showcase/formal/MeshComponents.lean": "3882654f5bf911ae8b5efc37140cfad3b2d8208252776495ffe7fbbb48f412a2",
+    "organized/materials/showcase/formal/MeshDefinitions.lean": "9bac2a293d768004d0a8507ad5c71167e7db67fe517d6e99f3ebd535a8ac0a4e",
+    "organized/materials/showcase/formal/MeshEquivariance.lean": "997a9f7d8de69ad255debd6003863dc5901677d6a4a4aff1c70a986963eef4de",
+    "organized/materials/showcase/formal/MeshNesting.lean": "81055e6a56ccdbfec4c3a24d4215c00e64cc7280df41fa56804541fa887b5cbc",
+    "organized/materials/showcase/formal/MeshOrbitCounting.lean": "24c82721a9c6621a5f3439051d97bd3d186d77c10f91d1a1b13be1fc6f0e1ac6",
+    "organized/materials/showcase/formal/MeshPartial.lean": "d91e8f23ff1ce50cd72ef2ef101bb88a47d1bfcf32efaef5e20ed84694965b50",
+    "organized/materials/showcase/formal/MeshPolynomial.lean": "33f6ed655e248b43c76604cfdc208be500468d6e6f95f73d7e279c54b9ea8501",
+    "organized/materials/showcase/formal/MeshReduction.lean": "57a2b6b1a4354a46eaf70b1cabc909ef52b9936ab5bb8488150887626910edc4",
+    "organized/materials/showcase/formal/MeshRotation.lean": "8222189953c3eb36ce96a5e349cd23e4679f0350359067c7d78457ca83e3af90",
+    "organized/materials/showcase/formal/MeshStructure.lean": "3e2f503183ddbd1f621b017652b7b14c2fe056707b5b5889686a2e9ce896d60a",
+    "organized/materials/showcase/formal/MeshSymmetry.lean": "8143c05a87b737470e57a8a584d08e4b437534b90d3d211f00cdf2c7ad181ffc",
+    "organized/materials/showcase/formal/MeshTransport.lean": "b5e2d2b6ed53b8194895336338264a6d5df2cdc68f18f8f70c2d5be40254576b",
+    "organized/materials/showcase/formal/README.cn.md": "9e15297a2a4a24fce53ecb497d3a8d8d8af642a51d86d3ab682e51b7f9d2f31b",
+    "organized/materials/showcase/formal/README.md": "01db90e88aa3626f378552aec5d5cc85d162cc0fca5e9514ff0909ce8e61251c",
+    "organized/materials/showcase/formal/lake-manifest.json": "35d978fa9cd26856313ac3a248bc9fb971cdf59479f62ec5e18974009e30709f",
+    "organized/materials/showcase/formal/lakefile.toml": "87aac4742e53482b220372dd308d75daf644d1c174f0defd87faf5be9e69665e",
+    "organized/materials/showcase/formal/lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+    "organized/materials/showcase/proof.md": "0788dc26255153faaab5e5458b373d279767b950bd702204534ce6d7cba26e47",
+    "organized/materials/showcase/review.cn.md": "6925fc5e92f2c6e528a2b56567ff060636eb65997812fc77e60b9ec6d2e91519",
+    "organized/materials/showcase/review.md": "7d6b31f70bef3beb97fad5b41cf3cc7121be4df0825c88e5ef24c869cff6fd2c",
+    "organized/materials/showcase/verification.json": "86025a4dd48809b125eb1357f05699bf5488e8c054065bec03d7da68ea1b3b4b",
+    "organized/report.en.md": "a82c5fdb0bbbd5d609634ec8be95258b15e60c48401e7c5ec398d3c8527425a4",
+    "organized/report.en.pdf": "45e7c4b8dd52fac4b3cac16c2268104c3d1ad9e50d1fcbe7113e45b7d95721e2",
+    "organized/report.zh.md": "3d18bd294003642c8d38fe92c219f020773f73f1ac5e1b96b956828ed000b692",
+    "organized/report.zh.pdf": "8c58d8a151dc5da57f2794de58c89c06b280b15d8a13b71190c608511bc39c40",
     "proof.md": "0788dc26255153faaab5e5458b373d279767b950bd702204534ce6d7cba26e47",
     "review.cn.md": "c94f9195beaf311f8472b76307f52d8a7dd8cc64e0d8964f61aabc0962246a5e",
     "review.md": "93f8010f5572f547d53eddfc6109f17366fea4e2a913cd07755f24947c8919a3"
+  },
+  "organized_reports": {
+    "publication_date": "2026-10-24",
+    "kind": "Curated bilingual editorial export",
+    "editorial_only": true,
+    "languages": {
+      "en": {
+        "markdown": "organized/report.en.md",
+        "pdf": "organized/report.en.pdf"
+      },
+      "zh": {
+        "markdown": "organized/report.zh.md",
+        "pdf": "organized/report.zh.pdf"
+      }
+    },
+    "manifest": "organized/manifest.json",
+    "source_evidence_date": "2026-10-21",
+    "new_literature_search": false,
+    "new_lean_build": false,
+    "original_evidence_unchanged": true
   }
 }

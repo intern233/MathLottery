@@ -2,7 +2,7 @@
 
 - Preserve a continuous primary native research session; optional specialist agents follow the workspace configuration. Review candidates in a separate review session with memories disabled.
 - Standalone Find returns a shortlist for explicit user selection. Carry the chosen Find dossier into Solve without sharing mutable sessions, credentials, or reviewer memory. Keep estimates and source-status uncertainty visible.
-- Keep find, solve, verify and organize as independent workflows. Run composes find/solve/verify; organize is an explicit optional follow-up and never upgrades proof or novelty evidence. Preserve source snapshots, review findings and omissions in expert reports. Agent transports must not determine the workflow.
+- Keep find, solve, verify and organize as independent workflows. Run composes find/solve/verify; organize is an explicit optional follow-up and never upgrades proof or novelty evidence. Produce both Chinese and English expert reports from the same source snapshot, preserving review findings and omissions in both versions. Preserve legacy single-language checkpoints without inventing translations. Agent transports must not determine the workflow.
 - Default to native execution: codex uses persistent official Codex sessions; chat uses the official Responses API with hosted tools and persistent response context. Manual handoff is an explicitly named compatibility backend, never the meaning of chat.
 - Keep the legacy structured JSON/tool protocol as an explicit compatibility option, including old checkpoints and offline demos.
 - Let the researcher choose its methods and intermediate actions. Structure only milestones and final evidence; do not impose short memory excerpts or per-action JSON on native research.

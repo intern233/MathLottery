@@ -46,7 +46,7 @@ def test_http_four_stages_preserve_source_and_link_solver(web, monkeypatch):
     code = FAKE_NATIVE.replace(
         "if 'Task: FIND' in prompt:",
         "if 'Task: ORGANIZE' in prompt:\n"
-        "            checkpoint.update(kind='organization', report_markdown='# Expert exposition\\n\\nThe fixture remains inconclusive.')\n"
+        "            checkpoint.update(kind='organization', report_markdowns={'en': '# Expert exposition\\n\\nThe fixture remains inconclusive.', 'zh': '# 专家报告\\n\\n此测试问题仍无定论。'})\n"
         "        elif 'Task: FIND' in prompt:",
     )
     executable.write_text(executable.read_text().splitlines()[0] + "\n" + code)
@@ -74,6 +74,8 @@ def test_http_four_stages_preserve_source_and_link_solver(web, monkeypatch):
         assert arranged["reviewed_candidate_count"] == 0  # Never recursively organize a report.
         assert arranged["organized_report"]["markdown_available"]
         assert arranged["organized_report"]["language"] == "en"
+        assert arranged["organized_report"]["bilingual_complete"]
+        assert set(arranged["organized_report"]["reports"]) == {"zh", "en"}
         assert json_text(web.store.load(source.id)) == before
         saved = web.store.load(arranged["id"])
         assert {item["run_id"] for item in saved.organization_context.lineage} == {source.id, solved["id"]}
@@ -82,6 +84,13 @@ def test_http_four_stages_preserve_source_and_link_solver(web, monkeypatch):
         assert "attachment" in download.headers["content-disposition"]
         assert "Expert exposition" in download.text
         assert "config.yaml" not in download.text
+        chinese = client.get(f"/api/runs/{saved.id}/organized?format=markdown&language=zh")
+        assert chinese.status_code == 200 and "专家报告" in chinese.text
+        assert ".zh.md" in chinese.headers["content-disposition"]
+        assert "INCONCLUSIVE" in chinese.text
+        for query in ("format=markdown&language=fr", "format=markdown&language=",
+                      "format=markdown&language=en&language=zh", "format=bundle&language=en"):
+            assert client.get(f"/api/runs/{saved.id}/organized?{query}").status_code == 400
         assert client.get(f"/api/runs/{saved.id}/organized?format=../../config.yaml").status_code == 400
         # PDF is optional in installations without the reports extra. Both outcomes are explicit.
         pdf = client.get(f"/api/runs/{saved.id}/organized?format=pdf")
@@ -94,7 +103,7 @@ def test_http_four_stages_preserve_source_and_link_solver(web, monkeypatch):
 def test_http_pdf_retry_needs_no_login_or_inference(store, reviewed, rendered, monkeypatch):
     config, engine, source = reviewed
     run = engine.organize(config, source.id)
-    organization.accept(run, "# Expert draft\nThe gap remains.")
+    organization.accept(run, {"en": "# Expert draft\nThe gap remains.", "zh": "# 专家报告\n缺口仍然存在。"})
     run.state, run.phase = State.COMPLETED, Phase.REPORT
     run.organization_report.pdf_status = "failed"
     store.save(run, "fixture_draft")
@@ -107,11 +116,16 @@ def test_http_pdf_retry_needs_no_login_or_inference(store, reviewed, rendered, m
         response = client.post(path, json={})
         assert response.status_code == 200, response.text
         assert response.json()["pdf_available"]
+        assert all(version["pdf_available"] for version in response.json()["reports"].values())
         assert client.get(path + "?format=pdf").content.startswith(b"%PDF-")
+        for language in ("zh", "en"):
+            assert client.get(path + f"?format=pdf&language={language}").content.startswith(b"%PDF-")
         bundle = client.get(path + "?format=bundle")
         assert bundle.status_code == 200 and bundle.headers["content-type"] == "application/zip"
         with zipfile.ZipFile(io.BytesIO(bundle.content)) as archive:
             assert {"report.md", "report.pdf", "manifest.json"} <= set(archive.namelist())
+            assert {f"report.{language}.{extension}" for language in ("zh", "en")
+                    for extension in ("md", "pdf")} <= set(archive.namelist())
             assert any(name.startswith("materials/") for name in archive.namelist())
         assert client.post(path, json={"model": "unexpected"}).status_code == 400
         assert client.get(path + "?format=pdf&path=auth.json").status_code == 400
@@ -121,7 +135,7 @@ def test_http_pdf_retry_needs_no_login_or_inference(store, reviewed, rendered, m
 def test_pdf_download_rejects_links_and_changed_bytes(store, reviewed, rendered, tmp_path):
     config, engine, source = reviewed
     run = engine.organize(config, source.id)
-    organization.accept(run, "An expert draft")
+    organization.accept(run, {"zh": "An expert draft", "en": "Another expert draft"})
     run.state, run.phase = State.COMPLETED, Phase.REPORT
     store.save(run, "fixture_draft")
     engine.export_organized(run.id)
@@ -158,9 +172,17 @@ def test_cli_organize_and_local_exports(store, reviewed, rendered, monkeypatch, 
     result = runner.invoke(app, ["--root", str(store.root), "export", organized.id, "--output", str(exported)])
     assert result.exit_code == 0, result.output
     assert "A readable exposition" in exported.read_text()
+    chinese = tmp_path / "expert.zh.md"
+    result = runner.invoke(app, ["--root", str(store.root), "export", organized.id,
+                                 "--language", "zh", "--output", str(chinese)])
+    assert result.exit_code == 0, result.output
+    assert chinese.read_text() == read_report(store, organized.id, "markdown", language="zh").decode()
     result = runner.invoke(app, ["--root", str(store.root), "export", organized.id, "--format", "pdf"])
     assert result.exit_code == 0 and "organized/report.pdf" in result.output
     assert len(editor.calls) == 1
+    result = runner.invoke(app, ["--root", str(store.root), "export", organized.id,
+                                 "--format", "pdf", "--language", "en"])
+    assert result.exit_code == 0 and "organized/report.en.pdf" in result.output
     bundle = tmp_path / "expert.zip"
     result = runner.invoke(app, ["--root", str(store.root), "export", organized.id, "--format", "bundle",
                                  "--output", str(bundle)])
@@ -168,6 +190,9 @@ def test_cli_organize_and_local_exports(store, reviewed, rendered, monkeypatch, 
     with zipfile.ZipFile(bundle) as archive:
         assert {"report.md", "report.pdf", "manifest.json"} <= set(archive.namelist())
     assert len(editor.calls) == 1
+    result = runner.invoke(app, ["--root", str(store.root), "export", organized.id,
+                                 "--format", "bundle", "--language", "en", "--output", str(tmp_path / "bad.zip")])
+    assert result.exit_code != 0 and not (tmp_path / "bad.zip").exists()
     result = runner.invoke(app, ["--root", str(store.root), "export", organized.id, "--output", str(exported)])
     assert result.exit_code != 0  # Existing expert files are never overwritten by export --output.
 

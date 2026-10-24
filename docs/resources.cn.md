@@ -43,7 +43,7 @@ CPU 核心多不代表构建一定跑得动。多个编译进程、编辑器的 
 
 ## 可选：配置专家报告 PDF 导出
 
-Organize 使用配置的远程模型撰写专家报告。保存 Markdown 不需要 PDF 渲染器；导出 PDF 会在本地运行 Chromium。激活 MathLottery 环境，在项目目录执行：
+Organize 使用配置的远程模型撰写中英文两版专家报告。保存 Markdown 不需要 PDF 渲染器；导出 PDF 会在本地运行 Chromium。激活 MathLottery 环境，在项目目录执行：
 
 ```bash
 python -m pip install -e '.[reports]'
@@ -52,11 +52,11 @@ python -m playwright install chromium
 
 Linux 提示缺少浏览器动态库时，可运行 `python -m playwright install-deps chromium`，可能需要管理员权限。中文报告还需要系统 CJK 字体；Debian/Ubuntu/WSL Ubuntu 可使用 `sudo apt-get install fonts-noto-cjk` 安装。浏览器依赖和字体属于本机环境配置，不调用模型。
 
-Chromium 的下载与缓存因平台而异，通常占用数百 MB，需要在基础 Python 环境之外预留磁盘。每次导出都会启动本地浏览器进程组；先一次导出一份，长报告应实测 RAM，没有适用于所有报告的实测最低内存或整个进程组的内存上限。Organize 的模型任务沿用普通研究预算；PDF 导出和本地重试只使用 CPU、内存与磁盘，不再次调用模型，也不编译 Lean。
+Chromium 的下载与缓存因平台而异，通常占用数百 MB，需要在基础 Python 环境之外预留磁盘。各语言导出会启动本地浏览器进程组，两版按顺序渲染；先一次处理一个任务的导出，长报告应实测 RAM，没有适用于所有报告的实测最低内存或整个进程组的内存上限。Organize 的模型任务沿用普通研究预算；生成两版完整报告比单语言需要更多输出 token。PDF 导出和本地重试只使用 CPU、内存与磁盘，不再次调用模型，也不编译 Lean。
 
 渲染支持标题、表格、代码、页码，以及 `$…$`、`$$…$$`、`\(…\)`、`\[…\]` 内的常用 TeX 数学公式。数学排版资源随项目提供，不从 CDN 获取脚本或字体。不支持的 TeX 会保留原文并提示警告。图片替换为描述文字，需要另行查看已捕获的原始材料；不执行原始 HTML，也不读取嵌入的远程或本地资源。
 
-缺少依赖、Chromium 或渲染失败时，已保存的 Markdown 仍可用。修复环境后点击**重新导出 PDF**，或运行 `mathlottery export <organize-run-id> --format pdf`。分享前请查看导出警告并检查第一份 PDF，特别是数学符号、长公式和中文字体。PDF 生成成功仅表示排版完成，不代表证明通过验证。[整理操作与保存路径](usage.cn.md#organize)
+缺少依赖、Chromium 或渲染失败时，已保存的 Markdown 仍可用。修复环境后点击**重新导出 PDF**，或运行 `mathlottery export <organize-run-id> --format pdf`。分享前请查看导出警告并检查中英文两份 PDF，特别是数学符号、长公式和中文字体。PDF 生成成功仅表示排版完成，不代表证明通过验证。[整理操作与保存路径](usage.cn.md#organize)
 
 ## 准备 Lean，避免不必要的完整重建
 

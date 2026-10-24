@@ -4,7 +4,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -213,7 +213,13 @@ class CandidateInput(Model):
     assumptions: list[str] = Field(default_factory=list)
     references: list[Reference] = Field(default_factory=list)
     scope: Literal["UNKNOWN", "COMPLETE", "PARTIAL", "COUNTEREXAMPLE"] = "UNKNOWN"
-    remaining_obligations: list[str] = Field(default_factory=list, max_length=50)
+    remaining_obligations: list[str] = Field(
+        default_factory=list, max_length=50,
+        description="Unresolved mathematical proof or original-statement coverage obligations only, "
+        "such as missing lemmas or unproved cases. Use [] when none remain, not a sentence saying "
+        "none remain. Describe pending tool checks, novelty questions and external certification "
+        "limits separately; never hide an actual proof gap as a validation limitation.",
+    )
 
 
 class ProofCheck(Model):
@@ -248,7 +254,15 @@ class Review(Model):
     novelty_references: list[Reference] = Field(default_factory=list)
     original_problem_coverage: Literal["UNKNOWN", "FULL", "PARTIAL", "DIFFERENT"] = "UNKNOWN"
     coverage_explanation: str = ""
-    remaining_obligations: list[str] = Field(default_factory=list, max_length=50)
+    remaining_obligations: list[str] = Field(
+        default_factory=list, max_length=50,
+        description="Unresolved mathematical proof or original-statement coverage obligations only. "
+        "Use [] when none remain, not a sentence saying none remain. Pending/failed formal execution "
+        "belongs in FORMAL checks (blocking when essential) and proof_assessment; specific literature "
+        "gaps belong in literature_search.unresolved and novelty_notes. External expert review or "
+        "alignment-certification limits belong in proof_assessment or coverage_explanation. Preserve "
+        "actual mathematical and statement-alignment gaps; do not relabel them to obtain FULL coverage.",
+    )
     checks: list[ProofCheck] = Field(default_factory=list, max_length=100)
     citations: list[Citation] = Field(default_factory=list, max_length=30)
     literature_search: LiteratureSearch = Field(default_factory=LiteratureSearch)
@@ -322,6 +336,7 @@ class NativeCheckpoint(Model):
     candidate: CandidateInput | None = None
     review: Review | None = None
     report_markdown: str | None = Field(default=None, min_length=1, max_length=400000)
+    report_markdowns: dict[Literal["zh", "en"], Annotated[str, Field(min_length=1, max_length=400000)]] | None = None
 
     @model_validator(mode="after")
     def payload_matches_kind(self):
@@ -329,9 +344,15 @@ class NativeCheckpoint(Model):
             raise ValueError("Only a candidate milestone must contain candidate")
         if (self.kind == "review") != (self.review is not None):
             raise ValueError("Only a review milestone must contain review")
-        if (self.kind == "organization") != (self.report_markdown is not None):
-            raise ValueError("Only an organization milestone must contain report_markdown")
-        if self.report_markdown is not None and not self.report_markdown.strip():
+        has_report = self.report_markdown is not None or self.report_markdowns is not None
+        if (self.kind == "organization") != has_report:
+            raise ValueError("Only an organization milestone must contain report_markdown or report_markdowns")
+        if self.report_markdown is not None and self.report_markdowns is not None:
+            raise ValueError("Use either report_markdown or report_markdowns, not both")
+        if self.report_markdowns is not None and set(self.report_markdowns) != {"zh", "en"}:
+            raise ValueError("report_markdowns requires complete Chinese (zh) and English (en) reports")
+        reports = [self.report_markdown] if self.report_markdown is not None else (self.report_markdowns or {}).values()
+        if any(not text.strip() for text in reports):
             raise ValueError("The organized report must not be blank")
         if self.kind == "selection" and (not self.problem or not self.shortlist):
             raise ValueError("Selection requires a selected problem and an ordered shortlist")
@@ -413,6 +434,8 @@ class OrganizationContext(Model):
     problem_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     captured_at: str
     language: Literal["zh", "en"] = "zh"
+    # None preserves the output contract of historical single-language checkpoints.
+    report_languages: list[Literal["zh", "en"]] | None = None
     instructions: str | None = Field(default=None, max_length=30000)
     candidate_hashes: list[dict] = Field(default_factory=list)
     files: list[DiscoveryFile] = Field(default_factory=list)
@@ -420,9 +443,17 @@ class OrganizationContext(Model):
     lineage: list[dict] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def complete_report_languages(self):
+        if self.report_languages is not None and (
+            len(self.report_languages) != 2 or set(self.report_languages) != {"zh", "en"}
+        ):
+            raise ValueError("New organization tasks require both zh and en reports")
+        return self
 
-class OrganizationReport(Model):
-    """Editorial output, never a new mathematical candidate or review."""
+
+class OrganizationDocument(Model):
+    """One language of an editorial report and its independently rendered PDF."""
 
     markdown: str = Field(min_length=1, max_length=500000)
     markdown_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -430,6 +461,12 @@ class OrganizationReport(Model):
     pdf_status: Literal["pending", "ready", "failed"] = "pending"
     pdf_error: str | None = None
     pdf_details: dict = Field(default_factory=dict)
+
+
+class OrganizationReport(OrganizationDocument):
+    """Primary-language output plus translations, never a candidate or review."""
+
+    translations: dict[Literal["zh", "en"], OrganizationDocument] = Field(default_factory=dict)
 
 
 class Run(Model):

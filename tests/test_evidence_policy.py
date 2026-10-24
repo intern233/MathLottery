@@ -14,6 +14,7 @@ from mathlottery.models import (
     Citation,
     LiteratureSearch,
     Problem,
+    ProofCheck,
     Review,
     digest,
     now,
@@ -240,6 +241,43 @@ def test_correct_partial_result_does_not_become_full_solution():
     assert accepted.original_problem_coverage == "PARTIAL"
     assert accepted.remaining_obligations == ["All remaining prime classes"]
     assert accepted.validation_notes
+
+
+def test_review_mathematical_obligation_prevents_full_coverage_of_complete_candidate():
+    proposed = review(original_problem_coverage="FULL", coverage_explanation="All parameter ranges compared.",
+                      remaining_obligations=["The endpoint x = 0 still needs a proof."])
+    accepted = audit(candidate(scope="COMPLETE"), proposed, []).reviews[-1]
+    assert accepted.original_problem_coverage == "PARTIAL"
+    assert accepted.remaining_obligations == proposed.remaining_obligations
+    assert "Full coverage conflicts" in accepted.validation_notes[-1]
+
+
+@pytest.mark.parametrize("formal_is_essential,expected_coverage", [(False, "FULL"), (True, "UNKNOWN")])
+def test_separate_formal_and_literature_limits_do_not_invent_missing_mathematical_cases(
+    formal_is_essential, expected_coverage,
+):
+    proposed = review(
+        original_problem_coverage="FULL", coverage_explanation="Both quantifier ranges and endpoints match.",
+        remaining_obligations=[], novelty="UNKNOWN",
+        novelty_notes="A possible prior solution is unavailable.",
+        proof_assessment="The derivation was checked. No external expert certification is recorded.",
+        literature_search=LiteratureSearch(unresolved=["A possible prior solution is unavailable."]),
+    )
+    proposed.checks.append(ProofCheck(
+        claim="Independent formal execution", method="FORMAL", result="UNRESOLVED",
+        reasoning="The controller compilation receipt is pending.", blocking=formal_is_essential,
+    ))
+    accepted = audit(candidate(scope="COMPLETE"), proposed, []).reviews[-1]
+    assert accepted.original_problem_coverage == expected_coverage
+    assert accepted.remaining_obligations == []
+    assert accepted.novelty == "UNKNOWN"
+    assert accepted.literature_search.unresolved == proposed.literature_search.unresolved
+    assert accepted.checks[-1].result == "UNRESOLVED"
+    if formal_is_essential:
+        assert accepted.verdict == "INCONCLUSIVE"
+    else:
+        assert accepted.verdict == "NO_ISSUES_FOUND"
+    assert "No external expert certification" in accepted.proof_assessment
 
 
 def test_different_problem_finding_is_not_overwritten_by_solver_partial_label():

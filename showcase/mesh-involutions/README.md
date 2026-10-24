@@ -4,6 +4,8 @@ English | [简体中文](README.cn.md)
 
 [All result samples](../README.md) · [Project overview](../../README.md)
 
+**Expert reports:** [English Markdown](organized/report.en.md) · [English PDF](organized/report.en.pdf) · [中文 Markdown](organized/report.zh.md) · [中文 PDF](organized/report.zh.pdf). Full bilingual exposition of the saved proof and evidence; editorial organization does not upgrade verification or novelty. [Publication manifest](organized/manifest.json).
+
 This case presents a complete written candidate proof of Fang–Fu–Kitaev–Li–Su–Sun's corrected Conjecture 1. The separate AI review returned **NO_ISSUES_FOUND**, and the novelty assessment is **POTENTIALLY_NEW**. Lean formalization is currently partial.
 
 The problem appears on printed page 17 of the 2026-10-11 revision of *On mesh patterns of short length: Equidistribution and enumeration*. [Original paper](https://arxiv.org/abs/2606.14367v2)

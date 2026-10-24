@@ -4,6 +4,8 @@
 
 [全部结果样本](../README.cn.md) · [项目介绍](../../README.cn.md)
 
+**专家报告：** [中文 Markdown](organized/report.zh.md) · [中文 PDF](organized/report.zh.pdf) · [English Markdown](organized/report.en.md) · [English PDF](organized/report.en.pdf)。两版均完整整理已有证明与证据，不提升验证或新颖性等级。[公开材料清单](organized/manifest.json)。
+
 本例给出 Bera–Paul–Subramanian《Some properties of stepwise irregular graphs》中 **Conjecture 1 的完整反例**。独立 AI 审查结论为 **NO_ISSUES_FOUND**；新颖性为 **UNKNOWN**，没有 Lean 形式化。
 
 原题刊于 EJGTA 14(1) (2026)，猜想在印刷页 223，简单连通图的约定和 SI 定义在页 216。[原论文](https://www.ejgta.org/index.php/ejgta/article/download/1077/pdf_357)
