@@ -19,7 +19,7 @@
 
 MathLottery is a local mathematics research project: let an agent find public problems, attempt solutions, and review its results. We want to see whether people without a mathematics background or large computing resources can use AI to produce something new in mathematics.
 
-The idea came from a collection of mathematical research results published by OpenAI. OpenAI reported that each result used, on average, compute equivalent to roughly three hours of ChatGPT Pro thinking; the results were produced by internal models. That comparison makes us want to try, but it does not mean the publicly available Pro mode already has the same capabilities. [Source: OpenAI's mathematics progress report](https://openai.com/index/sharing-ai-progress-in-mathematics/)
+The idea came from a collection of mathematical research results published by OpenAI. OpenAI reported that each result used, on average, compute equivalent to roughly three hours of ChatGPT Pro thinking; the results were produced by internal models. That comparison makes us want to try, even if it does not mean the publicly available Pro mode already has the same capabilities. [Source: OpenAI's mathematics progress report](https://openai.com/index/sharing-ai-progress-in-mathematics/)
 
 Our goal is simple: **give one agent a serious chance to explore and aim for a mathematical result worth checking.**
 

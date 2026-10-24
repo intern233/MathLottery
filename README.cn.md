@@ -19,7 +19,7 @@
 
 MathLottery 是一个本地数学研究项目：让 agent 自己找公开问题、尝试求解，再检查自己的成果。我们想试试，不是数学专业、也没有大规模算力的普通人，能不能借助 AI 做出一点新的数学结果。
 
-这个念头来自 OpenAI 公开的一批数学研究成果。OpenAI 称，平均每项结果使用的算力，相当于约三小时 ChatGPT Pro 思考；这些结果由内部模型产生。这个算力对比让人很想亲自试试，但并不意味着公开的 Pro 模式已经有同样的能力。[来源：OpenAI 数学进展介绍](https://openai.com/index/sharing-ai-progress-in-mathematics/)
+这个念头来自 OpenAI 公开的一批数学研究成果。OpenAI 称，平均每项结果使用的算力，相当于约三小时 ChatGPT Pro 思考；这些结果由内部模型产生。这个算力对比让人很想亲自试试，即使并不意味着公开的 Pro 模式已经有同样的能力。[来源：OpenAI 数学进展介绍](https://openai.com/index/sharing-ai-progress-in-mathematics/)
 
 我们的目标很朴素：**先让一个 agent 认真探索，争取抽中一份值得验证的数学成果。**
 
