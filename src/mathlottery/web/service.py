@@ -10,14 +10,25 @@ from urllib.parse import urlsplit
 from pydantic import Field, model_validator
 
 from mathlottery import budget
+from mathlottery.activity import read_activity
 from mathlottery.candidates import CandidateStore
 from mathlottery.config import ChatConfig, Config, load_config
 from mathlottery.discovery import problem_fingerprint
+from mathlottery.literature_obstacles import carry_literature
 from mathlottery.metrics import run_metrics
 from mathlottery.model_catalog import effective_provider, validate_configured_selection
-from mathlottery.models import CandidateInput, Model, Problem, ReviewProvenance, Workflow, digest
+from mathlottery.models import (
+    CandidateInput,
+    LiteratureSearch,
+    Model,
+    Problem,
+    ReviewProvenance,
+    Workflow,
+    digest,
+)
 from mathlottery.orchestrator import Orchestrator
 from mathlottery.organized_reports import summary as organization_summary
+from mathlottery.resources import Coordinator
 from mathlottery.review_evidence import capture as capture_review_evidence
 from mathlottery.review_evidence import manifest as evidence_manifest
 from mathlottery.review_evidence import selectable_source
@@ -181,6 +192,7 @@ def config_summary(config):
         "formal_limits": config.verification.model_dump(include={
             "formal_memory_mb", "formal_address_space_mb", "formal_timeout_seconds",
         }),
+        "resource_limits": config.resources.model_dump(),
     }
 
 
@@ -205,6 +217,8 @@ class WebService:
             title = (run.discovery_request or "").strip().partition("\n")[0] or "Find problems"
             if len(title) > 120:
                 title = title[:119].rstrip() + "…"
+        resources = Coordinator(self.store).snapshot(run.id)
+        worker = self.jobs.status(run.id)
         return {
             **run.model_dump(mode="json", include={
                 "id", "workflow", "mode", "state", "phase", "iteration", "created_at",
@@ -221,6 +235,8 @@ class WebService:
             if run.workflow != Workflow.ORGANIZE else 0,
             "organized_report": organization_summary(self.store, run),
             "busy": self.jobs.running(run.id),
+            "resources": resources,
+            "worker_state": resources["state"] if resources and resources["state"] in {"queued", "running"} else (worker or {}).get("state"),
             "elapsed_seconds": round(budget.elapsed(run), 1),
             "settings": config_summary(Config.model_validate(run.config)),
         }
@@ -266,6 +282,7 @@ class WebService:
             self.jobs.launch(run.id, "drive")
             return self.summary(self.store.load(run.id))
         problem, candidate, evidence, provenance = None, None, None, None
+        review_literature = []
         if request.from_run:
             self.ensure_review_source_idle(request.from_run)
             with self.store.lock(request.from_run):
@@ -287,6 +304,12 @@ class WebService:
                     source_run_id=original.id, source_candidate_id=checked.id,
                     candidate_sha256=checked.sha256,
                 )
+                # Carry factual literature investigations, never the earlier verdict or session.
+                merged = carry_literature(LiteratureSearch(), [
+                    *original.review_literature, *(review.literature_search for review in checked.reviews),
+                ])
+                # Revalidate model bounds; never silently drop an older unresolved obstacle.
+                review_literature = [LiteratureSearch.model_validate(merged.model_dump())]
                 problem = original.problem or Problem(
                     id=f"claim-{digest(candidate.claim)[:12]}",
                     title=candidate.claim[:100], statement=candidate.claim,
@@ -304,6 +327,7 @@ class WebService:
         run = Orchestrator(self.store).create(
             config, workflow=Workflow(request.workflow), problem=problem, candidate=candidate,
             source=request.source, discovery_request=request.query, discovery_count=request.count,
+            review_literature=review_literature,
         )
         if provenance is not None:
             run.review_source = provenance
@@ -395,7 +419,16 @@ class WebService:
         progress["checking_evidence"] = bool(
             pending and (pending.get("milestone") or {}).get("kind") in {"selection", "review"}
         )
-        worker = self.text_artifact(run_id, "web/status.json", limit=10000)["text"]
+        worker = self.jobs.status(run_id)
+        attempt = run.native.active_attempt
+        if not attempt and pending:
+            attempt = pending.get("directory")
+        if not attempt and run.native.history and run.native.history[-1].get("answer"):
+            attempt = str(Path(run.native.history[-1]["answer"]).parent)
+        activity = read_activity(safe_path(self.store.run_dir(run_id), f"{attempt}/activity.json")) if attempt else {
+            "available": False, "last_active_at": None, "current": None, "recent": [],
+        }
+        activity["attempt"] = attempt
         formal_artifacts = list_formal_artifacts(self.store.run_dir(run_id))
         for item in formal_artifacts["items"]:
             item["reviewable"] = item["downloadable"] and selectable_source(item["path"])
@@ -412,6 +445,8 @@ class WebService:
             "report": self.text_artifact(run_id, "report.md", limit=1000000),
             "formal_artifacts": formal_artifacts,
             "review_evidence": evidence_manifest(run.review_evidence),
-            "worker": json.loads(worker) if worker else None,
+            "worker": worker,
+            "activity": activity,
+            "formal_resources": Coordinator(self.store).snapshot(run_id, "formal"),
             "stop_requested": (self.store.run_dir(run_id) / "stop.requested").exists(),
         }

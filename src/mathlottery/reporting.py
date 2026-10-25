@@ -1,6 +1,7 @@
 import json
 
 from mathlottery.budget import elapsed
+from mathlottery.expert_brief import safe_link, text
 from mathlottery.metrics import run_metrics
 from mathlottery.models import Run
 from mathlottery.storage import Store, atomic_write, json_text
@@ -19,6 +20,28 @@ def source_assessment(assessment) -> str:
             f"source date (reported): {citation.get('source_date') or 'unknown'} · "
             f"SHA-256: `{citation.get('sha256') or 'unavailable'}`"
         )
+    for obstacle in assessment.obstacles:
+        lines += [
+            f"- Obstacle {text(obstacle.get('id', ''))}: **{text(obstacle.get('status', 'OPEN'))}** · "
+            f"resolution evidence supported: {obstacle.get('resolution_supported', False)}",
+            f"  {text(obstacle.get('description', ''))} · Impact: {text(obstacle.get('impact', ''))}",
+            f"  Next action: {text(obstacle.get('next_action', ''))}",
+            f"  Resolution: {text(obstacle.get('resolution', ''))} · "
+            f"{text(obstacle.get('resolution_reason', ''))}",
+        ]
+        if obstacle.get("source_url"):
+            lines.append("  Source: " + safe_link(obstacle["source_url"], obstacle["source_url"]))
+    for comparison in assessment.comparisons:
+        lines += [
+            f"- Prior-result comparison {text(comparison.get('id', ''))}: "
+            f"**{text(comparison.get('relation', 'UNKNOWN'))}** · "
+            + safe_link(comparison.get("source_url", "Source"), comparison.get("source_url")),
+            f"  Prior assumptions: {text(comparison.get('prior_assumptions', ''))}",
+            f"  Candidate assumptions: {text(comparison.get('candidate_assumptions', ''))}",
+            f"  Prior conclusion: {text(comparison.get('prior_conclusion', ''))}",
+            f"  Candidate conclusion: {text(comparison.get('candidate_conclusion', ''))}",
+            f"  Reasoning: {text(comparison.get('reasoning', ''))}",
+        ]
     lines += [f"- Observed search: {query}" for query in assessment.observed_queries]
     lines.append("Excerpt matching verifies retrieved text, not its interpretation or search completeness.")
     return "\n\n".join(lines)
@@ -181,9 +204,28 @@ def report(store: Store, run: Run):
                     "\n".join(f"- Evidence gate: {note}" for note in review.validation_notes),
                 ]
             )
+            coverage = review.proof_coverage
+            sections += [
+                "### Key-step coverage",
+                f"Policy: `{coverage.policy_version or 'UNASSESSED'}` · "
+                f"proof_complete={coverage.proof_complete} · statement_aligned={coverage.statement_aligned}. "
+                "These structural checks do not certify mathematical correctness or statement equivalence.",
+                "Unresolved steps: " + ("; ".join(text(s) for s in coverage.unresolved_steps) or "none recorded"),
+                *[f"- Coverage gap: {text(reason)}" for reason in coverage.reasons],
+            ]
+            for step in review.proof_steps:
+                sections.append(f"- Step {text(step.id)} · {step.kind} · essential={step.essential}: "
+                                f"{text(step.statement)}\n\n"
+                                f"  Dependencies: {', '.join(text(v) for v in step.dependencies) or 'none'}; "
+                                f"checks: {', '.join(text(v) for v in step.check_ids) or 'none'}")
+            for alignment in review.statement_alignment:
+                sections.append(f"- Alignment {alignment.facet}: **{alignment.assessment}**\n\n"
+                                f"  Original: {text(alignment.original)}\n\n"
+                                f"  Candidate: {text(alignment.candidate)}\n\n"
+                                f"  {text(alignment.reasoning)}")
             for check in review.checks:
                 sections.append(
-                    f"- {check.method} / {check.result} · blocking: {check.blocking}\n\n"
+                    f"- {text(check.id) or 'unnamed'} · {check.method} / {check.result} · blocking: {check.blocking}\n\n"
                     f"{check.claim}\n\n{check.reasoning}\n\n" + "; ".join(check.evidence)
                 )
             if review.reported_verdict and review.reported_verdict != review.verdict:

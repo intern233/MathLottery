@@ -1,6 +1,7 @@
 """The three mathematical tasks, independent of the agent transport."""
 
 from mathlottery.literature import collect_sources
+from mathlottery.literature_obstacles import carry_literature
 from mathlottery.models import NativeCheckpoint, Phase, Run, State, Workflow
 from mathlottery.sources import conservative_status
 from mathlottery.storage import Store, atomic_write, json_text
@@ -110,8 +111,14 @@ def record_selection(store: Store, run: Run, milestone: NativeCheckpoint, *, pre
     retrieved = [o["result"] for o in run.observations if o.get("phase") == "FIND"]
     shortlist = []
     selected = None
+    previous = [*store.list_problems(), *run.shortlist]
     for proposed in milestone.shortlist or [milestone.problem]:
         problem = proposed.model_copy(deep=True)
+        matching = [old.literature_search for old in previous if old.id == problem.id or (
+            old.source_url == problem.source_url
+            and " ".join(old.statement.split()) == " ".join(problem.statement.split())
+        )]
+        problem.literature_search = carry_literature(problem.literature_search, matching)
         problem.formal_target = None
         problem.educational = False
         problem = conservative_status(problem, retrieved)

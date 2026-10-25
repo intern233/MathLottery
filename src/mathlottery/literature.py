@@ -12,6 +12,7 @@ from mathlottery.config import Config
 from mathlottery.evidence_policy import normalized, recent
 from mathlottery.execution import python_exec
 from mathlottery.models import Citation, Run, digest, now
+from mathlottery.source_matching import excerpt_match
 from mathlottery.sources import WebTools, parse_page
 from mathlottery.storage import Store, atomic_write, json_text, safe_path
 
@@ -49,11 +50,16 @@ def snapshot(web: WebTools, url: str, excerpts: list[str], directory) -> dict:
     else:
         text = parse_page(data.decode("utf-8", errors="replace"), final_url)["text"]
     atomic_write(directory / "literature" / "snapshots" / f"{sha}.extracted.txt", text)
-    content = normalized(text)
+    matches = [
+        {"sha256": digest(normalized(excerpt)), "method": method}
+        for excerpt in excerpts
+        if (method := excerpt_match(text, excerpt, pdf=pdf))
+    ]
     return {
         "status": "OK", "record_kind": "source_snapshot", "requested_url": url,
         "url": final_url, "retrieved_at": now(), "sha256": sha, "artifact": relative,
-        "excerpt_hashes": [digest(normalized(e)) for e in excerpts if normalized(e) in content],
+        "excerpt_hashes": [match["sha256"] for match in matches],
+        "excerpt_matches": matches,
         "scope": "Text matches only; source interpretation and search completeness are not certified",
     }
 

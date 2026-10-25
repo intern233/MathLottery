@@ -19,12 +19,17 @@ from pathlib import Path
 from mathlottery import budget
 from mathlottery.config import Config
 from mathlottery.models import FormalCheckRequest, Run, digest, now
+from mathlottery.resources import formal_admission
 from mathlottery.review_evidence import validate
 from mathlottery.storage import Store, atomic_write, json_text
 
 IDENTIFIER = r"[A-Za-z_][A-Za-z_0-9']*"
 MODULE = re.compile(rf"{IDENTIFIER}(?:\.{IDENTIFIER})*")
 ALLOWED_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
+
+
+class FormalCheckError(ValueError):
+    """Controller-authored diagnostics safe to expose without host exception details."""
 
 
 def _output_budget_error(output, max_object_bytes, max_total_bytes):
@@ -245,16 +250,36 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
                 module.replace(".", "/") + suffix for module in modules
                 for suffix in (".olean", ".olean.private", ".olean.server")
             }
+            # Lean's module system also emits compiler IR and its signature.
+            # These are not theorem objects: validate and record them, but keep
+            # them out of the fresh kernel/inspection sandbox. Never admit an
+            # arbitrary sidecar or another module's files by extension alone.
+            auxiliary = {
+                module.replace(".", "/") + suffix for module in modules
+                for suffix in (".ir", ".ir.sig")
+            }
             receipt["objects"] = []
+            receipt["compiler_auxiliary"] = []
             for path in output.rglob("*"):
                 info = path.lstat()
                 if stat.S_ISDIR(info.st_mode):
                     continue
                 relative = path.relative_to(output).as_posix()
-                if relative not in allowed or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-                    raise ValueError("Unexpected file in compiler output")
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                    raise FormalCheckError("Unexpected linked or special file in compiler output")
+                if relative not in allowed | auxiliary:
+                    # Only a bounded output-relative name is shown, never a host path.
+                    raise FormalCheckError(f"Unexpected compiler output file: {relative[:160]!r}")
                 if info.st_size > max_object_bytes:
-                    raise ValueError("Compiler object exceeds size limit")
+                    raise FormalCheckError("Compiler object exceeds size limit")
+                if relative in auxiliary:
+                    with path.open("rb") as stream:
+                        sha = hashlib.file_digest(stream, "sha256").hexdigest()
+                    receipt["compiler_auxiliary"].append({
+                        "path": relative, "size": info.st_size, "sha256": sha,
+                        "disposition": "EXCLUDED_FROM_REPLAY",
+                    })
+                    continue
                 target = frozen / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(path, target, follow_symlinks=False)
@@ -262,7 +287,7 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
                     sha = hashlib.file_digest(stream, "sha256").hexdigest()
                 receipt["objects"].append({"path": relative, "size": info.st_size, "sha256": sha})
             if any(not (frozen / (m.replace(".", "/") + ".olean")).is_file() for m in modules):
-                raise ValueError("Compiler produced no object for a requested module")
+                raise FormalCheckError("Compiler produced no object for a requested module")
             output = frozen
             for index, module in enumerate(modules):
                 result = execute(["/lean/bin/leanchecker", module], f"replay-{index}")
@@ -275,14 +300,15 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
                 return receipt
             declarations = json.loads(result["output"])
             if not isinstance(declarations, list) or [d.get("name") for d in declarations] != request.declarations:
-                raise ValueError("Inspector returned mismatched declarations")
+                raise FormalCheckError("Inspector returned mismatched declarations")
             receipt["declarations"] = declarations
             if any(set(d["axioms"]) - ALLOWED_AXIOMS for d in declarations):
                 receipt.update(status="REJECTED", reason="Selected theorems depend on unapproved axioms or placeholders")
             else:
                 receipt["status"] = "KERNEL_REPLAYED"
     except (OSError, ValueError, subprocess.SubprocessError) as error:
-        receipt.update(status="ERROR", reason=f"Formal check failed: {type(error).__name__}")
+        detail = str(error) if isinstance(error, FormalCheckError) else type(error).__name__
+        receipt.update(status="ERROR", reason=f"Formal check failed: {detail}")
     finally:
         receipt["artifact"] = str((directory / "receipt.json").relative_to(store.run_dir(run.id)))
         atomic_write(directory / "receipt.json", json_text(receipt))
@@ -292,7 +318,17 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
 def record_formal_check(store: Store, run: Run, request: FormalCheckRequest | None) -> None:
     if request is None:
         return
-    result = check_snapshot(store, run, request)
+    config = Config.model_validate(run.config)
+    def cancelled():
+        return ((store.run_dir(run.id) / "stop.requested").exists()
+                or budget.remaining(run, config) <= 0)
+    with formal_admission(store, run, config, cancelled) as admitted:
+        result = check_snapshot(store, run, request) if admitted else {
+            "status": "CANCELLED", "checked_at": now(),
+            "candidate_sha256": run.candidates[-1].sha256,
+            "reason": "Independent formal check cancelled while waiting for resources",
+            "statement_alignment": "NOT_CERTIFIED",
+        }
     if "artifact" not in result:
         relative = f"verification/formal/{digest(json_text([run.task_id, result]))}.json"
         result["artifact"] = relative

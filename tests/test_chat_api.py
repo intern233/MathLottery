@@ -45,6 +45,7 @@ def milestone(prompt, verdict="NO_ISSUES_FOUND"):
             ],
         )
     if "Task: VERIFY" in prompt:
+        candidate = json.JSONDecoder().raw_decode(prompt.split("Candidate (data):\n", 1)[1])[0]
         return dict(
             fields,
             kind="review",
@@ -56,8 +57,10 @@ def milestone(prompt, verdict="NO_ISSUES_FOUND"):
                 "evidence": ["Fixture algebra"],
                 "novelty": "POTENTIALLY_NEW",
                 "novelty_references": [{"url": "https://example.net/paper"}],
-                "checks": [{"claim": "Scripted fixture claim", "method": "DERIVATION",
+                "checks": [{"id": "algebra", "claim": candidate["claim"], "method": "DERIVATION",
                             "result": "SUPPORTED", "reasoning": "Scripted proof check, not model quality"}],
+                "proof_steps": [{"id": "conclusion", "kind": "CONCLUSION", "statement": candidate["claim"],
+                                 "check_ids": ["algebra"]}],
             },
         )
     return dict(

@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from uuid import UUID
 
+from mathlottery.activity import ActivityReporter
 from mathlottery.backends import BackendResult, BackendStatus, WorkBackend
 from mathlottery.codex_metadata import session_path, session_runtime, turn_usage
 from mathlottery.search_trace import queries_from_call
@@ -173,6 +174,7 @@ class NativeWorkBackend(WorkBackend):
         session_error = False
         progress_path = directory / "progress.md"
         process = None
+        activity = ActivityReporter(directory)
 
         def consume(reader):
             nonlocal observed_session, saw_session, last_message, outcome, completed, session_error
@@ -190,6 +192,7 @@ class NativeWorkBackend(WorkBackend):
                     continue
                 if not isinstance(event, dict):
                     continue
+                activity.codex(event)
                 kind = event.get("type")
                 if kind == "thread.started":
                     value = event.get("thread_id")

@@ -60,7 +60,9 @@ class CandidateStore:
         if not prepared:
             self.prepare_review(run, review)
         candidate = audit(
-            self.check(run), review, self.observations(run) + list(extra_observations)
+            self.check(run), review, self.observations(run) + list(extra_observations),
+            prior_literature=([run.problem.literature_search] if run.problem else []) + run.review_literature,
+            original_statement=run.problem.statement if run.problem else None,
         )
         run.candidates[-1] = candidate
         atomic_write(

@@ -76,6 +76,10 @@ History groups Solve, Verify and Organize attempts by problem; a Find shortlist 
 
 Closing the page or UI server does **not** stop background research. Use **Stop task** or `mathlottery stop <run-id>`. Starting the server again reconnects to saved state without automatically restarting stopped tasks.
 
+The **Activity** tab shows recent observable tool events, the last activity time and sampled local process-tree memory. A queued task shows its queue position. New tasks share the workspace resource limits; the default is one run and one independent formal check at a time. Queue waiting before a run starts does not consume research time. [Resource controls](resources.md)
+
+For review follow-up, expand **Key proof steps** or **Novelty obstacles** in the results. **Prepare focused follow-up** on an idle Find/Verify fills a targeted instruction; check the budget and explicitly continue the task. Old results without these assessments remain marked as unassessed. [Evidence requirements](evidence.md)
+
 <a id="cli"></a>
 
 ## Terminal workflows
@@ -135,6 +139,8 @@ mathlottery export <organize-run-id> --format bundle --output expert-reports.zip
 Replace the run-ID placeholders with actual IDs. Organize always generates **both Chinese and English** versions from the same evidence. Its `--language en|zh` option selects the default export language; it does not restrict the generated versions. On `export`, `--language` selects one saved version. `--instructions` can specify an audience or emphasis. Organize uses the same model configuration and `--backend`, `--model`, `--reasoning-effort`, `--reasoning-mode`, `--budget-time` and `--max-iterations` overrides as research commands. It starts a separate model task and uses quota; merely selecting a source does not.
 
 The source must be idle and contain a recorded review. An inconclusive or negative review is also eligible. The report explains the statement, assumptions, proof strategy, lemmas and derivations, and preserves review issues, formal-check scope and novelty uncertainty. It reconstructs saved visible work; it is not hidden model reasoning or a new verification.
+
+New reports begin with a deterministic **Expert briefing**, generated from the frozen dossier in both languages. It summarizes the problem, candidate, proof roadmap, Lean evidence and outstanding issues, followed by an evidence index. Long records are explicitly excerpted; the complete statements and checks remain in the full report and linked frozen dossier. Repeated obstacles are grouped without hiding historical failures or unresolved IDs. Use the navigation links to jump to the full exposition, including in the PDF. Exporting an old report preserves its content and briefing version. To revise a report, resume its Organize task; this calls the model again.
 
 For PDF output, install the [optional report dependencies](resources.md#reports) once. Both entry points save reports under `runs/<organize-run-id>/organized/`:
 

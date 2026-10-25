@@ -126,6 +126,34 @@ class Citation(Model):
     )
 
 
+class LiteratureObstacle(Model):
+    """A stable research question; RESOLVED is a claim until receipts support it."""
+
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$")
+    kind: Literal["INACCESSIBLE_SOURCE", "UNCLEAR_COMPARISON", "CONFLICTING_STATUS", "MISSING_PROVENANCE", "OTHER"]
+    source_url: str | None = Field(default=None, max_length=2048)
+    description: str = Field(min_length=1, max_length=4000)
+    impact: str = Field(min_length=1, max_length=4000)
+    next_action: str = Field(min_length=1, max_length=4000)
+    status: Literal["OPEN", "RESOLVED"] = "OPEN"
+    resolution: str = Field(default="", max_length=10000)
+    evidence_urls: list[str] = Field(default_factory=list, max_length=30)
+    resolves_legacy_gaps: list[str] = Field(default_factory=list, max_length=30)
+
+
+class PriorResultComparison(Model):
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$")
+    source_url: str = Field(min_length=1, max_length=2048)
+    locator: str = Field(min_length=1, max_length=1000)
+    prior_assumptions: str = Field(min_length=1, max_length=5000)
+    candidate_assumptions: str = Field(min_length=1, max_length=5000)
+    prior_conclusion: str = Field(min_length=1, max_length=5000)
+    candidate_conclusion: str = Field(min_length=1, max_length=5000)
+    relation: Literal["UNKNOWN", "EQUIVALENT", "SPECIAL_CASE", "DIFFERENT"] = "UNKNOWN"
+    reasoning: str = Field(min_length=1, max_length=10000)
+    obstacle_ids: list[str] = Field(default_factory=list, max_length=30)
+
+
 class LiteratureSearch(Model):
     queries: list[str] = Field(default_factory=list, max_length=30)
     conclusion: str = Field(default="", max_length=10000)
@@ -140,6 +168,8 @@ class LiteratureSearch(Model):
         "or the possibility of unindexed work. These remain visible and do not certify exhaustive "
         "coverage. Never move a specific unresolved source or comparison here.",
     )
+    obstacles: list[LiteratureObstacle] = Field(default_factory=list, max_length=100)
+    comparisons: list[PriorResultComparison] = Field(default_factory=list, max_length=100)
 
 
 class EvidenceAssessment(Model):
@@ -152,6 +182,9 @@ class EvidenceAssessment(Model):
     checked_citations: list[dict] = Field(default_factory=list)
     observed_queries: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
+    obstacles: list[dict] = Field(default_factory=list)
+    unresolved_obstacle_ids: list[str] = Field(default_factory=list)
+    comparisons: list[dict] = Field(default_factory=list)
 
 
 class Problem(Model):
@@ -223,12 +256,48 @@ class CandidateInput(Model):
 
 
 class ProofCheck(Model):
-    claim: str = Field(min_length=1, max_length=4000)
+    id: str = Field(default="", pattern=r"^(?:[A-Za-z0-9][A-Za-z0-9_-]{0,99})?$")
+    claim: str = Field(min_length=1, max_length=30000)
     method: Literal["DERIVATION", "COUNTEREXAMPLE", "FINITE_TEST", "FORMAL", "REFERENCE"]
     result: Literal["SUPPORTED", "CONTRADICTED", "UNRESOLVED"]
     reasoning: str = Field(min_length=1, max_length=10000)
     evidence: list[str] = Field(default_factory=list, max_length=30)
     blocking: bool = True
+    formal_declarations: list[str] = Field(default_factory=list, max_length=30)
+
+
+class ProofStep(Model):
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$")
+    statement: str = Field(min_length=1, max_length=30000)
+    kind: Literal["LEMMA", "REDUCTION", "CASE", "CONCLUSION"] = "LEMMA"
+    dependencies: list[str] = Field(default_factory=list, max_length=100)
+    check_ids: list[str] = Field(default_factory=list, max_length=100)
+    essential: bool = True
+
+
+class StatementAlignment(Model):
+    facet: Literal["DEFINITIONS", "ASSUMPTIONS", "QUANTIFIERS", "DOMAIN", "BOUNDARY_CASES", "CONCLUSION"]
+    original: str = Field(min_length=1, max_length=30000)
+    candidate: str = Field(min_length=1, max_length=30000)
+    assessment: Literal["MATCHED", "DIFFERENT", "UNRESOLVED"] = "UNRESOLVED"
+    reasoning: str = Field(min_length=1, max_length=10000)
+    check_ids: list[str] = Field(default_factory=list, max_length=100)
+    formal_statement: str = Field(default="", max_length=10000)
+
+
+class ProofCoverage(Model):
+    """Controller-owned structural coverage, never external mathematical certification."""
+
+    policy_version: str | None = None
+    assessed_at: str | None = None
+    proof_complete: bool = False
+    statement_aligned: bool = False
+    total_steps: int = 0
+    essential_steps: int = 0
+    supported_steps: list[str] = Field(default_factory=list)
+    unresolved_steps: list[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
+    formal_alignment_certified: Literal[False] = False
 
 
 class FormalCheckRequest(Model):
@@ -264,11 +333,14 @@ class Review(Model):
         "actual mathematical and statement-alignment gaps; do not relabel them to obtain FULL coverage.",
     )
     checks: list[ProofCheck] = Field(default_factory=list, max_length=100)
+    proof_steps: list[ProofStep] = Field(default_factory=list, max_length=100)
+    statement_alignment: list[StatementAlignment] = Field(default_factory=list, max_length=20)
     citations: list[Citation] = Field(default_factory=list, max_length=30)
     literature_search: LiteratureSearch = Field(default_factory=LiteratureSearch)
     formal_check: FormalCheckRequest | None = None
     # The controller overwrites these fields; they never establish evidence by themselves.
     evidence_assessment: EvidenceAssessment = Field(default_factory=EvidenceAssessment)
+    proof_coverage: ProofCoverage = Field(default_factory=ProofCoverage)
     validation_notes: list[str] = Field(default_factory=list)
     reported_verdict: str | None = None
     reported_novelty: str | None = None
@@ -494,6 +566,7 @@ class Run(Model):
     next_actions: list[str] = Field(default_factory=list)
     candidates: list[Candidate] = Field(default_factory=list)
     review_evidence: ReviewEvidence | None = None
+    review_literature: list[LiteratureSearch] = Field(default_factory=list, max_length=100)
     review_source: ReviewProvenance | None = None
     discovery_context: DiscoveryContext | None = None
     organization_context: OrganizationContext | None = None

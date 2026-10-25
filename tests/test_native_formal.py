@@ -218,7 +218,97 @@ def test_unexpected_compiler_outputs_cannot_shadow_inspector_imports(store, form
     monkeypatch.setattr("mathlottery.native_formal._run", malicious_output)
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == "ERROR"
+    assert result["reason"] == "Formal check failed: Unexpected compiler output file: 'Lean.olean'"
     assert calls == ["compile-0"]
+
+
+def test_lean_module_ir_companions_are_bounded_recorded_and_excluded_from_replay(
+    store, formal_run, scripted_tools, monkeypatch,
+):
+    calls = []
+
+    def module_output(command, directory, label, *args):
+        calls.append(label)
+        if label.startswith("compile"):
+            output = Path(command[command.index("--bind") + 1])
+            for suffix in (".olean", ".olean.private", ".olean.server", ".ir", ".ir.sig"):
+                (output / ("Example" + suffix)).write_bytes(suffix.encode())
+        else:
+            assert "--bind" not in command
+            mount_index = max(index for index, value in enumerate(command) if value == "/out")
+            frozen = Path(command[mount_index - 1])
+            assert {p.name for p in frozen.iterdir()} == {
+                "Example.olean", "Example.olean.private", "Example.olean.server",
+            }
+        text = json.dumps([{"name": "target", "module": "Example", "type": "True", "axioms": []}]) if label == "inspect" else ""
+        return {"status": "OK", "returncode": 0, "output": text}
+
+    monkeypatch.setattr("mathlottery.native_formal._run", module_output)
+    result = check_snapshot(store, formal_run, request())
+    assert result["status"] == "KERNEL_REPLAYED"
+    assert calls == ["compile-0", "replay-0", "inspect"]
+    assert {item["path"] for item in result["compiler_auxiliary"]} == {"Example.ir", "Example.ir.sig"}
+    assert all(item["disposition"] == "EXCLUDED_FROM_REPLAY" for item in result["compiler_auxiliary"])
+    assert all(item["sha256"] == digest(item["path"].removeprefix("Example")) for item in result["compiler_auxiliary"])
+
+
+@pytest.mark.parametrize("filename", ["Lean.ir", "Other.ir.sig", "Example.ilean", "Example.ir.extra"])
+def test_ir_support_does_not_admit_other_modules_or_arbitrary_sidecars(
+    store, formal_run, scripted_tools, monkeypatch, filename,
+):
+    calls = []
+
+    def injected_sidecar(command, directory, label, *args):
+        calls.append(label)
+        output = Path(command[command.index("--bind") + 1])
+        (output / "Example.olean").write_bytes(b"object")
+        (output / filename).write_bytes(b"unexpected")
+        return {"status": "OK", "returncode": 0, "output": ""}
+
+    monkeypatch.setattr("mathlottery.native_formal._run", injected_sidecar)
+    result = check_snapshot(store, formal_run, request())
+    assert result["status"] == "ERROR"
+    assert f"Unexpected compiler output file: {filename!r}" in result["reason"]
+    assert calls == ["compile-0"]
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink", "size"])
+def test_known_ir_companions_do_not_bypass_link_or_size_checks(
+    store, formal_run, scripted_tools, monkeypatch, kind,
+):
+    formal_run.config["verification"]["formal_max_object_mb"] = 1
+    calls = []
+
+    def unsafe_sidecar(command, directory, label, *args):
+        calls.append(label)
+        output = Path(command[command.index("--bind") + 1])
+        original = output / "Example.olean"
+        original.write_bytes(b"object")
+        target = output / "Example.ir"
+        if kind == "symlink":
+            target.symlink_to(original)
+        elif kind == "hardlink":
+            target.hardlink_to(original)
+        else:
+            with target.open("wb") as stream:
+                stream.truncate(1_048_577)
+        return {"status": "OK", "returncode": 0, "output": ""}
+
+    monkeypatch.setattr("mathlottery.native_formal._run", unsafe_sidecar)
+    result = check_snapshot(store, formal_run, request())
+    assert result["status"] == ("OUTPUT_LIMIT" if kind == "size" else "ERROR")
+    assert calls == ["compile-0"]
+    assert "size limit" in result["reason"] if kind == "size" else "linked or special" in result["reason"]
+
+
+def test_unexpected_host_exception_details_are_not_exposed(store, formal_run, scripted_tools, monkeypatch):
+    def host_error(*args, **kwargs):
+        raise OSError("PRIVATE_HOST_PATH_OR_PROXY_SENTINEL")
+
+    monkeypatch.setattr("mathlottery.native_formal._run", host_error)
+    result = check_snapshot(store, formal_run, request())
+    assert result["reason"] == "Formal check failed: OSError"
+    assert "SENTINEL" not in json.dumps(result)
 
 
 def test_replay_failure_cannot_be_overridden_by_compiler_success(store, formal_run, scripted_tools, monkeypatch):

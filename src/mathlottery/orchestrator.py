@@ -14,6 +14,7 @@ from mathlottery.models import (
     Candidate,
     CandidateInput,
     DiscoveryContext,
+    LiteratureSearch,
     OrganizationContext,
     Phase,
     Problem,
@@ -24,6 +25,7 @@ from mathlottery.models import (
     uid,
 )
 from mathlottery.reporting import report
+from mathlottery.resources import run_admission
 from mathlottery.storage import Store, atomic_write
 from mathlottery.workflows import ACTIVE
 
@@ -50,6 +52,7 @@ class Orchestrator:
         organization_context: OrganizationContext | None = None,
         organization_files: dict[str, bytes] | None = None,
         organization_candidates: list[Candidate] | None = None,
+        review_literature: list[LiteratureSearch] | None = None,
     ) -> Run:
         workflow = Workflow(workflow)
         if workflow == Workflow.ORGANIZE:
@@ -92,6 +95,7 @@ class Orchestrator:
             problem=problem,
             discovery_context=discovery_context,
             organization_context=organization_context,
+            review_literature=review_literature or [],
             source=source,
             config=config.model_dump(mode="json"),
             environment={
@@ -203,7 +207,16 @@ class Orchestrator:
         with self.store.lock(run_id):
             run = self.store.load(run_id)
             try:
-                return self._drive(run)
+                if run.state in (State.COMPLETED, State.CANCELLED):
+                    return run
+                # Settle a crashed worker before waiting; queue time is not research time.
+                if run.active_since:
+                    budget.settle(run)
+                    self.store.save(run, "resource_recovery_settled")
+                with run_admission(self.store, run, Config.model_validate(run.config)) as admitted:
+                    if not admitted:
+                        return self._pause(run, "Resource wait cancelled; resume to continue")
+                    return self._drive(run)
             except KeyboardInterrupt:
                 return self._pause(run, "Interrupted; resume to continue")
             except Exception as error:
@@ -239,28 +252,34 @@ class Orchestrator:
             run = self.store.load(run_id)
             if run.state != State.WAITING_FOR_USER or run.mode != "manual":
                 raise ValueError("This run is not waiting for a manual response")
-            if run.execution == "native":
-                from mathlottery.native import NativeRunner
+            with run_admission(self.store, run, Config.model_validate(run.config)) as admitted:
+                if not admitted:
+                    return self._pause(run, "Resource wait cancelled; response not applied")
+                return self._submit(run, text)
 
-                return NativeRunner(self).submit(run, text)
-            from mathlottery.structured import StructuredRunner
+    def _submit(self, run: Run, text: str) -> Run:
+        if run.execution == "native":
+            from mathlottery.native import NativeRunner
 
-            runner = StructuredRunner(self)
-            response = runner.validate(run, text)  # Invalid input must not change state.
-            config = Config.model_validate(run.config)
-            reason = budget.exhausted(run, config)
-            if reason:
-                return self._pause(run, reason)
-            run.active_since = now()
-            run.usage.unknown_calls += 1
-            runner.accept(run, response)
-            try:
-                return self._drive(run)
-            except KeyboardInterrupt:
-                return self._pause(run, "Interrupted while applying response")
-            except Exception as error:
-                run.last_error = f"{type(error).__name__}: {error}"
-                return self._pause(run, "Execution error; state preserved", State.FAILED)
+            return NativeRunner(self).submit(run, text)
+        from mathlottery.structured import StructuredRunner
+
+        runner = StructuredRunner(self)
+        response = runner.validate(run, text)  # Invalid input must not change state.
+        config = Config.model_validate(run.config)
+        reason = budget.exhausted(run, config)
+        if reason:
+            return self._pause(run, reason)
+        run.active_since = now()
+        run.usage.unknown_calls += 1
+        runner.accept(run, response)
+        try:
+            return self._drive(run)
+        except KeyboardInterrupt:
+            return self._pause(run, "Interrupted while applying response")
+        except Exception as error:
+            run.last_error = f"{type(error).__name__}: {error}"
+            return self._pause(run, "Execution error; state preserved", State.FAILED)
 
     def resume(
         self,

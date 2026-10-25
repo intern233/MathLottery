@@ -204,6 +204,10 @@ function badge(value) {
   const style = value === "COMPLETED" ? "execution-status" : value === "NO_ISSUES_FOUND" ? "success" : ["FAILED", "ISSUES_FOUND"].includes(value) ? "error" : ["PAUSED", "RATE_LIMITED", "INCONCLUSIVE", "DISPUTED"].includes(value) ? "warning" : ["DISCOVERING", "SOLVING", "VERIFYING", "ORGANIZING", "CREATED"].includes(value) ? "active" : "";
   return node("span", `badge ${style}`, t(value));
 }
+function executionBadge(run) {
+  return run.busy && (run.resources?.state === "queued" || run.worker_state === "queued")
+    ? node("span", "badge warning", state.language === "zh" ? "排队中" : "Queued") : badge(run.state);
+}
 function options(selector, entries, emptyLabel) {
   const select = $(selector), previous = select.value;
   const all = [["", emptyLabel], ...entries];
@@ -623,11 +627,11 @@ function renderHistory() {
       const label = `${workflowLabel(run.workflow)}${attempt}`;
       const button = node("button", `run-item${run.id === state.selected ? " active" : ""}`);
       button.type = "button"; button.dataset.runId = run.id;
-      button.setAttribute("aria-label", `${group.latest.title} · ${label} · ${t(run.state)}`);
+      button.setAttribute("aria-label", `${group.latest.title} · ${label} · ${executionBadge(run).textContent}`);
       button.setAttribute("aria-pressed", String(run.id === state.selected));
       const top = node("div", "run-top"), stage = node("span", "run-stage");
       stage.append(node("strong", "run-workflow", label), node("span", "", run.mode));
-      top.append(stage, badge(run.state));
+      top.append(stage, executionBadge(run));
       const bottom = node("div", "run-bottom");
       bottom.append(node("span", "", `${t("startedAt")} ${date(run.created_at)}`), node("span", "", `${run.iteration} ${t("rounds")} · ${compact(run.usage.input_tokens)} in`));
       button.append(top, bottom); button.addEventListener("click", () => selectRun(run.id, true));
@@ -686,7 +690,7 @@ function renderProblem(problem, selectable = true, discoveryRun = null) {
   if (problem.status_evidence.length) { details.append(node("h3", "", t("sourceEvidence"))); const list = node("ul"); for (const item of problem.status_evidence) { const li = node("li"); li.append(safeLink(item)); list.append(li); } details.append(list); }
   for (const reference of problem.references) { const p = node("p"); p.append(safeLink(reference.url, reference.title || reference.url)); details.append(p); }
   card.append(details);
-  card.append(renderSourceAssessment(problem.evidence_assessment));
+  card.append(renderSourceAssessment(problem.evidence_assessment, problem.literature_search, problem.title, state.detail?.workflow === "find"));
   if (selectable) {
     const chosen = discoveryRun && state.discoveryChoice?.runId === discoveryRun.id && state.discoveryChoice.problem.id === problem.id;
     const button = node("button", "secondary", t(chosen ? "chosen" : discoveryRun ? "chooseProblem" : "solveThis")); button.type = "button";
@@ -713,10 +717,24 @@ function appendEvidenceList(parent, label, items) {
   parent.append(node("h4", "", label));
   const list = node("ul"); for (const item of items) list.append(node("li", "", item)); parent.append(list);
 }
-function renderSourceAssessment(assessment) {
+function prepareObstacleFollowup(item, context) {
+  const run = state.detail;
+  if (!run || run.busy || state.submitting || !["find", "verify"].includes(run.workflow)) return;
+  const direction = state.language === "zh"
+    ? `请继续核查“${context || run.title}”的新颖性障碍 ${item.id}。\n障碍：${item.description}\n影响：${item.impact}\n下一步：${item.next_action}\n来源：${item.source_url || "未指定"}\n请保留原障碍编号，用可定位的原文、独立来源证据和逐项比较支持处理结论。无法解决时保留 OPEN 并说明原因，不要仅凭未搜到结果宣称新颖。`
+    : `Investigate novelty obstacle ${item.id} for “${context || run.title}”.\nObstacle: ${item.description}\nImpact: ${item.impact}\nNext action: ${item.next_action}\nSource: ${item.source_url || "not specified"}\nPreserve the obstacle ID. Support any resolution with located quotations, independent source evidence and explicit comparison. Leave unresolved items OPEN with reasons; absence of search results is not evidence of novelty.`;
+  $("#direction").value = direction;
+  $("#resume-form").hidden = false;
+  $("#direction").focus();
+  $("#resume-form").scrollIntoView({behavior: "smooth", block: "center"});
+  toast(state.language === "zh" ? "已填写核查方向；检查预算后点击继续研究。" : "Follow-up prepared. Review the budget, then click Continue research.");
+}
+function renderSourceAssessment(assessment, search, context, allowFollowup = true) {
   const section = node("details", "evidence-assessment");
   const label = assessment?.policy_version ? `${t("evidenceGaps")}${assessment.reasons?.length ? ` (${assessment.reasons.length})` : ""}` : t("notAssessed");
   section.append(node("summary", "", label));
+  const canFollow = allowFollowup && state.detail && !state.detail.busy && !state.submitting && ["find", "verify"].includes(state.detail.workflow);
+  section.append(MathLotteryDetails.novelty(assessment, search, state.language, safeLink, canFollow ? (item) => prepareObstacleFollowup(item, context) : null));
   if (!assessment?.policy_version) { section.append(node("p", "field-hint", t("notAssessed"))); return section; }
   section.append(node("p", "field-hint", `${assessment.policy_version} · ${assessment.assessed_at || ""}`));
   appendEvidenceList(section, t("evidenceGate"), assessment.reasons);
@@ -733,10 +751,11 @@ function renderSourceAssessment(assessment) {
   section.append(node("p", "field-hint", t("sourceLimit")));
   return section;
 }
-function renderReviewChecks(review) {
+function renderReviewChecks(review, allowFollowup = false) {
   const section = node("div", "review-checks");
   section.append(node("p", "", `${t("originalCoverage")}: ${t(review.original_problem_coverage || "UNKNOWN")}\n${review.coverage_explanation || ""}`));
   appendEvidenceList(section, t("evidenceGate"), review.validation_notes);
+  section.append(MathLotteryDetails.proof(review, state.language));
   if (review.checks?.length) {
     const details = node("details"); details.append(node("summary", "", t("proofChecks")));
     for (const check of review.checks) {
@@ -745,7 +764,7 @@ function renderReviewChecks(review) {
     }
     section.append(details);
   }
-  section.append(renderSourceAssessment(review.evidence_assessment));
+  section.append(renderSourceAssessment(review.evidence_assessment, review.literature_search, null, allowFollowup));
   if (review.formal_receipt) {
     const details = node("details", "formal-receipt"); details.append(node("summary", "", `${t("formalReceipt")}: ${t(review.formal_receipt.status)}`), node("p", "field-hint", t("formalScope")), node("pre", "", JSON.stringify(review.formal_receipt, null, 2))); section.append(details);
   }
@@ -789,6 +808,7 @@ function renderOrganizedReport(run) {
     const edition = reports[language], panel = node("section", "organized-version");
     panel.dataset.language = language;
     panel.append(node("h4", "", language === "zh" ? "中文" : "English"));
+    if (edition?.expert_brief_available) panel.append(node("p", "field-hint", state.language === "zh" ? "含专家速览：结论、关键步骤、验证缺口及材料索引。" : "Includes an expert briefing: conclusions, key steps, verification gaps and source index."));
     if (!edition?.markdown_available) {
       panel.append(node("p", "field-hint", t("organizeMissingLanguage"))); versions.append(panel); continue;
     }
@@ -902,7 +922,7 @@ function renderResults(run) {
       const issues = reviewIndex ? body : section;
       appendEvidenceList(issues, t("ISSUES_FOUND"), review.issues);
       appendEvidenceList(issues, t("obligations"), review.remaining_obligations);
-      body.append(node("p", "", `${t("novelty")}: ${t(review.novelty)}\n${review.novelty_notes}`), renderReviewChecks(review));
+      body.append(node("p", "", `${t("novelty")}: ${t(review.novelty)}\n${review.novelty_notes}`), renderReviewChecks(review, index === 0 && reviewIndex === 0));
       for (const evidence of review.evidence) { const p = node("p"); p.append(safeLink(evidence)); body.append(p); }
       keyDisclosures(body, `${candidate.id}:review:${reviewNumber}`);
       if (reviewIndex) { body.querySelector("summary").textContent = `${t("reviewVersion").replace("{n}", reviewNumber)} · ${t(review.verdict)}`; card.append(body); }
@@ -942,7 +962,7 @@ function renderResults(run) {
 function renderDetail(run) {
   $("#run-detail").hidden = false;
   text("#detail-id", `${run.workflow.toUpperCase()} / ${run.id}`); text("#detail-title", run.title);
-  const status = badge(run.state); $("#detail-state").className = status.className; text("#detail-state", status.textContent);
+  const status = executionBadge(run); $("#detail-state").className = status.className; text("#detail-state", status.textContent);
   $("#run-facts").replaceChildren(...[modelSummary(run.settings, run.mode), `${run.iteration} ${t("rounds")}`, `${Math.round(run.elapsed_seconds / 60 * 10) / 10} min ${t("elapsed")}`, `${compact(run.usage.input_tokens)} in / ${compact(run.usage.output_tokens)} out ${t("tokens")}`].map((fact) => node("span", "", fact)));
   const interrupted = !run.busy && ["queued", "running"].includes(run.worker?.state);
   const message = [run.last_error, run.worker?.error, interrupted ? t("workerInterrupted") : null, run.stop_reason, run.metrics.usage_warning].filter(Boolean).join("\n"); notice("#run-message", message);
@@ -956,6 +976,9 @@ function renderDetail(run) {
   $("#download").href = `/api/runs/${run.id}/report`;
   text("#download", t(run.workflow === "organize" ? "downloadTaskReport" : "download"));
   renderResults(run);
+  const runtime = MathLotteryDetails.runtime(run, state.language);
+  notice("#runtime-summary", runtime.summary);
+  $("#runtime-details").replaceChildren(runtime.element);
   text("#progress", run.progress.text || t("noProgress")); text("#progress-note", [run.progress.checking_evidence ? t("checkingEvidence") : "", run.progress.truncated ? t("truncated") : ""].filter(Boolean).join(" "));
   text("#report-text", run.report.text || t("noReport")); text("#report-note", run.report.truncated ? t("truncated") : "");
   const eventList = $("#event-list"); eventList.replaceChildren();

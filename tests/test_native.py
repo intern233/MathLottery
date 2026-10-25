@@ -87,8 +87,10 @@ else:
                 'proof_assessment':'Need another step' if verdict == 'INCONCLUSIVE' else 'No gap found',
                 'issues':['Missing step'] if verdict == 'INCONCLUSIVE' else [],
                 'evidence':['Independent algebra check'],
-                'checks':[{'claim':'Scripted fixture claim', 'method':'DERIVATION',
-                           'result':'SUPPORTED', 'reasoning':'Scripted algebra check, not a model evaluation'}]})
+                'checks':[{'id':'algebra', 'claim':candidate['claim'], 'method':'DERIVATION',
+                           'result':'SUPPORTED', 'reasoning':'Scripted algebra check, not a model evaluation'}],
+                'proof_steps':[{'id':'conclusion', 'kind':'CONCLUSION', 'statement':candidate['claim'],
+                                'check_ids':['algebra']}]})
         else:
             checkpoint.update(kind='candidate', conclude=behavior != 'partial',
                               candidate={'claim':'Sum of odd numbers', 'proof':f'candidate-{count}'})

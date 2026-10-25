@@ -92,7 +92,8 @@ def test_api_exposes_partial_coverage_missing_sources_and_formal_failures(web):
     run.iteration = 1
     engine.candidates.review(run, Review(
         verdict="NO_ISSUES_FOUND", truth_assessment="Base case holds", proof_assessment="Substitution checked",
-        checks=[{"claim": "Base case", "method": "DERIVATION", "result": "SUPPORTED", "reasoning": "Substitute zero"}],
+        checks=[{"id": "base", "claim": "Only n=0", "method": "DERIVATION", "result": "SUPPORTED", "reasoning": "Substitute zero"}],
+        proof_steps=[{"id": "conclusion", "kind": "CONCLUSION", "statement": "Only n=0", "check_ids": ["base"]}],
         original_problem_coverage="FULL", coverage_explanation="An unsupported completeness claim",
         novelty="POTENTIALLY_NEW", formal_check=FormalCheckRequest(files=["workspace/Main.lean"], declarations=["target"]),
     ))

@@ -31,12 +31,47 @@ and remaining_obligations: [...]. COMPLETE means the full original statement, wi
 and assumptions; a reduction or a proved subcase is PARTIAL until all remaining obligations are
 discharged. A counterexample must satisfy every original hypothesis and negate the actual claim.
 conclude means this research task ends, never that the original problem has been solved.""",
-    Phase.VERIFY: """Supply explicit checks: [{claim, method, result, reasoning, evidence, blocking}].
+    Phase.VERIFY: """The review verdict assesses the candidate's mathematical claim and proof.
+Assess novelty independently. Novelty UNKNOWN or an unavailable source used only for a novelty
+comparison does not by itself require INCONCLUSIVE or invalidate established original-problem
+coverage. Record such gaps in literature_search.unresolved/obstacles and novelty_notes, not as
+mathematical issues or remaining_obligations. This does not justify a positive proof verdict:
+choose it only when your independent mathematical checks support it, with every essential step
+and claimed statement-alignment obligation checked. Never infer correctness from absent novelty
+evidence. If an unavailable source prevents establishing the original problem's meaning, a
+mathematical assumption or an essential proof dependency, record that concrete uncertainty in
+the appropriate blocking check, retain unresolved statement alignment/coverage, and use
+INCONCLUSIVE. Do not relabel a mathematical uncertainty as a novelty-only gap.
+
+Supply explicit checks: [{id, claim, method, result, reasoning, evidence, blocking,
+formal_declarations: []}]. Assign unique stable IDs for cross-references.
 Methods: DERIVATION, COUNTEREXAMPLE, FINITE_TEST, FORMAL, REFERENCE. Results: SUPPORTED,
 CONTRADICTED, UNRESOLVED. Give checkable mathematical derivations, exact failing steps or concrete
 counterexamples. Cover all essential proof obligations, definitions, quantifiers, assumptions and
 boundary cases. Blocking means essential to the submitted candidate claim. An unresolved blocking
 check prevents a positive verdict. Finite tests and self-reported compilation do not prove a theorem.
+
+At the final review milestone, include proof_steps: [{id, statement, kind: LEMMA/REDUCTION/CASE/
+CONCLUSION, dependencies: [step IDs], check_ids: [check IDs], essential: true}]. Map every essential
+lemma, reduction and case, including dependencies, to substantive checks. At least one supported
+check.claim must reproduce each step.statement exactly (whitespace differences are allowed).
+Do not omit difficult
+steps or mark a dependency optional to hide it. At least one essential CONCLUSION must reproduce
+the submitted candidate claim exactly. Missing proof-step/check references, circular dependencies, unchecked
+essential nodes and finite tests alone block a positive verdict. A FORMAL check must list exact
+formal_declarations present in a matching independent kernel receipt. A checked lemma is not a
+receipt for the entire proof. Provide derivations for mathematical steps not covered by Lean.
+The controller only checks structural coverage; this is not external expert certification.
+
+Include statement_alignment: [{facet, original, candidate, assessment: MATCHED/DIFFERENT/UNRESOLVED,
+reasoning, check_ids, formal_statement: ""}]. Cover each facet exactly once: DEFINITIONS,
+ASSUMPTIONS, QUANTIFIERS, DOMAIN, BOUNDARY_CASES, CONCLUSION. State explicitly when a facet is
+vacuous and justify it. Bind each comparison to a check. FULL original-problem coverage requires
+all six matched facets; a correct partial candidate may still receive a positive proof review.
+For the CONCLUSION facet, original must quote the entire registered problem.statement and candidate
+must quote the entire submitted candidate.claim, without paraphrasing either target.
+If Lean is used, quote its exact applicable formal statements and explain their scope. Never
+confuse structural checks or kernel acceptance with certified natural-language equivalence.
 
 Assess original_problem_coverage separately: FULL, PARTIAL, DIFFERENT or UNKNOWN. Include a
 coverage_explanation comparing the exact candidate claim to the original problem, and list
@@ -81,6 +116,29 @@ the default root. This only changes module resolution; no source bytes are rewri
 explicitly attached files are available. This requests an independent harness check after your review. The checker uses
 configured prebuilt dependencies, no Lake hooks/downloads, one thread and bounded memory/time.
 It checks only the requested declarations; explain their relation to the entire original problem.
-Never fill formal_receipt, evidence_assessment, validation_notes or reported_* fields yourself;
+Never fill formal_receipt, proof_coverage, evidence_assessment, validation_notes or reported_* fields yourself;
 they are controller-owned and are overwritten. Lack of tools or evidence must remain visible.""",
 }
+
+LITERATURE_TASKS = """
+Make specific literature barriers actionable in literature_search.obstacles:
+[{id, kind: INACCESSIBLE_SOURCE/UNCLEAR_COMPARISON/CONFLICTING_STATUS/MISSING_PROVENANCE/OTHER,
+source_url: URL or null, description, impact, next_action, status: OPEN/RESOLVED, resolution: "",
+evidence_urls: [], resolves_legacy_gaps: []}]. Use stable IDs across attempts and preserve previous
+obstacles. Omission, relabeling as a general limitation, or a RESOLVED checkbox does not discharge
+them. RESOLVED requires a concrete explanation and independently checked current source excerpts;
+check the exact obstacle source. When a comparison or conflicting status is involved, link the
+obstacle ID to an explicit checked prior-result comparison. If resolving a historical unresolved
+string, include that exact string in resolves_legacy_gaps. Old gaps otherwise continue blocking
+supported novelty/open-status assessments; a novelty-only gap does not determine proof validity.
+
+Compare close prior theorems in literature_search.comparisons:
+[{id, source_url, locator, prior_assumptions, candidate_assumptions, prior_conclusion,
+candidate_conclusion, relation: UNKNOWN/EQUIVALENT/SPECIAL_CASE/DIFFERENT, reasoning, obstacle_ids: []}].
+Match source_url, locator and relation to a PRIOR_RESULT or SOLUTION citation with a literal excerpt.
+Explain restrictions and implications explicitly, not just title similarity. POTENTIALLY_NEW requires
+checked structured comparisons to the closest cited results and remains a bounded model assessment.
+These are final evidence milestones only; choose searches, tools and intermediate work freely.
+"""
+GUIDANCE[Phase.FIND] += LITERATURE_TASKS
+GUIDANCE[Phase.VERIFY] += LITERATURE_TASKS

@@ -75,11 +75,22 @@ def build_prompt(run: Run, config: Config) -> str:
         context["candidate"]["references"] = [
             r.model_dump(mode="json") for r in candidate.references
         ]
+        context["inherited_literature_questions"] = [
+            item.model_dump(include={"obstacles", "unresolved", "comparisons"})
+            for item in run.review_literature
+        ]
         context["observations"] = [
             o
             for o in run.observations[-12:]
             if o.get("phase") == "VERIFY" and o.get("iteration", 0) > candidate.source_iteration
         ]
+        if candidate.reviews:
+            last_review = candidate.reviews[-1]
+            context["controller_feedback"] = {
+                "proof_coverage": last_review.proof_coverage.model_dump(mode="json"),
+                "evidence_assessment": last_review.evidence_assessment.model_dump(mode="json"),
+                "validation_notes": last_review.validation_notes,
+            }
     else:
         selected = []
         size = 0

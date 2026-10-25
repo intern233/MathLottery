@@ -28,7 +28,10 @@ def _document_summary(store, run, language, document):
                              and info.st_nlink == 1 and 0 < info.st_size <= MAX_PDF_BYTES)
         except OSError:
             pass
+    from mathlottery.expert_brief import metadata as brief_metadata
+
     return {
+        "expert_brief_available": bool(document and brief_metadata(run, document, language)),
         "markdown_available": bool(document),
         "pdf_available": pdf_available,
         "pdf_status": document.pdf_status if document else "pending",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import tempfile
@@ -12,6 +13,7 @@ from mathlottery.artifact_io import read_confined, write_confined
 from mathlottery.candidates import CandidateStore
 from mathlottery.discovery import problem_fingerprint
 from mathlottery.models import (
+    Candidate,
     CandidateInput,
     DiscoveryFile,
     OrganizationContext,
@@ -134,6 +136,12 @@ def capture(store, source, config, language="zh", instructions=None):
         dossier["candidates"] = [c.model_dump(mode="json") for c in run.candidates]
         dossier["visible_research_notes"] = [m.model_dump(mode="json") for m in run.memory]
         add(f"{run.id}/dossier.json", json_text(dossier).encode(), required=required)
+        for candidate in run.candidates:
+            for review in candidate.reviews:
+                receipt = review.formal_receipt or {}
+                relative = receipt.get("artifact", "")
+                if isinstance(relative, str) and relative.startswith("verification/formal/") and relative.endswith(".json"):
+                    copy(run, relative)
         for entry in run.native.history:
             relative = entry.get("answer", "")
             if re.fullmatch(r"tasks/task-[a-f0-9]{12}/(?:attempt|manual)-[a-f0-9]{12}/answer\.md", relative):
@@ -261,13 +269,36 @@ def _read_files(store, run):
         raise ValueError("The organized problem no longer matches its source snapshot")
     hashes = [{"id": c.id, "sha256": c.sha256, "snapshot_sha256": digest(json_text(c))}
               for c in run.candidates]
-    if hashes != context.candidate_hashes:
+    if hashes != context.candidate_hashes and not _historical_candidates_match(store, run):
         raise ValueError("The organized candidate/review snapshot was modified")
     for item in context.files:
         data = read_confined(store.run_dir(run.id), "organization-context/" + item.path, item.size)
         if len(data) != item.size or hashlib.sha256(data).hexdigest() != item.sha256:
             raise ValueError("Organization source snapshot was modified")
         yield item, data
+
+
+def _historical_candidates_match(store, run):
+    """Added empty model fields may change serialization, never historical evidence.
+
+    Trust the original hash-bound JSON, then validate it with current defaults.
+    A changed/new nondefault field fails equality; no field is blindly ignored.
+    """
+    context = run.organization_context
+    item = next((f for f in context.files if f.path == f"{context.source_run_id}/dossier.json"), None)
+    if item is None:
+        return False
+    try:
+        data = read_confined(store.run_dir(run.id), "organization-context/" + item.path, item.size)
+        if len(data) != item.size or hashlib.sha256(data).hexdigest() != item.sha256:
+            return False
+        originals = json.loads(data)["candidates"]
+        hashes = [{"id": c["id"], "sha256": c["sha256"], "snapshot_sha256": digest(json_text(c))}
+                  for c in originals]
+        return (hashes == context.candidate_hashes
+                and [Candidate.model_validate(c) for c in originals] == run.candidates)
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
 
 
 def project(store, run, workspace):
@@ -295,39 +326,20 @@ def project(store, run, workspace):
 
 
 def build_document(run, markdown, language):
-    """Prefix either language with the same authoritative outcomes and limitations."""
+    """Add an evidence-bound bilingual reading guide without changing the source."""
+    from mathlottery.expert_brief import matched_prefix, render
+
     context = run.organization_context
     if context is None or language not in {"zh", "en"}:
         raise ValueError("A report requires an organization context and supported language")
     if not isinstance(markdown, str) or not markdown.strip() or len(markdown) > 400000:
         raise ValueError("An organized report must contain 1–400000 nonblank characters")
-    if language == "zh":
-        header = ("# MathLottery 专家阅读报告\n\n> 本文是对已有研究材料的整理，未经新增独立验证。"
-                  "排版和说明不提升证明等级，也不认证问题的开放状态或新颖性。\n\n"
-                  f"来源任务：`{context.source_run_id}`；冻结版本：{context.source_revision}；"
-                  f"冻结时间：{context.captured_at}。\n\n## 原始验证记录\n\n")
-    else:
-        header = ("# MathLottery expert reading report\n\n> This is an editorial reconstruction of saved "
-                  "research, not a new independent verification. Formatting does not upgrade proof status "
-                  "or certify open status or novelty.\n\n"
-                  f"Source task: `{context.source_run_id}`; frozen revision: {context.source_revision}; "
-                  f"captured: {context.captured_at}.\n\n## Recorded verification outcomes\n\n")
-    for candidate in run.candidates:
-        header += f"- `{candidate.id}` · `{candidate.level}` · scope `{candidate.scope}`"
-        if not candidate.reviews:
-            header += "; 尚无验证记录" if language == "zh" else "; no recorded review"
-        for review in candidate.reviews:
-            header += (f"; verdict `{review.verdict}`, coverage `{review.original_problem_coverage}`, "
-                       f"novelty `{review.novelty}`")
-        header += "\n"
-    header += "\n[Evidence manifest](manifest.json)\n\n"
-    header += "### 材料范围与限制\n\n" if language == "zh" else "### Evidence scope and limitations\n\n"
-    header += "\n".join("- " + item for item in context.limitations) + "\n"
-    if context.omitted:
-        header += (f"\n未纳入的材料：{len(context.omitted)} 项，详见清单的 omitted 字段。\n"
-                   if language == "zh" else
-                   f"\nOmitted material: {len(context.omitted)} entries; see omitted in the manifest.\n")
-    header += "\n---\n\n"
+    header = render(run, language)
+    # Explicit acceptance can refresh a verified old guide, but never strips
+    # arbitrary source text merely because it contains a marker.
+    matched = matched_prefix(run, markdown, language)
+    if matched is not None:
+        markdown = markdown[len(matched[1]):]
     content = header + markdown.strip() + "\n"
     return OrganizationDocument(markdown=content, markdown_sha256=digest(content), created_at=now())
 
@@ -378,16 +390,19 @@ def export_manifest(run):
     """Authoritative portable export metadata shared by directory and ZIP projections."""
     documents = report_documents(run)
     document = run.organization_report
-    def metadata(document, markdown, pdf):
+    from mathlottery.expert_brief import metadata as brief_metadata
+
+    def metadata(document, markdown, pdf, language):
         return {"markdown": markdown, "sha256": document.markdown_sha256,
+                "expert_brief": brief_metadata(run, document, language),
                 "pdf": pdf if document.pdf_status == "ready" else None,
                 "pdf_status": document.pdf_status, "pdf_error": document.pdf_error,
                 "pdf_details": document.pdf_details}
 
     manifest = run.organization_context.model_dump(mode="json")
-    manifest.update(report=metadata(document, "report.md", "report.pdf"),
+    manifest.update(report=metadata(document, "report.md", "report.pdf", run.organization_context.language),
                     reports={language: metadata(item, report_filename(run, language, "md"),
-                                                report_filename(run, language, "pdf"))
+                                                report_filename(run, language, "pdf"), language)
                              for language, item in documents.items()},
                     materials_prefix="materials/", limitations=run.organization_context.limitations)
     return manifest

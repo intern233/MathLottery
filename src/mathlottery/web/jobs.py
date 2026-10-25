@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fcntl
+import json
 import subprocess
 import sys
 import threading
@@ -37,6 +38,16 @@ class Jobs:
                 finally:
                     fcntl.flock(handle, fcntl.LOCK_UN)
         return False
+
+    def status(self, run_id):
+        try:
+            value = json.loads((self.directory(run_id) / "status.json").read_text())
+        except (OSError, ValueError):
+            return None
+        if value.get("state") in {"queued", "running"} and not self.running(run_id, include_run_lock=False):
+            return {"state": "interrupted", "time": value.get("time"),
+                    "error": "Worker exited; resume the preserved checkpoint"}
+        return value
 
     def launch(self, run_id: str, action: str, **options):
         directory = self.directory(run_id)

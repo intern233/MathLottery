@@ -100,6 +100,16 @@ class DiscoveryConfig(Model):
     chat_context_max_bytes: int = Field(default=256_000, ge=1000, le=4_000_000)
 
 
+class ResourceConfig(Model):
+    # Admission is shared by CLI and browser jobs within a workspace.
+    max_concurrent_runs: int = Field(default=1, ge=1, le=32)
+    max_concurrent_formal: int = Field(default=1, ge=1, le=16)
+    # Cooperative protection based on sampled resident memory, not a hard OS quota.
+    memory_soft_limit_mb: int | None = Field(default=None, ge=256)
+    min_available_memory_mb: int = Field(default=256, ge=0)
+    sample_interval_seconds: float = Field(default=2, ge=0.1, le=30)
+
+
 class ModelChoice(Model):
     id: str = Field(min_length=1, max_length=200)
     label: str | None = Field(default=None, min_length=1, max_length=200)
@@ -168,6 +178,7 @@ class Config(Model):
     tools: ToolConfig = Field(default_factory=ToolConfig)
     verification: VerificationConfig = Field(default_factory=VerificationConfig)
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
+    resources: ResourceConfig = Field(default_factory=ResourceConfig)
     memory_context_chars: int = Field(default=16000, ge=1000, le=100000)
 
     @field_validator("model_providers")

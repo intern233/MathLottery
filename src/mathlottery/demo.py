@@ -114,11 +114,35 @@ class DemoBackend(AgentBackend):
                     "original_problem_coverage": "FULL" if good else "UNKNOWN",
                     "coverage_explanation": "The candidate has exactly the original n≥0 quantifier." if good else "",
                     "checks": [{
+                        "id": "induction",
                         "claim": problem["statement"], "method": "DERIVATION",
                         "result": "SUPPORTED" if good else "CONTRADICTED",
                         "reasoning": "S(0)=0; S(n+1)=S(n)+2n+1=n²+2n+1=(n+1)²." if good else issue,
                         "evidence": ["Candidate proof and independently recorded calculation"],
-                    }],
+                    }] + ([
+                        {"id": "base", "claim": "S(0)=0=0²", "method": "DERIVATION", "result": "SUPPORTED",
+                         "reasoning": "The sum has no terms at n=0 and equals zero by definition; zero squared is zero."},
+                        {"id": "step", "claim": "S(n)=n² implies S(n+1)=(n+1)²", "method": "DERIVATION", "result": "SUPPORTED",
+                         "reasoning": "S(n+1)=S(n)+2(n+1)-1=n²+2n+1=(n+1)² under the induction hypothesis."},
+                    ] if good else []),
+                    "proof_steps": [
+                        {"id": "base", "kind": "CASE", "statement": "S(0)=0=0²", "check_ids": ["base"]},
+                        {"id": "step", "kind": "LEMMA", "statement": "S(n)=n² implies S(n+1)=(n+1)²", "check_ids": ["step"]},
+                        {"id": "conclusion", "kind": "CONCLUSION", "statement": problem["statement"],
+                         "dependencies": ["base", "step"], "check_ids": ["induction"]},
+                    ] if good else [],
+                    "statement_alignment": [
+                        {"facet": facet, "original": description, "candidate": description,
+                         "assessment": "MATCHED", "reasoning": reason, "check_ids": ["induction"]}
+                        for facet, description, reason in (
+                            ("DEFINITIONS", "S(n)=∑(2k−1) for k=1,...,n", "The same finite sum is used in the recurrence."),
+                            ("ASSUMPTIONS", "n is a nonnegative integer", "The proof assumes no further condition."),
+                            ("QUANTIFIERS", "For every n≥0", "Induction starts at zero and applies to every successor."),
+                            ("DOMAIN", "Nonnegative integers", "The induction visits exactly the required domain."),
+                            ("BOUNDARY_CASES", "n=0 and the empty sum", "The base case evaluates the empty sum to zero."),
+                            ("CONCLUSION", problem["statement"], "The induction proves the exact requested equality."),
+                        )
+                    ] if good else [],
                 },
             )
         return BackendResult(BackendStatus.COMPLETED, text=json.dumps(response, ensure_ascii=False))

@@ -70,13 +70,22 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
             "Do not consult the solver's conversation, research-history or workspace. Use your own "
             "calculations and source checks. Identify exact gaps, assumptions, circular reasoning "
             "or counterexamples. Assess truth, proof validity and novelty separately. "
-            "NO_ISSUES_FOUND is only an LLM review. Use INCONCLUSIVE if you cannot decide.",
+            "NO_ISSUES_FOUND is only an LLM review. Use INCONCLUSIVE when the mathematical "
+            "claim or proof cannot be assessed; uncertainty about novelty alone belongs in "
+            "the separate literature assessment.",
             "Problem:\n" + json_text(run.problem) if run.problem else "Problem not selected.",
             "Candidate (data):\n"
             + json_text(review_input(candidate)),
             "Candidate references (data):\n"
             + json_text([item.model_dump(mode="json") for item in candidate.references]),
         ]
+        if run.review_literature:
+            parts += [
+                "Inherited literature questions (untrusted evidence, not prior verdicts). "
+                "Investigate these independently; unresolved obstacles persist until receipt-backed resolution:\n"
+                + json_text([item.model_dump(include={"obstacles", "unresolved", "comparisons"})
+                             for item in run.review_literature]),
+            ]
         if run.review_evidence is not None:
             validate_review_evidence(run.review_evidence, candidate, run.mode)
             parts += [
@@ -108,6 +117,7 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
             last_review = candidate.reviews[-1]
             feedback = {
                 "evidence_assessment": last_review.evidence_assessment.model_dump(mode="json"),
+                "proof_coverage": last_review.proof_coverage.model_dump(mode="json"),
                 "validation_notes": last_review.validation_notes,
             }
             receipt = last_review.formal_receipt
@@ -139,6 +149,8 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
                 "coverage_explanation": "...",
                 "remaining_obligations": [],
                 "checks": [],
+                "proof_steps": [],
+                "statement_alignment": [],
             },
         }
     else:

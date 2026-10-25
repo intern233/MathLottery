@@ -204,6 +204,18 @@ def _render_html(markdown: str, title: str) -> tuple[str, list[str], int]:
         "link_open": link_open, "link_close": link_close,
     })
     tokens = parser.parse(markdown, context)
+    # Portable heading anchors make the reading guide usable in the PDF too.
+    # IDs are derived from text, never accepted as raw HTML attributes.
+    heading_ids: set[str] = set()
+    for index, token in enumerate(tokens[:-1]):
+        if token.type != "heading_open":
+            continue
+        slug = re.sub(r"[^\w -]", "", tokens[index + 1].content.lower()).replace(" ", "-")[:160] or "section"
+        anchor, suffix = slug, 1
+        while anchor in heading_ids:
+            anchor, suffix = f"{slug}-{suffix}", suffix + 1
+        heading_ids.add(anchor)
+        token.attrSet("id", anchor)
     for token in tokens:
         for child in token.children or []:
             if child.type == "text" and re.search(

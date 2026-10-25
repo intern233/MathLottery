@@ -88,6 +88,11 @@ env LEAN_NUM_THREADS=1 lake env lean -j 1 -M 2048 Proof.lean
 
 | 配置或控制方式 | 生效范围与限制 |
 | --- | --- |
+| `resources.max_concurrent_runs: 1` | 当前工作区内，浏览器和 CLI 研究任务共用先进先出队列。其他工作区、IDE 会话和手动运行的命令不在队列内。排队不消耗研究时间预算。 |
+| `resources.max_concurrent_formal: 1` | 独立附件源码检查器的工作区并发上限，不拦截原生 agent 在任务内部自行运行的 Lean/Lake 命令。 |
+| `resources.min_available_memory_mb: 256` | Linux 的 `MemAvailable` 低于此值时暂缓启动。设为 `0` 可关闭；无法获取测量值时不阻止启动。 |
+| `resources.memory_soft_limit_mb: null` | 可选软上限，采样到本地执行进程及其后代的 RSS 超标时请求停止。默认关闭，不是操作系统硬配额、严格峰值限制或远程工具内存测量。 |
+| `resources.sample_interval_seconds: 2` | 本地进程树当前/峰值 RSS 的采样间隔。共享页面可能重复计入，采样间隔内的峰值可能遗漏。 |
 | `tools.memory_mb: 512` | 旧版 structured Python 工作进程的地址空间限制。**不限制**原生 Codex 命令、Lean/Lake、Web 服务或 WSL；旧版 Lean 检查器也没有使用此内存设置。 |
 | `tools.timeout_seconds: 15` | 旧版本地工具的超时，包括旧版 Lean 检查器；不会给原生 shell 命令统一加上 15 秒上限。 |
 | `verification.formal_memory_mb: 2048` | 独立附件检查器的 Lean `-M` 阈值；另有 `formal_address_space_mb: 8192` 限制每进程虚拟地址空间（`RLIMIT_AS`，包括预留栈和映射库，不是实测 RAM）。一个 Lean 工作线程、64 MiB 线程栈，总检查默认限时 120 秒；不是整个进程树或 WSL 的 RSS 限制。 |
@@ -98,7 +103,11 @@ env LEAN_NUM_THREADS=1 lake env lean -j 1 -M 2048 Proof.lean
 | `backend.native_max_log_bytes` | 对单次原生 Codex 调用的事件/stdout 与 stderr 日志检查大小；不限制下载、产物、全部运行记录或 Chat 响应的总大小。 |
 | Lean `-M`、`-j` 与 `LEAN_NUM_THREADS` | 对所调用 Lean 运行时的控制，不是所有任务合计的硬上限。 |
 
-MathLottery 会阻止两个工作进程同时执行**同一条 run**，但目前没有跨不同任务的全局资源调度器，也没有按可用内存排队的机制。在测得足够余量前，一次只运行一个本地计算较重的任务。关闭浏览器或 Web 服务不会停止后台研究，需要使用「停止任务」或 `mathlottery stop <run-id>`。
+MathLottery 会阻止两个工作进程同时执行**同一条 run**，不同任务也会按照上述工作区上限排队。每个任务在创建时保存资源设置；并存请求的并发设置不同时，共用队列采用较严格的上限。新请求带来的更低上限不会强行终止已经运行的任务。在测得足够余量前，一次只运行一个本地计算较重的任务。关闭浏览器或 Web 服务不会停止后台研究，需要使用「停止任务」或 `mathlottery stop <run-id>`。停止排队中的任务会取消入队等待，不调用模型。
+
+任务页面显示排队位置、传输层实际观察到的近期活动和最后活动时间，以及采样的当前/峰值内存。活动摘要只保留类别与状态，不保存 shell 命令、工具参数、网址或服务商凭据。没有新事件只代表尚未观察到新事件，不能据此判断模型卡死。原始研究产物仍留在本地。队列锁与状态保存在已忽略的 `.mathlottery/resources/` 和 `runs/` 下，重启前端服务不会丢失所有权或重复调用。执行进程崩溃后显示中断，需要明确续接。回收名额前会停止经过进程身份核对的本地 Codex 孤儿进程；Chat 远程后台响应可能继续运行，需续接或停止时取回/取消已保存的响应，不会重新提交同一调用。
+
+RSS 软上限通过已有的保存进度机制请求停止。采样与取消均异步进行，两次采样之间或工具退出期间内存仍可能增长。原生 agent 的 shell 命令计入整个任务的测量，但工具内部并行仍由 agent 选择。应用手动兼容模式回复时也会获取任务名额；只重试本地 PDF 导出不进入研究队列。严格隔离需要操作系统或容器配额。
 
 如果需要对整组进程施加硬上限，应使用覆盖其子进程的操作系统或容器资源限制。MathLottery 不会自动配置这些限制，Codex 的工作区沙箱也不是内存配额。同样，时间/token 预算不等于预留了服务商额度；凭据、订阅/API 额度、网络与本机硬件是不同的运行条件，见[接入配置与预算](configuration.cn.md)。
 

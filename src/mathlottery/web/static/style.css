@@ -355,3 +355,16 @@ footer > span:first-child { font-weight: 650; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+/* Evidence stays compact until a reviewer opens a specific step or obstacle. */
+.proof-map, .novelty-obstacles { margin: 20px 0; }
+.evidence-headline { font-weight: 600; }
+.evidence-block, .obstacle-card { margin: 10px 0; padding: 12px 16px; border: 1px solid var(--border, #dfe7e1); border-radius: 8px; min-width: 0; }
+.evidence-block summary, .obstacle-card summary { overflow-wrap: anywhere; }
+.evidence-block p, .obstacle-card p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.alignment-row { border-top: 1px solid var(--border, #dfe7e1); padding: 12px 0; }
+.runtime-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 18px 0; }
+.runtime-metrics dt { font-size: 12px; color: var(--muted, #6b7b73); }
+.runtime-metrics dd { margin: 4px 0 0; font-size: 22px; font-variant-numeric: tabular-nums; }
+.activity-events { padding-left: 20px; font-size: 13px; line-height: 1.9; }
+.runtime-summary { margin-bottom: 16px; }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 from bs4 import BeautifulSoup
@@ -72,6 +73,24 @@ def test_math_assets_are_packaged_offline_and_have_a_license():
     assert urls and all(url.startswith("data:font/woff2;base64,") for url in urls)
     assets = report_pdf.files("mathlottery").joinpath("report_assets", "katex")
     assert "Permission is hereby granted" in assets.joinpath("LICENSE").read_text()
+
+
+def test_reading_guide_links_have_unique_safe_heading_targets():
+    source = '''[Read the proof](#full-editorial-report) [完整推导](#完整整理报告)
+
+## Full editorial report
+## Full editorial report
+## Full editorial report-1
+## 完整整理报告
+## <img src=x onerror=alert(1)>
+'''
+    document, _, _ = report_pdf._render_html(source, "Guide")
+    soup = BeautifulSoup(document, "html.parser")
+    ids = [heading["id"] for heading in soup.select("h2")]
+    assert len(ids) == len(set(ids))
+    for link in soup.select("a"):
+        assert soup.find(id=unquote(link["href"][1:])) is not None
+    assert soup.select("img,script,[onerror]") == []
 
 
 def test_unclosed_formula_is_reported():
@@ -166,6 +185,21 @@ example (n : Nat) : n + 0 = n := by omega
     assert r"\sum" not in text  # Equations were typeset, not printed as raw TeX.
     assert len(result["sha256"]) == 64
     assert result["filename"] == target.name
+
+
+def test_pdf_reading_guide_navigation_is_an_internal_destination(tmp_path, browser_ready):
+    from pypdf import PdfReader
+
+    target = tmp_path / "navigation.pdf"
+    source = "[Skip to the proof](#full-editorial-report)\n\n"
+    source += "\n\n".join(["Evidence index with unchanged frozen source references. " * 9] * 12)
+    source += "\n\n## Full editorial report\n\nThe complete proof starts here.\n"
+    report_pdf.render_pdf(source, target)
+    reader = PdfReader(target)
+    assert len(reader.pages) >= 2
+    links = [item.get_object() for item in reader.pages[0].get("/Annots", [])]
+    assert any("/Dest" in link or link.get("/A", {}).get("/S") == "/GoTo" for link in links)
+    assert not any(link.get("/A", {}).get("/S") == "/URI" for link in links)
 
 
 def test_bad_tex_and_external_resources_are_visible_pdf_warnings(tmp_path, browser_ready):

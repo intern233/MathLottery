@@ -9,6 +9,7 @@ import time
 
 import httpx
 
+from mathlottery.activity import ActivityReporter
 from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import BackendConfig
 from mathlottery.search_trace import queries_from_call
@@ -160,6 +161,8 @@ class ChatBackend:
 
     def _poll(self, client, response, directory, deadline, cancelled, on_session):
         identifier = self._response_id(response)
+        activity = ActivityReporter(directory)
+        activity.response(response)
         while response.get("status") in {"queued", "in_progress"}:
             if cancelled() or time.monotonic() >= deadline:
                 # Cancellation is also needed server-side; closing HTTP alone does not stop work.
@@ -167,6 +170,7 @@ class ChatBackend:
                     client, "POST", f"responses/{identifier}/cancel", time.monotonic() + 5
                 )
                 self._save(directory, response)
+                activity.response(response)
                 if response.get("status") in {"queued", "in_progress"}:
                     return BackendResult(
                         BackendStatus.INTERRUPTED,
@@ -186,6 +190,7 @@ class ChatBackend:
                     "Responses API returned a different response; refusing to mix context"
                 )
             self._save(directory, response)
+            activity.response(response)
         return self._result(response, directory, on_session)
 
     def invoke_native(

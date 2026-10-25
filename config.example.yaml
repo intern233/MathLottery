@@ -40,6 +40,16 @@ discovery:
   context_max_total_bytes: 32000000
   # Hosted Chat cannot read local files; send text inline once, with explicit omissions.
   chat_context_max_bytes: 256000
+resources:
+  # Shared by CLI and browser research jobs in this workspace, including after server restart.
+  max_concurrent_runs: 1
+  # Independent attached-source checks only; native agent-launched Lean stays inside its run.
+  max_concurrent_formal: 1
+  # Sampled local process-tree RSS: cooperative stop, NOT a hard memory quota.
+  memory_soft_limit_mb: null
+  # Wait before starting when Linux MemAvailable is below this threshold; 0 disables the gate.
+  min_available_memory_mb: 256
+  sample_interval_seconds: 2
 budget:
   max_wall_time_minutes: 180
   max_iterations: 50

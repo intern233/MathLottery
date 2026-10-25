@@ -142,6 +142,8 @@ A selection milestone contains the recommended Problem and an ordered shortlist.
 
 ## Review
 
+`proof_coverage.py` validates the declared dependency graph, named checks and original-statement alignment; `literature_obstacles.py` preserves specific questions across attempts and checks receipt-backed resolutions and theorem comparisons. `CandidateStore.review` supplies the exact original statement and inherited literature tasks. Fresh reviews receive these tasks without prior verdicts. Selection carries earlier literature barriers for matching registered problems, including a problem temporarily removed from a shortlist. These are structural/evidence checks, not semantic proof certification.
+
 Every candidate gets a fresh reviewer context and a separate writable workspace. Only the problem, candidate content and references enter the initial review prompt; solver history and prior reviews are excluded. Codex reviewer memories are disabled. Instructions prohibit reading solver files, but workspace-write is not a complete read boundary.
 
 Independent verify tasks end after any verdict, including INCONCLUSIVE. The pipeline instead returns unsuccessful reviews to the original researcher. A passing partial result also continues unless designated as the final deliverable. Independent solve saves candidates without launching review.
@@ -152,6 +154,8 @@ Candidate scope and remaining obligations are immutable too. `auditor.py` gates 
 
 ## Expert report organization
 
+`expert_brief.py` produces a deterministic bilingual report prefix from the hash-checked frozen dossier: exact problem and claim, declared proof map, alignment, historical failed checks, formal receipt scope, novelty barriers and prioritized expert questions. Material links resolve within the captured bundle. The manifest binds the prefix hash and its source; exports preserve old report text rather than retroactively inserting new content.
+
 Organize is a standalone native workflow with a fresh session and `organization-workspace/`. Codex memories are disabled for this session. It accepts any recorded review verdict, including unresolved or negative findings, and preserves the original problem, candidate versions, reviews and verification levels. Selecting a source only prepares the form; creating the task is an explicit model invocation using its own configuration snapshot and budget.
 
 `organization.py` captures an idle source under its ownership lock, records its revision and hash, and freezes the exact problem/candidate/review dossier plus supported visible answers, notes, proof sources and literature receipts. An earlier Solve run is included only through persisted review provenance or attachment provenance with a matching candidate; historical records without this link are not matched by title. Full Find workspaces, binary dependencies and caches are not copied. The manifest records limitations and omitted files.
@@ -161,6 +165,8 @@ The snapshot allows up to 150 files, 1,000,000 bytes per ordinary file and 16,00
 Both language versions use the same frozen source and retain the same mathematical scope and evidence limitations. The harness prefixes each exposition with the recorded verdicts, coverage and novelty assessments. Saved outputs are `organized/report.zh.md`, `organized/report.en.md`, matching `.pdf` files when available, `organized/manifest.json` and `organized/materials/`. `report.md` and `report.pdf` remain compatibility aliases for the preferred language. The browser can download both versions and their shared materials as one ZIP that preserves relative links. ZIP contents are limited to 84,000,000 uncompressed bytes, including both language versions, preferred-language compatibility copies and the bounded material snapshot. SQLite retains each version’s text, hash and PDF status. Legacy single-language checkpoints remain readable without fabricating the missing version. PDF rendering is a local projection with bundled mathematics assets and no remote resource loading; missing dependencies or export errors preserve the Markdown reports and record failure per language. `export --format pdf` and the browser retry rebuild the saved report without a model call. Layout, fluent explanation and PDF success do not establish proof correctness, formal equivalence or novelty.
 
 ## Persistence and recovery
+
+`resources.py` uses OS-held leases and a persistent FIFO queue to coordinate CLI and browser executors in one workspace. Admission precedes active research accounting. Independent formal checks use their own gate within the active budget. Dead local workers are reconciled without restarting model calls; identified orphan Codex children use the existing identity checks before termination. Memory sampling covers the local process tree and may request a cooperative stop. `activity.py` projects bounded tool categories and statuses from native events, excluding tool arguments and raw command/output text. The browser exposes these projections separately from checkpoint history. See [resource scope and limits](resources.md).
 
 SQLite is authoritative. Runs snapshot their workflow, backend, strategy, settings, problems, candidates and separate Codex session / Chat response identifiers. Reports and other artifacts are projections.
 

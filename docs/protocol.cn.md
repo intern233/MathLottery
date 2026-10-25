@@ -59,4 +59,6 @@
 
 审查分别记录证明正确性、`original_problem_coverage`、剩余证明义务与新颖性。新的肯定审查需要具体 `checks`；空泛通过、只有有限实验或关键步骤仍未解决时，结论改为 `INCONCLUSIVE`。`NO_ISSUES_FOUND` 始终是 LLM 判断；拒绝需要具体矛盾检查或带证据的问题。新颖性与开放状态需要独立核对的 `citations` 和 `literature_search` 覆盖，不再仅凭网址列表。详见同样适用于原生阶段成果的[证据规则](evidence.cn.md)。旧记录继续可读，缺失字段默认为未评估。
 
+新版审查还提交 `proof_steps`（编号、依赖和检查编号）及六类 `statement_alignment`。`proof_coverage` 由控制器重算，不采信模型填写的评估结果。文献 `obstacles` 有固定编号，需要证据才能消除；`comparisons` 明确已有定理与候选的假设及结论。继承的 `review_literature` 将待核查事项带入新 Verify，不包含旧结论。缺失字段保证旧记录可读，但不能支持新提交的肯定审查。详见[逐项覆盖与文献障碍](evidence.cn.md#逐项覆盖与可跟进的文献障碍)。
+
 `examples/chat_response.template.json` 是可编辑的 SOLVE 阶段示例。完整 Schema 及全部嵌套字段应以任务生成的文件为准，无需手工重写协议。

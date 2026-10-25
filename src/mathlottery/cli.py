@@ -16,10 +16,12 @@ from mathlottery.chat_backend import ChatBackend
 from mathlottery.config import ChatConfig, Config, duration_minutes, load_config
 from mathlottery.demo import DemoBackend, demo_problem
 from mathlottery.execution import python_exec
+from mathlottery.literature_obstacles import carry_literature
 from mathlottery.local_network import apply_network_environment
 from mathlottery.models import (
     Candidate,
     CandidateInput,
+    LiteratureSearch,
     Problem,
     Reference,
     ReviewProvenance,
@@ -562,6 +564,7 @@ def verify(
         raise ValueError("Supply exactly one of --proof, --candidate or --from-run")
     problem_object = store.load_problem(problem) if problem else None
     content, provenance = None, None
+    prior_literature = []
     if proof:
         if not problem_object:
             raise ValueError("--proof requires --problem")
@@ -581,6 +584,8 @@ def verify(
             parsed.claim + "\n" + parsed.proof
         ):
             raise ValueError("Candidate checksum does not match its claim and proof")
+        if isinstance(parsed, Candidate):
+            prior_literature = [review.literature_search for review in parsed.reviews]
         content = CandidateInput(
             **{key: getattr(parsed, key) for key in CandidateInput.model_fields}
         )
@@ -591,6 +596,7 @@ def verify(
                 raise ValueError("The source run has no candidate to verify")
             Orchestrator(store)._check_candidate_file(original)
             checked = original.candidates[-1]
+            prior_literature = original.review_literature + [review.literature_search for review in checked.reviews]
             content = CandidateInput(
                 **{key: getattr(checked, key) for key in CandidateInput.model_fields}
             )
@@ -602,7 +608,9 @@ def verify(
             id=uid("claim"), title=content.claim[:100], statement=content.claim
         )
     start_task(store, config, workflow=Workflow.VERIFY, problem=problem_object, candidate=content,
-               review_source=provenance)
+               review_source=provenance, review_literature=[LiteratureSearch.model_validate(
+                   carry_literature(LiteratureSearch(), prior_literature).model_dump()
+               )] if prior_literature else [])
 
 
 @app.command()

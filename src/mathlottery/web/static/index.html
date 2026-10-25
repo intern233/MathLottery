@@ -7,6 +7,7 @@
   <title>MathLottery · Research workspace</title>
   <link rel="icon" href="/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
+  <script src="/research-details.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -141,11 +142,12 @@
       <div class="section-heading"><div><p id="detail-id" class="eyebrow"></p><h2 id="detail-title"></h2></div><span id="detail-state" class="badge"></span></div>
       <div id="run-facts" class="run-facts"></div>
       <div id="run-message" class="notice" hidden></div>
+      <div id="runtime-summary" class="notice runtime-summary" role="status" hidden></div>
       <div class="run-actions"><button id="stop" class="secondary danger" type="button" data-i18n="stop">Stop task</button><button id="show-resume" class="secondary" type="button" data-i18n="resume">Resume / add direction</button><button id="verify-latest" class="secondary" type="button" data-i18n="verifyLatest">Verify latest candidate</button><button id="organize-reviewed" class="secondary" type="button" data-i18n="organizeReviewed" hidden>Organize for expert review</button><a id="download" class="text-button" data-i18n="download">Download report ↓</a></div>
       <form id="resume-form" class="resume-form" hidden><label for="direction" data-i18n="direction">Additional direction · optional</label><textarea id="direction" rows="3" maxlength="30000" data-placeholder="directionPlaceholder"></textarea><div class="fields-row"><div><label for="resume-budget" data-i18n="newTotalBudget">New total time budget · minutes</label><input id="resume-budget" type="number" min="0.01" step="any"></div><div><label for="resume-rounds" data-i18n="newTotalRounds">New total round limit</label><input id="resume-rounds" type="number" min="1"></div></div><p class="field-hint" data-i18n="resumeHint">These replace total limits, rather than adding time. The saved model settings are preserved.</p><details id="resume-lean-limits" class="settings"><summary data-i18n="leanLimits">Independent Lean check resources</summary><p class="field-hint" data-i18n="leanLimitsHint">Optional limits for this task's independent checker. Blank fields keep the saved limits. The Lean threshold is not measured RAM usage.</p><div class="fields-row"><div><label for="resume-lean-memory" data-i18n="leanMemory">Lean memory threshold · MB</label><input id="resume-lean-memory" type="number" min="256" max="32768" step="1"></div><div><label for="resume-lean-address" data-i18n="leanAddress">Virtual address-space limit · MB</label><input id="resume-lean-address" type="number" min="1024" max="32768" step="1"></div><div><label for="resume-lean-timeout" data-i18n="leanTimeout">Total formal check timeout · seconds</label><input id="resume-lean-timeout" type="number" min="1" max="1800" step="any"></div></div></details><p id="resume-readiness" class="notice" role="status" hidden></p><button id="resume-submit" class="primary small" type="submit" data-i18n="continue" aria-describedby="resume-readiness" disabled>Continue research</button></form>
       <div class="detail-tabs" role="tablist"><button class="selected" type="button" role="tab" aria-selected="true" data-tab="results" data-i18n="results">Results</button><button type="button" role="tab" aria-selected="false" data-tab="activity" data-i18n="activity">Activity</button><button type="button" role="tab" aria-selected="false" data-tab="report" data-i18n="report">Report</button></div>
       <div id="results" class="tab-content"></div>
-      <div id="activity" class="tab-content" hidden><h3 data-i18n="visibleProgress">Latest visible output</h3><p id="progress-note" class="field-hint"></p><pre id="progress"></pre><h3 data-i18n="events">Recent checkpoint events</h3><div id="event-list"></div></div>
+      <div id="activity" class="tab-content" hidden><div id="runtime-details"></div><h3 data-i18n="visibleProgress">Latest visible output</h3><p id="progress-note" class="field-hint"></p><pre id="progress"></pre><h3 data-i18n="events">Recent checkpoint events</h3><div id="event-list"></div></div>
       <div id="report" class="tab-content" hidden><p id="report-note" class="field-hint"></p><pre id="report-text"></pre></div>
     </section>
     <footer><span>MathLottery</span><span data-i18n="footer">Curiosity starts the run. Evidence decides the result.</span></footer>

@@ -246,7 +246,9 @@ def test_unknown_novelty_and_kernel_checks_do_not_prove_informal_claim(store, co
             }
         ],
     )
-    assert candidate.level == Level.PARTIALLY_VERIFIED
+    assert candidate.level == Level.CANDIDATE
+    assert candidate.reviews[0].verdict == "INCONCLUSIVE"
+    assert not candidate.reviews[0].proof_coverage.proof_complete
     assert candidate.level != Level.FORMALLY_VERIFIED
     assert candidate.reviews[0].novelty == "UNKNOWN"
 

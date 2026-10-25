@@ -13,6 +13,7 @@ from mathlottery.models import (
     CandidateInput,
     Citation,
     LiteratureSearch,
+    PriorResultComparison,
     Problem,
     ProofCheck,
     Review,
@@ -59,10 +60,25 @@ def review(**kwargs):
     return Review.model_validate({
         "verdict": "NO_ISSUES_FOUND", "truth_assessment": "The precise claim holds.",
         "proof_assessment": "Base case and induction step checked.",
-        "checks": [{"claim": "Induction covers n≥0", "method": "DERIVATION", "result": "SUPPORTED",
+        "checks": [{"id": "induction", "claim": "Claim", "method": "DERIVATION", "result": "SUPPORTED",
                     "reasoning": "At n=0 the sum is 0; S(n+1)=n²+2n+1=(n+1)²."}],
+        "proof_steps": [{"id": "conclusion", "statement": "Claim", "kind": "CONCLUSION", "check_ids": ["induction"]}],
+        "statement_alignment": [{"facet": facet, "original": "Claim" if facet == "CONCLUSION" else "The stated induction identity for n≥0.",
+                                 "candidate": "Claim" if facet == "CONCLUSION" else "The same induction identity for n≥0.", "assessment": "MATCHED",
+                                 "reasoning": "The induction includes 0 and every successor without extra hypotheses.",
+                                 "check_ids": ["induction"]}
+                                for facet in ("DEFINITIONS", "ASSUMPTIONS", "QUANTIFIERS", "DOMAIN", "BOUNDARY_CASES", "CONCLUSION")],
         **kwargs,
     })
+
+
+def comparison(citation):
+    return PriorResultComparison(
+        id="prior-even", source_url=citation.url, locator=citation.locator,
+        prior_assumptions="n is an even natural number", candidate_assumptions="n is any natural number",
+        prior_conclusion="P(n) holds for even n", candidate_conclusion="P(n) holds for every n",
+        relation="DIFFERENT", reasoning="The cited theorem says nothing about odd n; its domain is strictly narrower.",
+    )
 
 
 def test_one_checked_primary_source_can_support_a_limited_open_assessment():
@@ -246,7 +262,7 @@ def test_correct_partial_result_does_not_become_full_solution():
 def test_review_mathematical_obligation_prevents_full_coverage_of_complete_candidate():
     proposed = review(original_problem_coverage="FULL", coverage_explanation="All parameter ranges compared.",
                       remaining_obligations=["The endpoint x = 0 still needs a proof."])
-    accepted = audit(candidate(scope="COMPLETE"), proposed, []).reviews[-1]
+    accepted = audit(candidate(scope="COMPLETE"), proposed, [], original_statement="Claim").reviews[-1]
     assert accepted.original_problem_coverage == "PARTIAL"
     assert accepted.remaining_obligations == proposed.remaining_obligations
     assert "Full coverage conflicts" in accepted.validation_notes[-1]
@@ -267,7 +283,7 @@ def test_separate_formal_and_literature_limits_do_not_invent_missing_mathematica
         claim="Independent formal execution", method="FORMAL", result="UNRESOLVED",
         reasoning="The controller compilation receipt is pending.", blocking=formal_is_essential,
     ))
-    accepted = audit(candidate(scope="COMPLETE"), proposed, []).reviews[-1]
+    accepted = audit(candidate(scope="COMPLETE"), proposed, [], original_statement="Claim").reviews[-1]
     assert accepted.original_problem_coverage == expected_coverage
     assert accepted.remaining_obligations == []
     assert accepted.novelty == "UNKNOWN"
@@ -315,6 +331,7 @@ def test_matching_published_conjectures_are_not_classified_as_existing_proofs():
     cites = [*original, prior]
     proposed = review(novelty="POTENTIALLY_NEW", citations=cites,
                       literature_search=problem().literature_search)
+    proposed.literature_search.comparisons = [comparison(prior)]
     observed = [{"phase": "VERIFY", "result": r} for r in records(cites)]
     accepted = audit(candidate(), proposed, observed).reviews[-1]
     assert accepted.novelty == "POTENTIALLY_NEW"
@@ -327,6 +344,7 @@ def test_novelty_requires_comparisons_with_checked_prior_results_and_recent_sear
                      excerpt="Result for even n.", explanation="Candidate also covers odd n, beyond this result.",
                      relation="DIFFERENT")
     proposed = review(novelty="POTENTIALLY_NEW", citations=[prior], literature_search=problem().literature_search)
+    proposed.literature_search.comparisons = [comparison(prior)]
     observed = records([prior])
     accepted = audit(candidate(), proposed, [{"phase": "VERIFY", "result": r} for r in observed]).reviews[-1]
     assert accepted.novelty == "POTENTIALLY_NEW"

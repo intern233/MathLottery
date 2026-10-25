@@ -42,7 +42,7 @@ def test_continued_review_receives_controller_results_without_agent_opinions(sto
     assert "CONTROLLER_RESULT_SENTINEL" in prompt and status in prompt
     assert "evidence_assessment" in prompt
     if status == "ERROR":
-        assert "A blocking formal check has no independently successful execution receipt" in prompt
+        assert "A blocking formal check has no matching independently checked theorem declarations" in prompt
     assert "PRIOR_AGENT_" not in prompt
     assert "another compilation unless a new concern requires it" in prompt
 

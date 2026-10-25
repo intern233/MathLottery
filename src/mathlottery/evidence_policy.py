@@ -12,13 +12,14 @@ from urllib.parse import urldefrag
 from mathlottery.models import (
     Citation,
     EvidenceAssessment,
+    LiteratureObstacle,
     LiteratureSearch,
     OpenStatus,
     Problem,
     now,
 )
 
-POLICY_VERSION = "evidence-v2"
+POLICY_VERSION = "evidence-v3"
 
 
 def normalized(text: str) -> str:
@@ -82,8 +83,9 @@ def assess_sources(
         assessment.reasons.append("Literature search queries and a coverage explanation are missing")
     elif any(normalized(query) not in observed for query in search.queries):
         assessment.reasons.append("Some declared search queries have no recent observed search-tool receipt")
-    if search.unresolved:
-        assessment.reasons.extend(f"Unresolved literature gap: {gap}" for gap in search.unresolved)
+    from mathlottery.literature_obstacles import assess_obstacles
+
+    assess_obstacles(search, assessment)
     assessment.supported = not assessment.reasons
     return assessment
 
@@ -136,7 +138,7 @@ def assess_problem(problem: Problem, records: list[dict]) -> Problem:
     return problem
 
 
-def assess_novelty(reported: str, assessment: EvidenceAssessment) -> str:
+def assess_novelty(reported: str, assessment: EvidenceAssessment, search: LiteratureSearch | None = None) -> str:
     checked = [c for c in assessment.checked_citations if c["verified_excerpt"]]
     prior = [c for c in checked if c["role"] in {"PRIOR_RESULT", "SOLUTION"}]
     if any(c["relation"] == "EQUIVALENT" for c in prior):
@@ -146,6 +148,39 @@ def assess_novelty(reported: str, assessment: EvidenceAssessment) -> str:
     if reported == "POTENTIALLY_NEW":
         if not prior or any(c["relation"] != "DIFFERENT" for c in prior):
             assessment.reasons.append("Closest prior results lack checked claim-by-claim comparisons")
+        missing_comparisons = [citation for citation in prior if not any(
+            comparison["supported"] and comparison["source_url"] == citation["url"]
+            and comparison["locator"] == citation["locator"]
+            and comparison["relation"] == "DIFFERENT"
+            for comparison in assessment.comparisons
+        )]
+        if missing_comparisons:
+            assessment.reasons.append("Closest prior results need structured assumptions-and-conclusions comparisons")
+        for citation in missing_comparisons:
+            if any(comparison["source_url"] == citation["url"] and comparison["locator"] == citation["locator"]
+                   for comparison in assessment.comparisons):
+                continue  # Its existing comparison already projects an actionable obstacle.
+            from mathlottery.models import digest
+
+            obstacle_id = "comparison-" + digest(citation["url"] + "\n" + citation["locator"])[:12]
+            obstacle = {
+                "id": obstacle_id, "kind": "UNCLEAR_COMPARISON", "source_url": citation["url"],
+                "description": f"Structured comparison missing for {citation['locator']}",
+                "impact": "The closest prior theorem has not been compared with this candidate",
+                "next_action": "Compare the exact hypotheses, conclusions and implications in literature_search.comparisons, using this source URL and locator",
+                "status": "OPEN", "resolution": "", "evidence_urls": [], "resolves_legacy_gaps": [],
+                "resolution_supported": False, "resolution_reason": "A checked excerpt alone is not a structured comparison",
+            }
+            if not any(item["id"] == obstacle_id for item in assessment.obstacles):
+                assessment.obstacles.append(obstacle)
+            if obstacle_id not in assessment.unresolved_obstacle_ids:
+                assessment.unresolved_obstacle_ids.append(obstacle_id)
+            if search is not None and not any(item.id == obstacle_id for item in search.obstacles):
+                # This concrete, controller-discovered gap must survive a new
+                # Verify even if the next model output omits the old citation.
+                search.obstacles = [*search.obstacles, LiteratureObstacle.model_validate({
+                    key: value for key, value in obstacle.items() if key in LiteratureObstacle.model_fields
+                })]
         assessment.supported = not assessment.reasons
         if assessment.supported:
             return reported
