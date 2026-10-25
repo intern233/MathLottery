@@ -8,6 +8,7 @@ import time
 import httpx
 
 from mathlottery import budget
+from mathlottery.activity import controller_activity
 from mathlottery.config import Config
 from mathlottery.evidence_policy import normalized, recent
 from mathlottery.execution import python_exec
@@ -67,6 +68,13 @@ def snapshot(web: WebTools, url: str, excerpts: list[str], directory) -> dict:
 def collect_sources(store: Store, run: Run, citations: list[Citation]) -> None:
     if not citations:
         return
+    with controller_activity(store.run_dir(run.id), "sources") as operation:
+        _collect_sources(store, run, citations)
+        if (store.run_dir(run.id) / "stop.requested").exists():
+            operation.set_status("cancelled")
+
+
+def _collect_sources(store: Store, run: Run, citations: list[Citation]) -> None:
     config = Config.model_validate(run.config)
     directory = store.run_dir(run.id)
     limit = config.verification

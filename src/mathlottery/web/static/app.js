@@ -128,7 +128,7 @@ Object.assign(words.en, {
   historySearch: "Search title, model or run ID", historyFilter: "Run status", historyAll: "All runs",
   historyRunning: "Running", historyAttention: "Needs attention", historyCompleted: "Completed runs",
   historyCount: "{n} of {total} runs", historyNoMatch: "No matching runs", historyNoMatchHint: "Try another search or status filter.",
-  historyEarlier: "Earlier attempts ({n})", historyHint: "Grouped by problem. The latest attempt at each stage appears first.", historyHelp: "How runs are grouped",
+  historyEarlier: "Earlier attempts ({n})", historyHint: "Once a problem is selected for Solve, its source Find joins the same problem group. A Find used by multiple problems is shared, counted once. Run status, solver claims and review findings are separate.", historyHelp: "How runs are grouped",
   COMPLETED: "Run completed", candidateVersion: "Candidate {n}", latestCandidate: "Latest candidate",
   earlierCandidate: "Earlier candidate {n}", reviewDetails: "Review reasoning & evidence", reviewVersion: "Review {n}",
   assumptions: "Assumptions", accountConnected: "Codex connected", accountSignedOut: "Sign in to use Codex",
@@ -140,7 +140,7 @@ Object.assign(words.zh, {
   historySearch: "搜索题目、模型或任务 ID", historyFilter: "运行状态", historyAll: "全部任务",
   historyRunning: "正在运行", historyAttention: "需要关注", historyCompleted: "运行完成",
   historyCount: "显示 {n} / {total} 条", historyNoMatch: "没有匹配的任务", historyNoMatchHint: "试试其他关键词或状态筛选。",
-  historyEarlier: "较早的尝试（{n}）", historyHint: "按问题归组，优先展示各阶段的最近一次尝试。", historyHelp: "任务归组说明",
+  historyEarlier: "较早的尝试（{n}）", historyHint: "选题开始求解后，来源 Find 与后续步骤按问题归组。一次 Find 可作为多个问题的共享来源，执行总数只计一次。运行状态、求解声称和审查结论分别展示。", historyHelp: "任务归组说明",
   COMPLETED: "运行完成", candidateVersion: "候选证明 {n}", latestCandidate: "最新候选证明",
   earlierCandidate: "较早的候选证明 {n}", reviewDetails: "审查过程与证据", reviewVersion: "审查 {n}",
   assumptions: "前提假设", accountConnected: "Codex 已连接", accountSignedOut: "登录后使用 Codex",
@@ -560,6 +560,8 @@ function updateForm() {
   $("#discovery-choice").hidden = !choice;
   text("#discovery-choice-title", choice ? `${choice.problem.title} · ${choice.runId.slice(-6)}` : "");
   $("#selected-problem").hidden = !problem; text("#selected-problem", problem?.statement || "");
+  $("#selected-statement-risk").hidden = !problem;
+  $("#selected-statement-risk").replaceChildren(...(problem ? [MathLotteryDetails.statement(problem, state.language)] : []));
   $$("#task-form input, #task-form textarea, #task-form select").forEach((input) => { if (!input.closest("#source-file-list")) input.disabled = Boolean(input.closest("[hidden]")); });
   const backend = selectedBackend();
   renderModels();
@@ -573,21 +575,12 @@ function workflowLabel(workflow) {
   return t({ find: "stageFind", solve: "stageSolve", verify: "stageVerify", organize: "stageOrganize", run: "stagePipeline", pipeline: "stagePipeline" }[workflow] || workflow);
 }
 function groupRuns(runs) {
-  const groups = new Map();
-  for (const run of runs) {
-    // An unfinished search has no problem identity yet; keep it as its own group.
-    const key = run.problem_key ? `problem:${run.problem_key}` : `run:${run.id}`;
-    if (!groups.has(key)) groups.set(key, { key, latest: run, runs: [] });
-    const group = groups.get(key); group.runs.push(run);
-    if (run.updated_at > group.latest.updated_at) group.latest = run;
-  }
-  for (const group of groups.values()) group.runs.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
-  return [...groups.values()].sort((a, b) => b.latest.updated_at.localeCompare(a.latest.updated_at) || a.key.localeCompare(b.key));
+  return MathLotteryHistory.groupRuns(runs);
 }
 function renderHistory() {
   const query = $("#history-search").value.trim().toLocaleLowerCase(), filter = $("#history-filter").value;
-  const matches = (run) => {
-    const searchable = [run.title, run.id, run.settings?.model, run.settings?.provider, run.mode].join(" ").toLocaleLowerCase();
+  const matches = (run, groupTitle = "") => {
+    const searchable = [groupTitle, run.title, run.id, run.settings?.model, run.settings?.provider, run.mode].join(" ").toLocaleLowerCase();
     const status = filter === "all" || (filter === "running" && run.busy) || (filter === "completed" && run.state === "COMPLETED" && !run.busy)
       || (filter === "attention" && !run.busy && (run.last_error || ["FAILED", "RATE_LIMITED", "PAUSED", "WAITING_FOR_USER"].includes(run.state)));
     return Boolean(status && (!query || searchable.includes(query)));
@@ -601,14 +594,15 @@ function renderHistory() {
   const expanded = new Set($$("#run-list details[open]").map((item) => item.dataset.key));
   let focusedButton;
   const content = document.createDocumentFragment();
-  const matchingCount = state.runs.filter(matches).length;
-  text("#history-count", t("historyCount").replace("{n}", matchingCount).replace("{total}", state.runs.length));
+  const groups = groupRuns(state.runs);
+  const matchingCount = new Set(groups.flatMap(group => group.runs.filter(run => matches(run, group.title)).map(run => run.id))).size;
+  text("#history-count", t("historyCount").replace("{n}", matchingCount).replace("{total}", new Set(state.runs.map(run => run.id)).size));
   if (!matchingCount) { const empty = node("div", "empty"); empty.append(node("p", "", t(state.runs.length ? "historyNoMatch" : "emptyRuns")), node("p", "", t(state.runs.length ? "historyNoMatchHint" : "emptyRunsHint"))); content.append(empty); }
-  for (const group of groupRuns(state.runs)) {
-    const matchingRuns = group.runs.filter(matches);
+  for (const group of groups) {
+    const matchingRuns = group.runs.filter(run => matches(run, group.title));
     if (!matchingRuns.length) continue;
     const card = node("article", "run-group"); card.dataset.problemKey = group.key;
-    const title = node("h3", "run-title", group.latest.title); title.title = group.latest.title;
+    const title = node("h3", "run-title", group.title); title.title = group.title;
     card.append(title, node("p", "group-meta", `${group.runs.length} ${t("runRecords")} · ${t("lastUpdated")} ${date(group.latest.updated_at)}`));
     const counts = new Map(), attempts = new Map(), numbers = new Map(), latest = new Map();
     for (const run of group.runs) counts.set(run.workflow, (counts.get(run.workflow) || 0) + 1);
@@ -627,14 +621,16 @@ function renderHistory() {
       const label = `${workflowLabel(run.workflow)}${attempt}`;
       const button = node("button", `run-item${run.id === state.selected ? " active" : ""}`);
       button.type = "button"; button.dataset.runId = run.id;
-      button.setAttribute("aria-label", `${group.latest.title} · ${label} · ${executionBadge(run).textContent}`);
+      const linked = run.workflow === "find" && group.key.startsWith("problem:");
+      const outcome = MathLotteryOutcomes.history(run, state.language, {linked, shared: group.sharedFindIds.includes(run.id)});
+      button.setAttribute("aria-label", `${group.title} · ${label} · ${executionBadge(run).textContent} · ${outcome.textContent}`);
       button.setAttribute("aria-pressed", String(run.id === state.selected));
       const top = node("div", "run-top"), stage = node("span", "run-stage");
       stage.append(node("strong", "run-workflow", label), node("span", "", run.mode));
       top.append(stage, executionBadge(run));
       const bottom = node("div", "run-bottom");
       bottom.append(node("span", "", `${t("startedAt")} ${date(run.created_at)}`), node("span", "", `${run.iteration} ${t("rounds")} · ${compact(run.usage.input_tokens)} in`));
-      button.append(top, bottom); button.addEventListener("click", () => selectRun(run.id, true));
+      button.append(top, outcome, bottom); button.addEventListener("click", () => selectRun(run.id, true));
       (olderIds.has(run.id) ? older : card).append(button);
       if (run.id === focusedId) focusedButton = button;
     }
@@ -680,7 +676,7 @@ function renderProblem(problem, selectable = true, discoveryRun = null) {
   for (const [label, value] of [["difficulty", problem.difficulty_estimate], ["feasibility", problem.verification_feasibility], ["leanFeasibility", problem.lean_feasibility]]) {
     const item = node("div"); item.append(node("dt", "", t(label)), node("dd", "", !value || value === "unknown" ? t("unknown") : value)); metrics.append(item);
   }
-  card.append(metrics);
+  card.append(metrics, MathLotteryDetails.statement(problem, state.language));
   const details = node("details"), summary = node("summary", "", t("statementDetails")); details.append(summary, node("pre", "", problem.statement));
   if (problem.selection_reason) details.append(node("p", "", `${t("selection")}: ${problem.selection_reason}`));
   if (problem.source_url) { const p = node("p"); p.append(safeLink(problem.source_url)); details.append(p); }
@@ -723,7 +719,7 @@ function prepareObstacleFollowup(item, context) {
   const direction = state.language === "zh"
     ? `请继续核查“${context || run.title}”的新颖性障碍 ${item.id}。\n障碍：${item.description}\n影响：${item.impact}\n下一步：${item.next_action}\n来源：${item.source_url || "未指定"}\n请保留原障碍编号，用可定位的原文、独立来源证据和逐项比较支持处理结论。无法解决时保留 OPEN 并说明原因，不要仅凭未搜到结果宣称新颖。`
     : `Investigate novelty obstacle ${item.id} for “${context || run.title}”.\nObstacle: ${item.description}\nImpact: ${item.impact}\nNext action: ${item.next_action}\nSource: ${item.source_url || "not specified"}\nPreserve the obstacle ID. Support any resolution with located quotations, independent source evidence and explicit comparison. Leave unresolved items OPEN with reasons; absence of search results is not evidence of novelty.`;
-  $("#direction").value = direction;
+  $("#direction").value = direction + (item.required_locator ? `\nRequired locator: ${item.required_locator}` : "") + (item.required_excerpt_sha256 ? `\nRequired excerpt SHA-256: ${item.required_excerpt_sha256}` : "");
   $("#resume-form").hidden = false;
   $("#direction").focus();
   $("#resume-form").scrollIntoView({behavior: "smooth", block: "center"});
@@ -833,9 +829,16 @@ function renderOrganizedReport(run) {
     const downloads = node("div", "organized-downloads"), bundle = node("a", "secondary", t("organizeBundle"));
     bundle.href = `/api/runs/${encodeURIComponent(run.id)}/organized?format=bundle`;
     bundle.download = "expert-reports.zip"; downloads.append(bundle); section.append(downloads);
+    if (report.public_bundle_available) {
+      const share = node("a", "secondary", state.language === "zh" ? "脱敏文本分享包" : "Redacted text sharing bundle");
+      share.href = `/api/runs/${encodeURIComponent(run.id)}/organized?format=public_bundle`;
+      share.download = "expert-reports-public-text.zip"; downloads.append(share);
+      section.append(node("p", "field-hint", state.language === "zh" ? "分享包包含脱敏后的中英文 Markdown、文本材料、导出映射和专家入口；不含 PDF。分享前仍请检查内容。原始材料 ZIP 保留原始证据。" : "The sharing bundle contains redacted bilingual Markdown, text materials, export mappings and the expert entry point; PDFs are omitted. Review before sharing. The original ZIP preserves the evidence."));
+    }
+    if (report.handoff_available) section.append(node("p", "field-hint", state.language === "zh" ? "专家可先打开 ZIP 中 handoff/START_HERE.zh.md：包含主张索引、验证缺口和复现说明。" : "Experts can start with handoff/START_HERE.en.md in the ZIP for claims, verification gaps and reproduction instructions."));
   }
-  if (available.some((language) => !reports[language].pdf_available)) {
-    const retry = node("button", "secondary", t(pdfExports.has(run.id) ? "organizeRetryingPdf" : "organizeRetryPdf"));
+  if (available.some((language) => !reports[language].pdf_available) || !report.handoff_available) {
+    const retry = node("button", "secondary", pdfExports.has(run.id) ? t("organizeRetryingPdf") : state.language === "zh" ? "补齐本地交付文件" : "Complete local delivery files");
     retry.id = "retry-pdf"; retry.type = "button"; retry.disabled = run.busy || pdfExports.has(run.id);
     retry.addEventListener("click", async () => {
       if (pdfExports.has(run.id)) return;
@@ -964,6 +967,12 @@ function renderDetail(run) {
   text("#detail-id", `${run.workflow.toUpperCase()} / ${run.id}`); text("#detail-title", run.title);
   const status = executionBadge(run); $("#detail-state").className = status.className; text("#detail-state", status.textContent);
   $("#run-facts").replaceChildren(...[modelSummary(run.settings, run.mode), `${run.iteration} ${t("rounds")}`, `${Math.round(run.elapsed_seconds / 60 * 10) / 10} min ${t("elapsed")}`, `${compact(run.usage.input_tokens)} in / ${compact(run.usage.output_tokens)} out ${t("tokens")}`].map((fact) => node("span", "", fact)));
+  const outcomeKey = JSON.stringify([run.id, run.workflow, state.language, run.research_outcome]);
+  if (renderDetail.outcomeKey !== outcomeKey) {
+    $("#research-outcome").replaceChildren(MathLotteryOutcomes.detail(run, state.language));
+    $("#research-outcome").hidden = run.workflow === "find";
+    renderDetail.outcomeKey = outcomeKey;
+  }
   const interrupted = !run.busy && ["queued", "running"].includes(run.worker?.state);
   const message = [run.last_error, run.worker?.error, interrupted ? t("workerInterrupted") : null, run.stop_reason, run.metrics.usage_warning].filter(Boolean).join("\n"); notice("#run-message", message);
   $("#run-message").classList.toggle("error", Boolean(run.last_error || run.worker?.error));
@@ -979,6 +988,10 @@ function renderDetail(run) {
   const runtime = MathLotteryDetails.runtime(run, state.language);
   notice("#runtime-summary", runtime.summary);
   $("#runtime-details").replaceChildren(runtime.element);
+  const activityDownload = node("a", "secondary small", state.language === "zh" ? "下载已记录的完整活动" : "Download all recorded activity");
+  activityDownload.href = `/api/runs/${encodeURIComponent(run.id)}/activity`;
+  activityDownload.download = "activity.jsonl";
+  $("#runtime-details").append(activityDownload, node("p", "field-hint", state.language === "zh" ? "下载包含已保存的可见活动及执行资源记录。旧版本未记录的历史、隐藏推理和远端资源不会补造。" : "Includes saved visible events and execution resource records. Missing legacy history, hidden reasoning and remote resources are not reconstructed."));
   text("#progress", run.progress.text || t("noProgress")); text("#progress-note", [run.progress.checking_evidence ? t("checkingEvidence") : "", run.progress.truncated ? t("truncated") : ""].filter(Boolean).join(" "));
   text("#report-text", run.report.text || t("noReport")); text("#report-note", run.report.truncated ? t("truncated") : "");
   const eventList = $("#event-list"); eventList.replaceChildren();

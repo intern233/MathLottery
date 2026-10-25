@@ -239,3 +239,189 @@ def test_web_detail_reads_safe_activity_without_reparsing_raw_event_log(tmp_path
     assert detail["activity"]["current"]["kind"] == "search"
     assert detail["activity"]["available"]
     assert "Sensitive" not in json.dumps(detail["activity"])
+
+
+def test_resume_retains_cumulative_time_and_historical_peak_without_offline_time(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    run = SimpleNamespace(id="run-000000000010")
+    store.run_dir(run.id).mkdir(parents=True)
+    clock, rss = [100.0], [600.0]
+    monkeypatch.setattr("mathlottery.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
+    monkeypatch.setattr("mathlottery.resources.process_tree_memory", lambda pid: rss[0])
+    config = Config(resources={"min_available_memory_mb": 0, "sample_interval_seconds": 0.1})
+    coordinator = Coordinator(store)
+    with coordinator.admission(run, config) as admitted:
+        assert admitted
+        wait_for(lambda: (coordinator.snapshot(run.id).get("memory") or {}).get("peak_rss_mb") == 600)
+        clock[0] += 10
+    assert coordinator.snapshot(run.id)["cumulative"]["active_seconds"] == 10
+    clock[0] += 10000
+    rss[0] = 120
+    with coordinator.admission(run, config):
+        wait_for(lambda: (coordinator.snapshot(run.id).get("memory") or {}).get("peak_rss_mb") == 120)
+        clock[0] += 4
+    final = Coordinator(Store(tmp_path)).snapshot(run.id)
+    assert final["attempt"]["active_seconds"] == 4
+    assert final["memory"]["peak_rss_mb"] == 120
+    assert final["cumulative"] == {"attempts": 2, "queue_seconds": 0.0, "active_seconds": 14.0,
+                                   "peak_rss_mb": 600.0, "history_complete": True, "timing_basis": "monotonic"}
+    assert [item["active_seconds"] for item in final["recent_attempts"]] == [10, 4]
+
+
+def test_cancelled_queue_time_is_separate_and_counts_no_active_time(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    run = SimpleNamespace(id="run-000000000011")
+    store.run_dir(run.id).mkdir(parents=True)
+    clock = [0.0]
+    monkeypatch.setattr("mathlottery.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
+    monkeypatch.setattr("mathlottery.resources.available_memory_mb", lambda: 0)
+    calls = 0
+
+    def cancelled():
+        nonlocal calls
+        calls += 1
+        clock[0] += 3
+        return calls > 1
+
+    config = Config(resources={"sample_interval_seconds": 0.1})
+    with Coordinator(store).admission(run, config, cancelled=cancelled) as admitted:
+        assert not admitted
+    value = Coordinator(store).snapshot(run.id)
+    assert value["cumulative"]["active_seconds"] == 0
+    assert value["cumulative"]["queue_seconds"] == 6
+    assert value["attempt"]["state"] == "cancelled"
+    assert value["cumulative"]["peak_rss_mb"] is None
+
+
+def test_legacy_snapshot_preserves_observed_peak_and_marks_missing_history(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    run = SimpleNamespace(id="run-000000000012")
+    store.run_dir(run.id).mkdir(parents=True)
+    coordinator = Coordinator(store)
+    coordinator.snapshot_path(run.id).write_text(json.dumps({
+        "state": "released", "queued_at": "2025-01-01T00:00:00+00:00",
+        "started_at": "2025-01-01T00:00:03+00:00", "updated_at": "2025-01-01T00:00:13+00:00",
+        "memory": {"available": True, "peak_rss_mb": 2400, "rss_mb": 100},
+    }))
+    prior = coordinator.snapshot(run.id)
+    assert not prior["cumulative"]["history_complete"]
+    assert prior["cumulative"]["queue_seconds"] == 3
+    assert prior["cumulative"]["active_seconds"] == 10
+    monkeypatch.setattr("mathlottery.resources.process_tree_memory", lambda pid: None)
+    with coordinator.admission(run, Config(resources={"min_available_memory_mb": 0})):
+        pass
+    value = coordinator.snapshot(run.id)
+    assert value["cumulative"]["peak_rss_mb"] == 2400
+    assert value["cumulative"]["active_seconds"] >= 10
+    assert not value["cumulative"]["history_complete"]
+    assert value["cumulative"]["timing_basis"] == "legacy_snapshot_and_monotonic"
+
+
+def test_resource_history_is_bounded_but_totals_keep_all_admissions(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    run = SimpleNamespace(id="run-000000000013")
+    store.run_dir(run.id).mkdir(parents=True)
+    clock = [0.0]
+    monkeypatch.setattr("mathlottery.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
+    coordinator = Coordinator(store)
+    config = Config(resources={"min_available_memory_mb": 0})
+    for _ in range(23):
+        with coordinator.admission(run, config, kind="formal"):
+            clock[0] += 2
+    value = coordinator.snapshot(run.id, kind="formal")
+    assert len(value["recent_attempts"]) == 20
+    assert value["recent_attempts"][0]["number"] == 4
+    assert value["cumulative"]["attempts"] == 23
+    assert value["cumulative"]["active_seconds"] == 46
+    assert coordinator.snapshot_path(run.id, "formal").stat().st_size < 16000
+    archive = store.run_dir(run.id) / "formal-resource-attempts.jsonl"
+    archived = [json.loads(line) for line in archive.read_text().splitlines()]
+    assert archived[0]["earlier_history"] == "none_observed"
+    assert [item["attempt"]["number"] for item in archived[1:]] == list(range(1, 24))
+
+
+def test_resource_snapshot_redacts_unknown_metadata_and_untrusted_values(tmp_path):
+    store = Store(tmp_path)
+    run_id = "run-000000000014"
+    store.run_dir(run_id).mkdir(parents=True)
+    coordinator = Coordinator(store)
+    coordinator.snapshot_path(run_id).write_text(json.dumps({
+        "state": {"token": "PRIVATE"}, "reason": "PRIVATE_PROXY", "updated_at": "PRIVATE_PATH",
+        "memory": {"rss_mb": float("nan"), "peak_rss_mb": -1, "scope": "PRIVATE"},
+        "cumulative": {"timing_basis": [], "active_seconds": "PRIVATE"},
+        "attempt": {"state": [], "command": "PRIVATE"}, "recent_attempts": [None, {"token": "PRIVATE"}],
+    }))
+    value = coordinator.snapshot(run_id)
+    assert "PRIVATE" not in json.dumps(value)
+    assert value["memory"]["rss_mb"] is None
+    assert value["memory"]["peak_rss_mb"] is None
+
+
+def test_interrupted_resource_record_keeps_last_observed_time():
+    from mathlottery.resources import _interrupt_snapshot
+
+    value = _interrupt_snapshot({"state": "running", "queued_at": "2020-01-01T00:00:00+00:00",
+                                 "started_at": "2020-01-01T00:00:01+00:00", "updated_at": "2020-01-01T00:00:06+00:00"})
+    assert value["state"] == "interrupted"
+    assert value["updated_at"] == "2020-01-01T00:00:06+00:00"
+    assert value["cumulative"]["active_seconds"] == 5
+    assert value["recent_attempts"][-1]["state"] == "interrupted"
+
+
+def test_exception_releases_capacity_and_keeps_cumulative_observations(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    run = SimpleNamespace(id="run-000000000015")
+    store.run_dir(run.id).mkdir(parents=True)
+    clock = [0.0]
+    monkeypatch.setattr("mathlottery.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
+    config = Config(resources={"min_available_memory_mb": 0})
+    coordinator = Coordinator(store)
+    with pytest.raises(RuntimeError, match="PRIVATE_TOKEN"):
+        with coordinator.admission(run, config, kind="formal"):
+            clock[0] += 3
+            raise RuntimeError("PRIVATE_TOKEN PRIVATE_PROXY")
+    clock[0] += 1000
+    with coordinator.admission(run, config, kind="formal"):
+        clock[0] += 5
+    value = coordinator.snapshot(run.id, kind="formal")
+    assert value["cumulative"]["active_seconds"] == 8
+    assert value["cumulative"]["attempts"] == 2
+    assert "PRIVATE" not in coordinator.snapshot_path(run.id, "formal").read_text()
+
+
+def test_crashed_execution_history_survives_resumption(processes):
+    store, start = processes
+    run_id, directory, owner = start(16)
+    wait_for(lambda: (directory / "entered").exists())
+    owner.kill()
+    owner.wait(timeout=5)
+    interrupted = Coordinator(store).snapshot(run_id)
+    assert interrupted["state"] == "interrupted"
+    observed = interrupted["cumulative"]["active_seconds"]
+    time.sleep(0.1)
+    assert Coordinator(store).snapshot(run_id)["cumulative"]["active_seconds"] == observed
+    (directory / "entered").unlink()
+    _, _, resumed = start(16)
+    wait_for(lambda: (directory / "entered").exists())
+    (directory / "release").touch()
+    assert resumed.wait(timeout=5) == 0
+    value = Coordinator(store).snapshot(run_id)
+    assert value["cumulative"]["attempts"] == 2
+    assert [item["state"] for item in value["recent_attempts"]] == ["interrupted", "released"]
+
+
+def test_orphan_snapshot_without_queue_record_is_preserved_in_attempt_archive(tmp_path):
+    store = Store(tmp_path)
+    run = SimpleNamespace(id="run-000000000017")
+    store.run_dir(run.id).mkdir(parents=True)
+    coordinator = Coordinator(store)
+    coordinator.snapshot_path(run.id, "formal").write_text(json.dumps({
+        "state": "running", "queued_at": "2020-01-01T00:00:00+00:00",
+        "started_at": "2020-01-01T00:00:01+00:00", "updated_at": "2020-01-01T00:00:06+00:00",
+    }))
+    with coordinator.admission(run, Config(resources={"min_available_memory_mb": 0}), kind="formal"):
+        pass
+    rows = [json.loads(line) for line in (store.run_dir(run.id) / "formal-resource-attempts.jsonl").read_text().splitlines()]
+    assert rows[0]["earlier_history"] == "unavailable"
+    assert [item["attempt"]["state"] for item in rows[1:]] == ["interrupted", "released"]
+    assert rows[1]["attempt"]["active_seconds"] == 5

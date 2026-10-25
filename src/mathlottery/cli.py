@@ -661,17 +661,17 @@ def export(
     """Export Markdown, JSON, or an organized PDF/materials bundle without model calls."""
     store, _ = resources(ctx)
     task = store.load(run_id)
-    if format not in {"markdown", "json", "pdf", "bundle"}:
-        raise ValueError("--format must be markdown, json, pdf or bundle")
+    if format not in {"markdown", "json", "pdf", "bundle", "public_bundle"}:
+        raise ValueError("--format must be markdown, json, pdf, bundle or public_bundle")
     selected = language.value if language is not None else None
-    if selected is not None and (task.workflow != Workflow.ORGANIZE or format in {"json", "bundle"}):
+    if selected is not None and (task.workflow != Workflow.ORGANIZE or format in {"json", "bundle", "public_bundle"}):
         raise ValueError("--language applies only to organized Markdown/PDF exports; bundles include both languages")
-    if format == "bundle":
+    if format in {"bundle", "public_bundle"}:
         from mathlottery.organized_reports import read_report
 
         if output is None:
-            raise ValueError("--format bundle requires --output <new-report.zip>")
-        content = read_report(store, run_id, "bundle")
+            raise ValueError(f"--format {format} requires --output <new-report.zip>")
+        content = read_report(store, run_id, format)
         with output.open("xb") as stream:
             stream.write(content)
         typer.echo(str(output.resolve()))

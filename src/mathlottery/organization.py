@@ -63,6 +63,13 @@ def _provenance(run):
 
 def capture(store, source, config, language="zh", instructions=None):
     """The caller holds the source lock. Only named, bounded evidence is transferred."""
+    from mathlottery.activity import controller_activity
+
+    with controller_activity(store.run_dir(source.id), "organize_materials"):
+        return _capture(store, source, config, language, instructions)
+
+
+def _capture(store, source, config, language, instructions):
     _idle(source)
     if not eligible(source):
         raise ValueError("Organize requires a problem and a recorded candidate review; any verdict is accepted")
@@ -207,7 +214,8 @@ def capture(store, source, config, language="zh", instructions=None):
                     scanned += 1
                     if scanned > 3000:
                         break
-                    if not name.startswith(".") and (name.endswith(".lean") or name in {"lean-toolchain", "lakefile.toml"}):
+                    if not name.startswith(".") and (name.endswith(".lean") or name in {
+                            "lean-toolchain", "lakefile.toml", "lake-manifest.json"}):
                         copy(run, (Path(folder) / name).relative_to(root).as_posix())
                 if scanned > 3000:
                     break
@@ -215,7 +223,8 @@ def capture(store, source, config, language="zh", instructions=None):
                 context.omitted.append(f"{run.id}: additional formal sources omitted at scan limit")
                 break
         for relative in ("workspace/notes.md", "workspace/research-notes.md", "workspace/proof.md",
-                         "workspace/lean-toolchain", "workspace/lakefile.toml", "workspace/lakefile.lean"):
+                         "workspace/lean-toolchain", "workspace/lakefile.toml", "workspace/lakefile.lean",
+                         "workspace/lake-manifest.json"):
             if (root / relative).exists():
                 copy(run, relative)
         context.limitations.append(f"{run.id}: only saved answers, named notes, proof/formal files and source "
@@ -414,7 +423,8 @@ def export(store, run):
         return
     documents = report_documents(run)
     root = store.run_dir(run.id)
-    for item, data in _read_files(store, run):
+    materials = list(_read_files(store, run))
+    for item, data in materials:
         write_confined(root, "organized/materials/" + item.path, data)
     for language, document in documents.items():
         write_confined(root, "organized/" + report_filename(run, language, "md"), document.markdown.encode())
@@ -424,10 +434,29 @@ def export(store, run):
     store.save(run, "organization_exported", pdf_status=run.organization_report.pdf_status,
                pdf_statuses={language: document.pdf_status for language, document in documents.items()})
     write_confined(root, "organized/manifest.json", json_text(export_manifest(run)).encode())
+    # A local derived entry point can improve old deliveries without replacing
+    # immutable report text, its guide version or source evidence.
+    from mathlottery.expert_delivery import build, file_manifest
+
+    handoff = build(run, materials)
+    source_files = {"materials/" + item.path: data for item, data in materials}
+    source_files.update(handoff)
+    handoff["handoff/files.json"] = file_manifest(source_files)
+    for name, data in handoff.items():
+        write_confined(root, "organized/" + name, data)
 
 
 def _export_pdf(run, root, language, document):
     """One failed renderer invocation cannot discard the other language's result."""
+    from mathlottery.activity import controller_activity
+
+    with controller_activity(root, "report_render") as operation:
+        _render_pdf_document(run, root, language, document)
+        if document.pdf_status == "failed":
+            operation.set_status("failed")
+
+
+def _render_pdf_document(run, root, language, document):
     safe_error_type = ()
     try:
         import importlib

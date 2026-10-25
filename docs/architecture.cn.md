@@ -20,6 +20,8 @@ CLI 命令 find、solve、verify、organize 为运行设置明确的 Workflow，
 
 独立 Find 在候选列表处结束，由用户选择问题。CLI 的 `run` 命令表示自动串联研究阶段，不增加此选题停顿。浏览器分别提供 Find、Solve、Verify，以及可选的 Organize。
 
+Find 保存原文陈述、目标相对于原题的范围、已有部分结果和明确的题意风险。`statement_risks.py` 在候选卡片和 Solve 选题预览中展示缺失材料及歧义。这些信息供选题参考，不构成题意等价认证。非空披露字段纳入冻结的 Find 资料校验；旧记录明确显示尚未评估。
+
 ## 组件
 
 | 模块 | 职责 |

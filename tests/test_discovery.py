@@ -72,8 +72,10 @@ def test_global_problem_catalog_does_not_override_selected_find_snapshot(discove
 def test_legacy_discovery_fingerprint_survives_new_optional_evidence_fields(discovery):
     engine, source, config = discovery
     legacy = source.shortlist[1].model_dump(mode="json")
+    for field in ("source_statement", "scope_relation", "scope_description", "prior_work_summary", "statement_risks"):
+        legacy.pop(field, None)
     for field in ("literature_search", "evidence_assessment"):
-        for added in ("limitations", "obstacles", "comparisons", "unresolved_obstacle_ids"):
+        for added in ("limitations", "obstacles", "comparisons", "unresolved_obstacle_ids", "obstacle_changes"):
             legacy[field].pop(added, None)
     previous_hash = digest(json_text(legacy))
     assert problem_fingerprint(Problem.model_validate(legacy)) == previous_hash

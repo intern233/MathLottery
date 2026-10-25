@@ -139,6 +139,8 @@ class LiteratureObstacle(Model):
     resolution: str = Field(default="", max_length=10000)
     evidence_urls: list[str] = Field(default_factory=list, max_length=30)
     resolves_legacy_gaps: list[str] = Field(default_factory=list, max_length=30)
+    required_locator: str = Field(default="", max_length=1000)
+    required_excerpt_sha256: str = Field(default="", pattern=r"^(?:[a-f0-9]{64})?$")
 
 
 class PriorResultComparison(Model):
@@ -185,6 +187,23 @@ class EvidenceAssessment(Model):
     obstacles: list[dict] = Field(default_factory=list)
     unresolved_obstacle_ids: list[str] = Field(default_factory=list)
     comparisons: list[dict] = Field(default_factory=list)
+    obstacle_changes: list[dict] = Field(default_factory=list)
+
+
+class StatementRisk(Model):
+    """A researcher's disclosed statement risk, not an independent certification."""
+
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$")
+    kind: Literal[
+        "QUANTIFIER_AMBIGUITY", "ASSUMPTION_GAP", "SOURCE_CONFLICT", "INCOMPLETE_SOURCE",
+        "SCOPE_RESTRICTION", "FORMALIZATION_GAP", "OTHER",
+    ]
+    severity: Literal["INFO", "CAUTION", "NEEDS_CLARIFICATION"] = "CAUTION"
+    description: str = Field(min_length=1, max_length=4000)
+    impact: str = Field(min_length=1, max_length=4000)
+    next_action: str = Field(min_length=1, max_length=4000)
+    source_url: str | None = Field(default=None, max_length=2048)
+    locator: str = Field(default="", max_length=1000)
 
 
 class Problem(Model):
@@ -209,6 +228,11 @@ class Problem(Model):
     citations: list[Citation] = Field(default_factory=list, max_length=30)
     literature_search: LiteratureSearch = Field(default_factory=LiteratureSearch)
     evidence_assessment: EvidenceAssessment = Field(default_factory=EvidenceAssessment)
+    source_statement: str = Field(default="", max_length=30000)
+    scope_relation: Literal["UNKNOWN", "FULL_STATEMENT", "EXPLICIT_SUBPROBLEM", "INTERPRETATION"] = "UNKNOWN"
+    scope_description: str = Field(default="", max_length=10000)
+    prior_work_summary: str = Field(default="", max_length=10000)
+    statement_risks: list[StatementRisk] = Field(default_factory=list, max_length=30)
 
 
 class MemoryItem(Model):

@@ -28,6 +28,29 @@ SIGNED_IN = {
 }
 
 
+def test_activity_download_keeps_all_attempts_beyond_polling_window(web):
+    from mathlottery.activity import ActivityReporter
+
+    run = Orchestrator(web.store).create(web.config(), workflow=Workflow.FIND)
+    directory = web.store.run_dir(run.id)
+    for number in range(25):
+        attempt = f"tasks/attempt-{number}"
+        ActivityReporter(directory / attempt).record("search", "completed", "PRIVATE_IDENTIFIER")
+        run.native.history.append({"answer": f"{attempt}/answer.md"})
+    # Legacy root-level answers remain readable and mark missing archives honestly.
+    run.native.history.append({"answer": "old-answer.md"})
+    web.store.save(run, "archive_fixture")
+    with serving(web) as (client, _):
+        response = client.get(f"/api/runs/{run.id}/activity")
+        assert response.status_code == 200
+        assert "application/x-ndjson" in response.headers["Content-Type"]
+        records = [json.loads(line) for line in response.text.splitlines()]
+        assert len([r for r in records if r.get("kind") == "search"]) == 25
+        assert any(not stream["available"] for stream in records[0]["streams"])
+        assert "PRIVATE_IDENTIFIER" not in response.text and str(directory) not in response.text
+        assert client.get(f"/api/runs/{run.id}/activity?path=anything").status_code == 400
+
+
 @contextmanager
 def serving(service, *, account_status=None):
     server = LocalServer(service, port=0)
@@ -287,7 +310,7 @@ def test_http_custom_problem_starts_at_solve_and_keeps_review_in_same_group(web,
 
 def test_http_boundaries_reject_cross_site_mutations_and_file_access(web):
     with serving(web, account_status=SIGNED_IN) as (client, server):
-        for asset in ("/", "/app.js", "/style.css", "/mark.svg"):
+        for asset in ("/", "/app.js", "/history.js", "/outcomes.js", "/style.css", "/mark.svg"):
             response = client.get(asset)
             assert response.status_code == 200
             assert "frame-ancestors 'none'" in response.headers["content-security-policy"]

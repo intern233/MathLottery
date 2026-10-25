@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 from pydantic import Field, model_validator
 
 from mathlottery import budget
-from mathlottery.activity import read_activity
+from mathlottery.activity import export_activity_archive, read_run_activity
 from mathlottery.candidates import CandidateStore
 from mathlottery.config import ChatConfig, Config, load_config
 from mathlottery.discovery import problem_fingerprint
@@ -32,9 +32,11 @@ from mathlottery.resources import Coordinator
 from mathlottery.review_evidence import capture as capture_review_evidence
 from mathlottery.review_evidence import manifest as evidence_manifest
 from mathlottery.review_evidence import selectable_source
+from mathlottery.statement_risks import present_problem
 from mathlottery.storage import Store, safe_path
 from mathlottery.web.artifacts import list_formal_artifacts
 from mathlottery.web.jobs import BusyError, Jobs
+from mathlottery.web.outcomes import research_outcome
 
 
 class Overrides(Model):
@@ -233,6 +235,7 @@ class WebService:
             "candidate_count": len(run.candidates) if run.workflow != Workflow.ORGANIZE else 0,
             "reviewed_candidate_count": sum(bool(c.reviews) for c in run.candidates)
             if run.workflow != Workflow.ORGANIZE else 0,
+            "research_outcome": research_outcome(run),
             "organized_report": organization_summary(self.store, run),
             "busy": self.jobs.running(run.id),
             "resources": resources,
@@ -249,7 +252,7 @@ class WebService:
         return {
             "settings": settings, "config_error": error,
             "runs": [self.summary(run) for run in self.store.list_runs()],
-            "problems": [p.model_dump(mode="json") for p in self.store.list_problems()],
+            "problems": [present_problem(p) for p in self.store.list_problems()],
         }
 
     def start(
@@ -398,6 +401,16 @@ class WebService:
             data = stream.read(limit + 1)
         return {"text": data[:limit].decode("utf-8", errors="replace"), "truncated": len(data) > limit}
 
+    def activity_archive(self, run_id):
+        run = self.store.load(run_id)
+        directory = self.store.run_dir(run_id)
+        attempts = [safe_path(directory, item["answer"]).parent
+                    for item in run.native.history if item.get("answer")]
+        for path in (run.native.active_attempt, (run.native.pending_result or {}).get("directory")):
+            if path:
+                attempts.append(safe_path(directory, f"{path}/activity.json").parent)
+        return export_activity_archive(directory, attempts)
+
     def detail(self, run_id):
         run = self.store.load(run_id)
         with self.store.connect() as db:
@@ -425,9 +438,11 @@ class WebService:
             attempt = pending.get("directory")
         if not attempt and run.native.history and run.native.history[-1].get("answer"):
             attempt = str(Path(run.native.history[-1]["answer"]).parent)
-        activity = read_activity(safe_path(self.store.run_dir(run_id), f"{attempt}/activity.json")) if attempt else {
-            "available": False, "last_active_at": None, "current": None, "recent": [],
-        }
+        run_dir = self.store.run_dir(run_id)
+        prior_attempts = [safe_path(run_dir, item["answer"]).parent
+                          for item in run.native.history[-20:] if item.get("answer")]
+        activity = read_run_activity(run_dir, safe_path(run_dir, f"{attempt}/activity.json").parent if attempt else None,
+                                     previous_attempt_directories=prior_attempts)
         activity["attempt"] = attempt
         formal_artifacts = list_formal_artifacts(self.store.run_dir(run_id))
         for item in formal_artifacts["items"]:
@@ -435,8 +450,8 @@ class WebService:
         return {
             **self.summary(run),
             "discovery_request": run.discovery_request,
-            "problem": run.problem.model_dump(mode="json") if run.problem else None,
-            "shortlist": [p.model_dump(mode="json") for p in run.shortlist],
+            "problem": present_problem(run.problem) if run.problem else None,
+            "shortlist": [present_problem(p) for p in run.shortlist],
             "shortlist_bindings": {p.id: problem_fingerprint(p) for p in run.shortlist},
             "discovery_context": run.discovery_context.model_dump(mode="json") if run.discovery_context else None,
             "candidates": [c.model_dump(mode="json") for c in run.candidates],

@@ -8,6 +8,8 @@
   <link rel="icon" href="/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
   <script src="/research-details.js" defer></script>
+  <script src="/history.js" defer></script>
+  <script src="/outcomes.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -88,6 +90,7 @@
             <label for="problem-id" data-i18n="problem">Problem</label><select id="problem-id"></select>
             <div id="new-problem"><label for="title" data-i18n="problemTitle">Title · optional</label><input id="title" maxlength="200" data-placeholder="titlePlaceholder"><label for="statement" data-i18n="statement">Problem statement</label><textarea id="statement" rows="4" maxlength="30000" data-placeholder="statementPlaceholder"></textarea></div>
             <div id="selected-problem" class="problem-preview" hidden></div>
+            <div id="selected-statement-risk" hidden></div>
             <div id="discovery-choice" class="discovery-choice" hidden aria-live="polite"><strong data-i18n="yourChoice">Your choice</strong><p id="discovery-choice-title"></p><p class="field-hint" data-i18n="discoveryCarry">The Find dossier, notes and sources will accompany this problem. Review your choice, then start solving.</p><button id="clear-discovery" type="button" class="text-button" data-i18n="clearChoice">Clear choice</button></div>
             <div id="proof-fields" hidden><label for="proof" data-i18n="proof">Proof to review</label><textarea id="proof" rows="5" maxlength="100000" data-placeholder="proofPlaceholder"></textarea></div>
           </div>
@@ -141,6 +144,7 @@
     <section id="run-detail" class="panel detail" hidden aria-label="Selected run">
       <div class="section-heading"><div><p id="detail-id" class="eyebrow"></p><h2 id="detail-title"></h2></div><span id="detail-state" class="badge"></span></div>
       <div id="run-facts" class="run-facts"></div>
+      <div id="research-outcome" hidden></div>
       <div id="run-message" class="notice" hidden></div>
       <div id="runtime-summary" class="notice runtime-summary" role="status" hidden></div>
       <div class="run-actions"><button id="stop" class="secondary danger" type="button" data-i18n="stop">Stop task</button><button id="show-resume" class="secondary" type="button" data-i18n="resume">Resume / add direction</button><button id="verify-latest" class="secondary" type="button" data-i18n="verifyLatest">Verify latest candidate</button><button id="organize-reviewed" class="secondary" type="button" data-i18n="organizeReviewed" hidden>Organize for expert review</button><a id="download" class="text-button" data-i18n="download">Download report ↓</a></div>

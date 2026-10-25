@@ -7,7 +7,17 @@ import pytest
 from mathlottery.candidates import review_input
 from mathlottery.config import Config
 from mathlottery.demo import demo_problem
-from mathlottery.models import CandidateInput, Level, Reference, Review
+from mathlottery.evidence_policy import assess_sources, normalized
+from mathlottery.models import (
+    CandidateInput,
+    Citation,
+    Level,
+    LiteratureSearch,
+    Reference,
+    Review,
+    digest,
+    now,
+)
 from mathlottery.native_workspace import NativeWorkspace
 from mathlottery.orchestrator import Orchestrator
 
@@ -83,3 +93,31 @@ def test_review_does_not_rewrite_candidate_or_leak_previous_verdict(candidate_ru
     assert json.loads(review_file) == review_input(candidate)
     assert "n is positive" in review_file
     assert "https://example.org/original" in review_file
+
+
+def test_shared_review_carries_frozen_find_baseline_without_reusing_find_receipts(candidate_run):
+    engine, run = candidate_run
+    citation = Citation(url="https://example.org/original", role="ORIGINAL_STATEMENT", locator="Problem 1",
+                        excerpt="For every positive n, establish P(n).", explanation="Exact problem statement.")
+    search = LiteratureSearch(queries=["P(n) original problem"], conclusion="Checked the exact source.")
+    run.problem.literature_search = search
+    run.problem.evidence_assessment = assess_sources([citation], search, [])
+    obstacle_id = run.problem.evidence_assessment.obstacles[0]["id"]
+    frozen_problem = run.problem.model_dump()
+    candidate_path = engine.candidates.path(run, run.candidates[-1])
+    frozen_candidate = candidate_path.read_bytes()
+    observations = [{"phase": "VERIFY", "result": result} for result in [
+        {"record_kind": "source_snapshot", "status": "OK", "requested_url": citation.url, "url": citation.url,
+         "retrieved_at": now(), "artifact": "literature/original.txt", "sha256": "a" * 64,
+         "excerpt_hashes": [digest(normalized(citation.excerpt))]},
+        {"status": "OK", "retrieved_at": now(), "query": search.queries[0]},
+    ]]
+    candidate = engine.candidates.review(run, Review(
+        verdict="INCONCLUSIVE", truth_assessment="Not assessed", proof_assessment="Not assessed",
+        citations=[citation], literature_search=LiteratureSearch(queries=search.queries, conclusion=search.conclusion),
+    ), observations, prepared=True)
+    change = next(item for item in candidate.reviews[-1].evidence_assessment.obstacle_changes if item["id"] == obstacle_id)
+    assert (change["from_status"], change["to_status"], change["change"]) == ("OPEN", "RESOLVED", "RESOLVED")
+    assert run.problem.model_dump() == frozen_problem
+    assert candidate_path.read_bytes() == frozen_candidate
+    assert engine.candidates.check(run) == candidate

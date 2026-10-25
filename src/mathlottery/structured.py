@@ -13,10 +13,9 @@ from mathlottery.literature import collect_sources
 from mathlottery.models import Action, AgentResponse, MemoryItem, Phase, Run, State, now, uid
 from mathlottery.prompts import build_prompt, output_schema
 from mathlottery.reporting import report
-from mathlottery.sources import conservative_status
 from mathlottery.storage import atomic_write, json_text
 from mathlottery.tools import ToolRegistry
-from mathlottery.workflows import ACTIVE
+from mathlottery.workflows import ACTIVE, assess_selection
 
 if TYPE_CHECKING:
     from mathlottery.orchestrator import Orchestrator
@@ -183,19 +182,17 @@ class StructuredRunner:
             selected = response.problem.model_copy(deep=True)
             selected.formal_target = run.problem.formal_target if run.problem else None
             selected.educational = run.problem.educational if run.problem else False
-            selected = conservative_status(selected, [o["result"] for o in run.observations])
+            previous = [*self.store.list_problems(), *run.shortlist, *([run.problem] if run.problem else [])]
+            retrieved = [o["result"] for o in run.observations]
+            selected = assess_selection(selected, retrieved, previous)
+            run.shortlist = [assess_selection(p, retrieved, previous) for p in (response.shortlist or [selected])]
             run.problem = self.store.save_problem(selected)
             atomic_write(
                 self.store.run_dir(run.id) / "literature" / "selection.json",
                 json_text(
                     {
                         "selected": run.problem.id,
-                        "ordered_candidates": [
-                            conservative_status(
-                                p, [o["result"] for o in run.observations]
-                            ).model_dump(mode="json")
-                            for p in (response.shortlist or [selected])
-                        ],
+                        "ordered_candidates": [p.model_dump(mode="json") for p in run.shortlist],
                         "scope": "Heuristic ranking, not a probability of solving the problem",
                     }
                 ),

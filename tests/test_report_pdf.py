@@ -100,6 +100,35 @@ def test_unclosed_formula_is_reported():
     assert any("unclosed" in warning for warning in warnings)
 
 
+def test_html_comments_are_hidden_outside_code_without_enabling_html():
+    source = '''# Proof
+
+<!-- internal theorem marker $not math$
+
+still internal -->
+
+Visible <!-- inline marker --> conclusion $x=1$.
+
+`<!-- inline code -->`
+
+```lean
+-- <!-- fenced code -->
+```
+
+    <!-- indented code -->
+
+<script>unsafe()</script>
+'''
+    document, warnings, count = report_pdf._render_html(source, "Proof")
+    soup = BeautifulSoup(document, "html.parser")
+    assert "internal theorem marker" not in soup.get_text()
+    assert "inline marker" not in soup.get_text()
+    assert "inline code" in soup.get_text() and "fenced code" in soup.get_text()
+    assert "indented code" in soup.get_text()
+    assert "<script>unsafe()</script>" in soup.get_text()
+    assert not soup.select("script") and count == 1 and not warnings
+
+
 def test_raw_tex_without_math_delimiters_is_reported_but_code_is_not():
     source = r"""\begin{align} x &= \frac{1}{2} \end{align}
 

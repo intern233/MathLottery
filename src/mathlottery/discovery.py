@@ -18,12 +18,21 @@ EXCLUDED = {"node_modules", "__pycache__", "build", "dist", "target", "sessions"
 
 def problem_fingerprint(problem):
     payload = problem.model_dump(mode="json")
+    for optional in ("source_statement", "scope_description", "prior_work_summary", "statement_risks"):
+        if not payload[optional]:
+            payload.pop(optional)
+    if payload["scope_relation"] == "UNKNOWN":
+        payload.pop("scope_relation")
     # Empty fields added by evidence policies must not invalidate older frozen dossiers.
     # Nonempty disclosures still participate in revision and integrity checks.
     for field in ("literature_search", "evidence_assessment"):
-        for optional in ("limitations", "obstacles", "comparisons", "unresolved_obstacle_ids"):
+        for optional in ("limitations", "obstacles", "comparisons", "unresolved_obstacle_ids", "obstacle_changes"):
             if optional in payload[field] and not payload[field][optional]:
                 payload[field].pop(optional)
+        for obstacle in payload[field].get("obstacles", []):
+            for optional in ("required_locator", "required_excerpt_sha256"):
+                if optional in obstacle and not obstacle[optional]:
+                    obstacle.pop(optional)
     return digest(json_text(payload))
 
 

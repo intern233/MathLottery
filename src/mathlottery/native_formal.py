@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 from mathlottery import budget
+from mathlottery.activity import controller_activity
 from mathlottery.config import Config
 from mathlottery.models import FormalCheckRequest, Run, digest, now
 from mathlottery.resources import formal_admission
@@ -224,11 +225,16 @@ def check_snapshot(store: Store, run: Run, request: FormalCheckRequest) -> dict:
                         output_error = _output_budget_error(output, max_object_bytes, max_total_bytes)
                     return output_error is not None
 
-                result = _run(command(args, writable), directory, label, deadline, interrupted)
-                if writable:
-                    output_error = output_error or _output_budget_error(output, max_object_bytes, max_total_bytes)
-                if output_error:
-                    result["status"] = output_error[0]
+                stage = "formal_compile" if label.startswith("compile-") else (
+                    "formal_replay" if label.startswith("replay-") else "formal_inspect")
+                with controller_activity(store.run_dir(run.id), stage) as operation:
+                    result = _run(command(args, writable), directory, label, deadline, interrupted)
+                    if writable:
+                        output_error = output_error or _output_budget_error(output, max_object_bytes, max_total_bytes)
+                    if output_error:
+                        result["status"] = output_error[0]
+                    if result["status"] != "OK":
+                        operation.set_status("cancelled" if cancelled() else "failed")
                 receipt["steps"].append({k: v for k, v in result.items() if k != "output"} | {"argv": args})
                 if result["status"] != "OK":
                     receipt.update(status=result["status"], reason=output_error[1] if output_error

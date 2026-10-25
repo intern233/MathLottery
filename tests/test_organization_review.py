@@ -44,10 +44,15 @@ def test_bundle_contains_complete_manifest_bound_materials_without_private_state
     payload = read_report(store, arranged.id, "bundle")
     with zipfile.ZipFile(io.BytesIO(payload)) as bundle:
         names = set(bundle.namelist())
-        expected = {"report.md", "manifest.json"} | {
+        expected = {"report.md", "manifest.json",
+                    "handoff/START_HERE.zh.md", "handoff/START_HERE.en.md",
+                    "handoff/index.json", "handoff/check_files.py", "handoff/files.json",
+                    "handoff/candidate-1.proof.md", "handoff/candidate-1.review.json"} | {
             "materials/" + item.path for item in arranged.organization_context.files
         }
         assert names == expected
+        handoff_files = json.loads(bundle.read("handoff/files.json"))["files"]
+        assert {item["path"] for item in handoff_files} == expected - {"handoff/files.json"}
         manifest = json.loads(bundle.read("manifest.json"))
         assert manifest["report"]["pdf"] is None
         assert manifest["materials_prefix"] == "materials/"

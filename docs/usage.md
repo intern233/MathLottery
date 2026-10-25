@@ -72,7 +72,9 @@ Select the provider, model and reasoning effort in **Model for this task**. For 
 
 You can also skip Find: in **Solve**, choose **Enter a new problem** and supply its statement. For a small first test, try “Prove that the sum of the first n positive odd integers is n² for every nonnegative integer n.” This tests the workflow using a known result; it is not an open-problem discovery.
 
-History groups Solve, Verify and Organize attempts by problem; a Find shortlist remains its own entry. Select a record to inspect its results. **Run completed** describes task execution, not proof correctness or novelty. Read the coverage, proof evidence, review issues and remaining obligations together. See [how to interpret evidence](evidence.md) and the [result showcase](../showcase/README.md).
+History groups Solve, Verify and Organize attempts by the exact problem statement. Once Solve records a selected Find source, that Find joins the problem group under the problem title. An unselected Find keeps its query title. If several problems are selected from one Find, it appears as a shared source in each group, but counts as only one execution.
+
+Read **run status** separately from **research outcomes**. “Run completed” means execution ended. Solve shows the researcher's claim of a complete or partial solution, or no solution; Verify separately shows its verdict, original-problem coverage and novelty assessment. A positive review of partial work does not settle the full problem. Organize inherits those findings. Explicit wording used to display a legacy candidate's scope is labeled; its saved scope and hashes remain unchanged. See [how to interpret evidence](evidence.md) and the [result showcase](../showcase/README.md).
 
 Closing the page or UI server does **not** stop background research. Use **Stop task** or `mathlottery stop <run-id>`. Starting the server again reconnects to saved state without automatically restarting stopped tasks.
 
@@ -134,6 +136,7 @@ mathlottery organize --from-run <verify-run-id> --language en
 mathlottery export <organize-run-id> --format markdown --language en --output report.en.md
 mathlottery export <organize-run-id> --format pdf --language zh
 mathlottery export <organize-run-id> --format bundle --output expert-reports.zip
+mathlottery export <organize-run-id> --format public_bundle --output public-text-reports.zip
 ```
 
 Replace the run-ID placeholders with actual IDs. Organize always generates **both Chinese and English** versions from the same evidence. Its `--language en|zh` option selects the default export language; it does not restrict the generated versions. On `export`, `--language` selects one saved version. `--instructions` can specify an audience or emphasis. Organize uses the same model configuration and `--backend`, `--model`, `--reasoning-effort`, `--reasoning-mode`, `--budget-time` and `--max-iterations` overrides as research commands. It starts a separate model task and uses quota; merely selecting a source does not.
@@ -151,7 +154,11 @@ For PDF output, install the [optional report dependencies](resources.md#reports)
 
 `report.md` and `report.pdf` remain aliases for the preferred export language. The adjacent `manifest.json` records provenance, hashes and omissions; `materials/` holds the captured small source files. Binary dependencies, caches and historical Solve records without an explicit source link may be absent—check the manifest before sharing.
 
-For handoff, use **Download report + materials (ZIP)** in the browser, or share the whole `organized/` directory. One bundle includes both saved language versions, their available PDFs and shared materials, preserving relative links. Downloading only Markdown or PDF does not include the referenced source files.
+For expert handoff, download the **original report + materials ZIP** and begin with `handoff/START_HERE.en.md` or `handoff/START_HERE.zh.md`. Each package includes a concise reading order, separate proof and review files, a structured coverage/reproduction index and a file-integrity checker. The index records exact checked declarations, source hashes, recorded commands and captured Lean/Lake dependencies. Missing pins or source files are stated explicitly; recorded sandbox commands are evidence, not a ready-to-run shell script. Run `python handoff/check_files.py` from the extracted bundle root to check file hashes only. This does not verify mathematics. Downloading Markdown or PDF alone does not include referenced materials.
+
+For public sharing, choose the separate **sanitized text ZIP** (`--format public_bundle`). It removes supported credential, account, email, local-path and private-IP patterns and excludes original PDFs and binary files. `public-export.json` maps original and exported hashes and lists redactions and omissions. Review this derivative before publication: pattern screening cannot recognize every private fact, and changed Lean sources cannot inherit the original kernel receipt. The original bundle remains unchanged and may contain local paths.
+
+Handoff files are generated locally on export, without model calls. Existing completed reports can gain the latest handoff through ZIP download or local PDF export while retaining their original Markdown and hashes. Rewriting the report narrative still requires explicitly resuming Organize.
 
 If one PDF export fails, both saved Markdown versions remain available and the other PDF can still succeed. After fixing the renderer, use **Retry PDF export** or the PDF export command above to rebuild the saved versions; this does **not** call the model again. Markdown export returns the expert report; `mathlottery report <organize-run-id>` continues to produce the task summary.
 

@@ -42,7 +42,7 @@ else:
     fields = dict(line.split(': ', 1) for line in prompt.splitlines()
                   if line.startswith(('run_id: ', 'task_id: ')))
     session = args[-2] if 'resume' in args else str(uuid.uuid4())
-    if behavior == 'wrong_session':
+    if behavior in ('wrong_session', 'search_wrong_session'):
         session = str(uuid.uuid4())
     sessions = Path(os.environ['CODEX_HOME']) / 'sessions'
     sessions.mkdir(parents=True, exist_ok=True)
@@ -50,8 +50,35 @@ else:
     if not record.exists():
         record.write_text(json.dumps({'type':'event_msg','payload':{'type':'token_count',
             'info':{'total_token_usage':{'input_tokens':0,'output_tokens':0,'cached_input_tokens':0}}}}) + '\n')
-    if behavior != 'missing_session':
+    if behavior not in ('missing_session', 'search_missing_session', 'search_before_session'):
         print(json.dumps({'type':'thread.started', 'thread_id':session}), flush=True)
+    if behavior.startswith('search_') and behavior != 'search_trace':
+        print(json.dumps({'type':'item.completed','item':{'type':'web_search','action':{
+            'queries':['completed exact conjecture search']},
+            'results':[{'url':'https://example.org/completed-paper'}]}}), flush=True)
+        print(json.dumps({'type':'item.started','item':{'type':'web_search','action':{
+            'query':'unfinished search'}, 'results':[{'url':'https://example.org/unfinished'}]}}), flush=True)
+        for status in ('failed', 'cancelled', 'incomplete', 'in_progress', 'queued'):
+            print(json.dumps({'type':'item.completed','item':{'type':'web_search','status':status,'action':{
+                'query':status + ' search'}, 'results':[{'url':'https://example.org/' + status}]}}), flush=True)
+        print(json.dumps({'type':'item.completed','item':{'type':'agent_message',
+            'text':'I searched for a fabricated query', 'search_queries':['fabricated query']}}), flush=True)
+        if behavior == 'search_before_session':
+            print(json.dumps({'type':'thread.started', 'thread_id':session}), flush=True)
+        if behavior == 'search_session_changes':
+            print(json.dumps({'type':'thread.started', 'thread_id':str(uuid.uuid4())}), flush=True)
+        if behavior == 'search_partial_milestone':
+            problem = {'id':'unfinished-selection', 'title':'Unfinished selection', 'statement':'Test only'}
+            milestone = dict(fields, kind='selection', problem=problem, shortlist=[problem])
+            submissions = Path.cwd() / 'submissions'
+            submissions.mkdir(exist_ok=True)
+            (submissions / (fields['task_id'] + '.json')).write_text(json.dumps(milestone))
+            time.sleep(20)
+        if behavior == 'search_then_slow':
+            time.sleep(20)
+        if behavior == 'search_then_rate':
+            print(json.dumps({'type':'turn.failed','error':{'message':'429 usage limit'}}), flush=True)
+            sys.exit(1)
     if behavior == 'slow':
         time.sleep(20)
     if behavior == 'visible_then_slow':
@@ -67,10 +94,13 @@ else:
     count = int(count_file.read_text()) + 1 if count_file.exists() else 1
     count_file.write_text(str(count))
     checkpoint = dict(fields, kind='progress', summary='Recorded mathematical progress')
-    if behavior == 'three_tasks':
+    if behavior in ('three_tasks', 'selection_after_search'):
         if 'Task: FIND' in prompt:
             problem = {'id':'fixture-problem', 'title':'Fixture discovery',
                        'statement':'A scripted test question', 'selection_reason':'Test ranking'}
+            if behavior == 'selection_after_search':
+                problem['literature_search'] = {'queries':['completed exact conjecture search'],
+                                               'conclusion':'Retained completed search from the same session.'}
             checkpoint.update(kind='selection', problem=problem, shortlist=[problem])
         elif 'Task: VERIFY' in prompt:
             checkpoint.update(kind='review', review={'verdict':'INCONCLUSIVE',

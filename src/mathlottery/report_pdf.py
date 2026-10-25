@@ -157,6 +157,37 @@ def _math_block(state: Any, start: int, end: int, silent: bool) -> bool:
     return True
 
 
+def _comment_inline(state: Any, silent: bool) -> bool:
+    """Hide complete Markdown comments, never enable arbitrary HTML."""
+    if not state.src.startswith("<!--", state.pos):
+        return False
+    close = state.src.find("-->", state.pos + 4)
+    if close < 0:
+        return False
+    state.pos = close + 3
+    return True
+
+
+def _comment_block(state: Any, start: int, end: int, silent: bool) -> bool:
+    # Code fences and indented code retain comments as literal source examples.
+    if state.sCount[start] - state.blkIndent >= 4:
+        return False
+    position = state.bMarks[start] + state.tShift[start]
+    if not state.src.startswith("<!--", position):
+        return False
+    close = state.src.find("-->", position + 4)
+    if close < 0:
+        return False
+    next_line = start
+    while next_line < end and state.eMarks[next_line] < close + 3:
+        next_line += 1
+    if next_line >= end or state.src[close + 3:state.eMarks[next_line]].strip():
+        return False
+    if not silent:
+        state.line = next_line + 1
+    return True
+
+
 def _render_html(markdown: str, title: str) -> tuple[str, list[str], int]:
     try:
         from markdown_it import MarkdownIt
@@ -165,6 +196,9 @@ def _render_html(markdown: str, title: str) -> tuple[str, list[str], int]:
     warnings: list[str] = []
     context: dict[str, Any] = {"warnings": warnings, "formulas": 0, "links": []}
     parser = MarkdownIt("commonmark", {"html": False, "linkify": False}).enable("table")
+    parser.inline.ruler.before("html_inline", "report_comment", _comment_inline)
+    parser.block.ruler.before("paragraph", "report_comment", _comment_block,
+                              {"alt": ["paragraph", "reference", "blockquote", "list"]})
     parser.inline.ruler.before("escape", "report_math", _math_inline)
     parser.block.ruler.before(
         "fence", "report_math", _math_block,

@@ -26,10 +26,12 @@ ASSETS = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/research-details.js": ("research-details.js", "text/javascript; charset=utf-8"),
+    "/history.js": ("history.js", "text/javascript; charset=utf-8"),
+    "/outcomes.js": ("outcomes.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/mark.svg": ("mark.svg", "image/svg+xml"),
 }
-RUN_ROUTE = re.compile(r"/api/runs/(run-[a-f0-9]{12})(?:/(resume|stop|report|artifact|organized))?")
+RUN_ROUTE = re.compile(r"/api/runs/(run-[a-f0-9]{12})(?:/(resume|stop|report|artifact|organized|activity))?")
 
 
 class LocalServer(ThreadingHTTPServer):
@@ -187,6 +189,11 @@ class Handler(BaseHTTPRequestHandler):
             run_id, action = match.groups()
             if action is None:
                 self.respond(200, self.server.service.detail(run_id))
+            elif action == "activity":
+                if urlsplit(self.path).query:
+                    raise ValueError("Activity downloads do not accept query parameters")
+                self.respond(200, self.server.service.activity_archive(run_id), "application/x-ndjson; charset=utf-8",
+                             Content_Disposition=f'attachment; filename="{run_id}-activity.jsonl"')
             elif action == "report":
                 self.server.service.store.load(run_id)
                 report = self.server.service.text_artifact(run_id, "report.md", limit=10000000)
@@ -210,8 +217,11 @@ class Handler(BaseHTTPRequestHandler):
                     "pdf": ("pdf", "application/pdf"),
                     "markdown": ("md", "text/markdown; charset=utf-8"),
                     "bundle": ("zip", "application/zip"),
+                    "public_bundle": ("zip", "application/zip"),
                 }[format]
                 suffix = f".{language}" if language is not None else ""
+                if format == "public_bundle":
+                    suffix = "-public-text"
                 self.respond(200, data, content_type,
                              Content_Disposition=f'attachment; filename="{run_id}-expert-report{suffix}.{extension}"')
             elif action == "artifact":

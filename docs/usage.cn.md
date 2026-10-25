@@ -72,7 +72,9 @@ mathlottery serve
 
 也可以跳过 Find：在 **Solve** 中选择**输入一个新问题**并填写陈述。第一次可用“证明对每个非负整数 n，前 n 个正奇数之和等于 n²”测试流程。这是已知结论，用来检查系统是否跑通，不是开放问题发现。
 
-任务历史按问题归并 Solve、Verify 和 Organize 尝试，Find 候选列表保留为独立记录。点击记录查看结果。**运行完成**表示执行结束，不代表证明正确或结果新颖；需要一起看原题覆盖、证明证据、审查问题和剩余义务。参见[证据说明](evidence.cn.md)和[成果样本](../showcase/README.cn.md)。
+任务历史按精确问题陈述归并 Solve、Verify 和 Organize 尝试。选题启动 Solve 并记录明确来源后，Find 会并入对应问题组，使用问题标题；尚未选题的 Find 仍用查询标题。同一次 Find 选出多个问题时，会作为各组的共享来源展示，但执行总数只计一次。
+
+请分开看**运行状态**与**研究结果**。“运行完成”只表示执行结束。Solve 展示求解者声称完整解决、部分解决或尚未解决；Verify 另列审查结论、原题覆盖和新颖性。部分结果审查未发现问题，不代表完整原题已解决。Organize 沿用这些结论。旧候选若依据明确自述展示范围，会注明依据，原记录及哈希不变。参见[证据说明](evidence.cn.md)和[成果样本](../showcase/README.cn.md)。
 
 关闭页面或 UI 服务**不会停止**后台研究。请使用**停止任务**或 `mathlottery stop <run-id>`。重新启动服务会连接已有记录，不会自动重启已停止的任务。
 
@@ -134,6 +136,7 @@ mathlottery organize --from-run <verify-run-id> --language zh
 mathlottery export <organize-run-id> --format markdown --language zh --output report.zh.md
 mathlottery export <organize-run-id> --format pdf --language en
 mathlottery export <organize-run-id> --format bundle --output expert-reports.zip
+mathlottery export <organize-run-id> --format public_bundle --output public-text-reports.zip
 ```
 
 将任务 ID 占位符换成实际值。Organize 始终根据同一份证据生成**中英文两版**。它的 `--language zh|en` 只设置默认导出语言，不限制生成版本；`export --language` 则选择要导出的已保存版本。`--instructions` 可以指定读者背景或重点。Organize 使用同一套模型配置，也支持 `--backend`、`--model`、`--reasoning-effort`、`--reasoning-mode`、`--budget-time` 和 `--max-iterations` 覆盖参数。启动整理会创建独立模型任务并消耗额度，选择来源本身不会调用模型。
@@ -151,7 +154,11 @@ mathlottery export <organize-run-id> --format bundle --output expert-reports.zip
 
 `report.md` 和 `report.pdf` 保留为默认导出语言的兼容副本。同目录的 `manifest.json` 记录来源、哈希和遗漏，`materials/` 保存捕获的小型源文件。二进制依赖、缓存，以及没有明确来源关联的历史 Solve 记录可能未被收集；分享前请检查清单。
 
-交给他人审阅时，建议在浏览器点击**下载报告与材料（ZIP）**，或分享整个 `organized/` 目录。一个 ZIP 包含中英文已保存版本、可用的 PDF 和共用材料，保留相对链接；单独下载 Markdown 或 PDF 不会附带引用的源文件。
+专家交接时，下载**原始报告与材料 ZIP**，先读 `handoff/START_HERE.zh.md` 或 `handoff/START_HERE.en.md`。包内提供简短阅读顺序、独立证明和审查文件、结构化覆盖与复现索引，以及文件完整性检查器。索引列明真正检查过的定理声明、源码哈希、已记录命令和捕获的 Lean/Lake 依赖；缺少依赖锁定或源码时会明确说明。原始隔离环境中的命令是执行证据，不能直接作为本机脚本运行。解压后在包根目录运行 `python handoff/check_files.py`，仅核对文件哈希，不能据此判断数学正确性。单独下载 Markdown 或 PDF 不附带引用材料。
+
+公开分享请另选**脱敏文本 ZIP**（`--format public_bundle`）。它处理已支持的凭据、账号、邮箱、本机路径和私有 IP 模式，并排除原始 PDF 和二进制文件。`public-export.json` 对照原始与导出哈希，列出删改和遗漏。发布前仍需检查这个副本：模式匹配无法识别所有私人事实，修改后的 Lean 源码也不能直接继承原内核回执。原始材料包保持不变，可能包含本机路径。
+
+交接文件在导出时由本地生成，无需调用模型。历史已完成报告通过下载 ZIP 或重新导出 PDF 即可获得新版交接材料，原 Markdown 和哈希保持不变；需要改写报告正文时，才显式续接 Organize。
 
 某一版 PDF 导出失败不会丢失两版 Markdown，也不妨碍另一版 PDF 导出。修复渲染环境后，点击**重新导出 PDF**或执行上述 PDF 导出命令，根据已保存版本重新生成，**无需再次调用模型**。Markdown 导出得到专家报告；`mathlottery report <organize-run-id>` 仍然生成任务摘要。
 

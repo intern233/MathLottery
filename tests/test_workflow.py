@@ -92,6 +92,26 @@ def test_agent_cannot_promote_lemma_or_set_formal_target(waiting):
     assert run.memory[-1].status == "unverified"
 
 
+def test_structured_reselection_cannot_omit_saved_source_obligations(waiting, store):
+    from mathlottery.models import LiteratureObstacle
+
+    engine, run = waiting
+    old = run.problem.model_copy(deep=True)
+    old.literature_search.obstacles = [LiteratureObstacle(
+        id="prior-theorem", kind="UNCLEAR_COMPARISON", description="Compare the closest known theorem",
+        impact="It could already imply the claim", next_action="Read both hypotheses and conclusions",
+        source_url="https://example.test/paper",
+    )]
+    old.evidence_assessment.policy_version = "evidence-v4"
+    old.evidence_assessment.obstacles = [{"id": "prior-theorem", "resolution_supported": False}]
+    store.save_problem(old)
+    selected = run.problem.model_dump(mode="json")
+    run = engine.submit(run.id, response(run, action="SELECT_PROBLEM", problem=selected))
+    assert "prior-theorem" in run.problem.evidence_assessment.unresolved_obstacle_ids
+    assert run.problem.evidence_assessment.obstacles[0]["previous_status"] == "OPEN"
+    assert run.shortlist[0].literature_search.obstacles[0].id == "prior-theorem"
+
+
 def test_independent_review_excludes_solver_memory_and_previous_candidate_reviews(store, config):
     engine = Orchestrator(store)
     run = engine.create(config, demo_problem(), proof="Induction on n.")

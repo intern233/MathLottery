@@ -25,7 +25,17 @@ or paraphrase inside excerpt. Put formula transcriptions and interpretation in s
 If PDF text extraction cannot faithfully preserve the needed passage, use an accessible primary
 HTML/text version with an exact locator, or report the retrieval gap. Do not evade site access rules.
 Retain UNKNOWN if the evidence cannot support an open-status assessment. These fields structure
-the final selection only; choose your research steps and tools freely.""",
+the final selection only; choose your research steps and tools freely.
+
+Before asking the user to choose, include source_statement with the original question and quantifiers,
+scope_relation (FULL_STATEMENT/EXPLICIT_SUBPROBLEM/INTERPRETATION/UNKNOWN), scope_description,
+prior_work_summary, and statement_risks. Each risk has id, kind, severity, description, impact,
+next_action, source_url and locator. Disclose quantifier ambiguity, missing assumptions, conflicting
+versions, unavailable source text, selected subproblems and missing formalizations before Solve.
+Use severity NEEDS_CLARIFICATION when source quantifiers conflict. Preserve the complete original
+statement when the selected target is only a branch; do not portray that branch as the whole question.
+An empty risk list means no risk was reported, not certified unambiguity. These disclosures describe
+the final shortlist and do not prescribe the agent's intermediate methods or tools.""",
     Phase.SOLVE: """For each candidate, declare scope: COMPLETE, PARTIAL, COUNTEREXAMPLE or UNKNOWN,
 and remaining_obligations: [...]. COMPLETE means the full original statement, with its quantifiers
 and assumptions; a reduction or a proved subcase is PARTIAL until all remaining obligations are
@@ -131,6 +141,19 @@ check the exact obstacle source. When a comparison or conflicting status is invo
 obstacle ID to an explicit checked prior-result comparison. If resolving a historical unresolved
 string, include that exact string in resolves_legacy_gaps. Old gaps otherwise continue blocking
 supported novelty/open-status assessments; a novelty-only gap does not determine proof validity.
+
+Preserve controller-generated source-/comparison-/gap- IDs and any registered required_locator
+and required_excerpt_sha256. These identify the original obligation and cannot be replaced by an
+easier sentence or theorem. A current checked excerpt matching the exact registered source goal
+can close the access/excerpt barrier automatically; it does not certify the passage's interpretation
+or novelty. If correcting an erroneous old quotation, explain the correction explicitly and attach
+a checked citation at the original locator, rather than deleting the old goal. Old free-text source
+barriers still need an explicit RESOLVED explanation with checked citations. For a generated
+comparison goal, link its exact ID in the matching comparison.obstacle_ids and compare that same
+source and locator. A mere successful download cannot close a semantic comparison or status conflict.
+Use the latest controller resolution_reason to target the next action; failed or stale current
+receipts may reopen an earlier resolution. Do not invent mirror equivalence: only an actually
+observed independent redirect receipt connects different URLs automatically.
 
 Compare close prior theorems in literature_search.comparisons:
 [{id, source_url, locator, prior_assumptions, candidate_assumptions, prior_conclusion,

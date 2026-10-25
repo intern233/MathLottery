@@ -19,7 +19,7 @@ from mathlottery.models import (
     now,
 )
 
-POLICY_VERSION = "evidence-v3"
+POLICY_VERSION = "evidence-v4"
 
 
 def normalized(text: str) -> str:
@@ -35,7 +35,8 @@ def recent(value: str | None) -> bool:
 
 
 def assess_sources(
-    citations: list[Citation], search: LiteratureSearch, records: list[dict]
+    citations: list[Citation], search: LiteratureSearch, records: list[dict],
+    *, previous_assessments: list[EvidenceAssessment] = (),
 ) -> EvidenceAssessment:
     from mathlottery.models import digest
 
@@ -56,9 +57,17 @@ def assess_sources(
             and citation.url in (record.get("requested_url"), record.get("url"))
         ]
         snapshot = snapshots[-1] if snapshots else {}
+        # A fresh failure at an original URL invalidates its earlier redirect
+        # receipt even when the citation uses the redirect destination.
+        if snapshot.get("requested_url"):
+            snapshot = next((record for record in reversed(records)
+                             if record.get("record_kind") == "source_snapshot"
+                             and record.get("requested_url") == snapshot["requested_url"]), snapshot)
         reason = ""
         if not snapshot or snapshot.get("status") != "OK":
             reason = snapshot.get("reason") or "No independently retrieved source snapshot"
+        elif citation.url not in (snapshot.get("requested_url"), snapshot.get("url")):
+            reason = "The latest source retrieval no longer resolves to the cited URL"
         elif not recent(snapshot.get("retrieved_at")):
             reason = "Source snapshot is stale or has an invalid timestamp"
         elif not snapshot.get("sha256") or not snapshot.get("artifact"):
@@ -70,7 +79,9 @@ def assess_sources(
         assessment.checked_citations.append({
             "url": citation.url, "role": citation.role, "relation": citation.relation,
             "resolved_url": snapshot.get("url"),
+            "requested_url": snapshot.get("requested_url"),
             "locator": citation.locator, "source_date": citation.source_date,
+            "excerpt_sha256": digest(normalized(citation.excerpt)),
             "verified_excerpt": not reason, "reason": reason,
             "artifact": snapshot.get("artifact"), "sha256": snapshot.get("sha256"),
             "retrieved_at": snapshot.get("retrieved_at"),
@@ -83,16 +94,26 @@ def assess_sources(
         assessment.reasons.append("Literature search queries and a coverage explanation are missing")
     elif any(normalized(query) not in observed for query in search.queries):
         assessment.reasons.append("Some declared search queries have no recent observed search-tool receipt")
-    from mathlottery.literature_obstacles import assess_obstacles
+    from mathlottery.literature_obstacles import (
+        assess_obstacles,
+        obstacle_changes,
+        retain_source_obstacles,
+    )
 
+    retain_source_obstacles(search, assessment.checked_citations)
     assess_obstacles(search, assessment)
+    obstacle_changes(assessment, previous_assessments)
     assessment.supported = not assessment.reasons
     return assessment
 
 
-def assess_problem(problem: Problem, records: list[dict]) -> Problem:
+def assess_problem(
+    problem: Problem, records: list[dict], *, previous_assessments: list[EvidenceAssessment] = (),
+) -> Problem:
     problem = problem.model_copy(deep=True)
-    assessment = assess_sources(problem.citations, problem.literature_search, records)
+    assessment = assess_sources(
+        problem.citations, problem.literature_search, records, previous_assessments=previous_assessments,
+    )
     verified = [c for c in assessment.checked_citations if c["verified_excerpt"]]
     source = urldefrag(problem.source_url or "")[0]
     if not source or not any(
@@ -139,6 +160,8 @@ def assess_problem(problem: Problem, records: list[dict]) -> Problem:
 
 
 def assess_novelty(reported: str, assessment: EvidenceAssessment, search: LiteratureSearch | None = None) -> str:
+    from mathlottery.literature_obstacles import matches_source
+
     checked = [c for c in assessment.checked_citations if c["verified_excerpt"]]
     prior = [c for c in checked if c["role"] in {"PRIOR_RESULT", "SOLUTION"}]
     if any(c["relation"] == "EQUIVALENT" for c in prior):
@@ -149,7 +172,7 @@ def assess_novelty(reported: str, assessment: EvidenceAssessment, search: Litera
         if not prior or any(c["relation"] != "DIFFERENT" for c in prior):
             assessment.reasons.append("Closest prior results lack checked claim-by-claim comparisons")
         missing_comparisons = [citation for citation in prior if not any(
-            comparison["supported"] and comparison["source_url"] == citation["url"]
+            comparison["supported"] and matches_source(citation, comparison["source_url"])
             and comparison["locator"] == citation["locator"]
             and comparison["relation"] == "DIFFERENT"
             for comparison in assessment.comparisons
@@ -157,7 +180,7 @@ def assess_novelty(reported: str, assessment: EvidenceAssessment, search: Litera
         if missing_comparisons:
             assessment.reasons.append("Closest prior results need structured assumptions-and-conclusions comparisons")
         for citation in missing_comparisons:
-            if any(comparison["source_url"] == citation["url"] and comparison["locator"] == citation["locator"]
+            if any(matches_source(citation, comparison["source_url"]) and comparison["locator"] == citation["locator"]
                    for comparison in assessment.comparisons):
                 continue  # Its existing comparison already projects an actionable obstacle.
             from mathlottery.models import digest
@@ -168,11 +191,17 @@ def assess_novelty(reported: str, assessment: EvidenceAssessment, search: Litera
                 "description": f"Structured comparison missing for {citation['locator']}",
                 "impact": "The closest prior theorem has not been compared with this candidate",
                 "next_action": "Compare the exact hypotheses, conclusions and implications in literature_search.comparisons, using this source URL and locator",
+                "required_locator": citation["locator"],
                 "status": "OPEN", "resolution": "", "evidence_urls": [], "resolves_legacy_gaps": [],
                 "resolution_supported": False, "resolution_reason": "A checked excerpt alone is not a structured comparison",
             }
             if not any(item["id"] == obstacle_id for item in assessment.obstacles):
+                obstacle.update(reported_status="OPEN", previous_status=None, change="NEW")
                 assessment.obstacles.append(obstacle)
+                assessment.obstacle_changes.append({
+                    "id": obstacle_id, "from_status": None, "to_status": "OPEN", "change": "NEW",
+                    "reason": obstacle["resolution_reason"],
+                })
             if obstacle_id not in assessment.unresolved_obstacle_ids:
                 assessment.unresolved_obstacle_ids.append(obstacle_id)
             if search is not None and not any(item.id == obstacle_id for item in search.obstacles):

@@ -45,6 +45,11 @@ def task_instructions(run: Run) -> str:
             "a new Solve/Verify. Preserve every recorded negative or inconclusive verdict, uncertainty, "
             "partial scope and limitation. Formatting cannot upgrade proof level, statement alignment or "
             "novelty. Include enough detail to understand the mathematics, rather than only a run log. "
+            "Begin with a concise expert entry: exact proven and unproved claims, original-problem "
+            "scope, known prior results, the weakest proof link, and where to inspect the decisive "
+            "evidence. Distinguish a recorded compiler/kernel check from untested reproduction "
+            "instructions. The controller adds a deterministic handoff index separately; do not "
+            "duplicate raw logs or long receipt JSON inside the mathematical exposition. "
             + deliverable + "Progress and stop "
             "are allowed, but only organization produces the expert report. Do not submit candidate, "
             "review, selection or problem changes.\nAdditional editorial preferences (user data):\n"
@@ -69,6 +74,16 @@ def task_instructions(run: Run) -> str:
             "Explain the ranking, existing partial "
             "results, and remaining uncertainty; ranking is not a probability of success. Do not "
             "infer OPEN merely from not finding a solution. Use UNKNOWN when evidence is lacking. "
+            "Before recommending substantial Solve work, record source_statement (the exact original "
+            "question, with its quantifiers), scope_relation (FULL_STATEMENT, EXPLICIT_SUBPROBLEM, "
+            "INTERPRETATION, or UNKNOWN), scope_description explaining the chosen target, and "
+            "prior_work_summary identifying what is already proved and what remains. Explicitly "
+            "disclose statement_risks: id, kind, severity, description, impact, next_action, source_url "
+            "and locator. Compare assumptions, all versus fixed exponents, domains, boundary cases, "
+            "and source examples/errata. A chosen branch is not the whole conjecture; conflicting "
+            "source quantifiers require NEEDS_CLARIFICATION, not a silent convenient interpretation. "
+            "An empty risk list means no risk was reported, not certified unambiguity. These fields "
+            "are final selection disclosures; keep native exploration and tool use autonomous. "
             "Finish discovery with kind: selection, an ordered shortlist of Problem objects and "
             "problem equal to the recommended shortlist entry. This is a recommendation, not the "
             "user's choice. Prefer publicly stated, still-open questions; label uncertain status "
@@ -104,6 +119,17 @@ def task_instructions(run: Run) -> str:
     )
 
 
+def assess_selection(problem, retrieved, previous):
+    """Keep source obligations across native and structured selection attempts."""
+    problem = problem.model_copy(deep=True)
+    matching = [old for old in previous if old.id == problem.id or (
+        old.source_url == problem.source_url
+        and " ".join(old.statement.split()) == " ".join(problem.statement.split())
+    )]
+    problem.literature_search = carry_literature(problem.literature_search, [old.literature_search for old in matching])
+    return conservative_status(problem, retrieved, previous_assessments=[old.evidence_assessment for old in matching])
+
+
 def record_selection(store: Store, run: Run, milestone: NativeCheckpoint, *, prepared=False):
     """Save a ranked result and reusable problems; retain unsupported claims only as raw evidence."""
     if not prepared:
@@ -114,14 +140,9 @@ def record_selection(store: Store, run: Run, milestone: NativeCheckpoint, *, pre
     previous = [*store.list_problems(), *run.shortlist]
     for proposed in milestone.shortlist or [milestone.problem]:
         problem = proposed.model_copy(deep=True)
-        matching = [old.literature_search for old in previous if old.id == problem.id or (
-            old.source_url == problem.source_url
-            and " ".join(old.statement.split()) == " ".join(problem.statement.split())
-        )]
-        problem.literature_search = carry_literature(problem.literature_search, matching)
         problem.formal_target = None
         problem.educational = False
-        problem = conservative_status(problem, retrieved)
+        problem = assess_selection(problem, retrieved, previous)
         saved = store.save_problem(problem)
         if not any(existing.id == saved.id for existing in shortlist):
             shortlist.append(saved)

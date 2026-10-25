@@ -62,6 +62,7 @@ class CandidateStore:
         candidate = audit(
             self.check(run), review, self.observations(run) + list(extra_observations),
             prior_literature=([run.problem.literature_search] if run.problem else []) + run.review_literature,
+            prior_assessments=[run.problem.evidence_assessment] if run.problem else [],
             original_statement=run.problem.statement if run.problem else None,
         )
         run.candidates[-1] = candidate

@@ -87,6 +87,15 @@ class NativeRunner:
             }
         )
         run.native.pending_result = None
+        # A timed-out turn can contain completed, useful searches. Preserve only
+        # transport-confirmed observations for this exact session, before pausing;
+        # do not accept its unfinished milestone or refresh its original time.
+        if result.status == BackendStatus.COMPLETED or (
+            result.runtime.get("tool_observations_confirmed") is True
+            and result.session_id
+            and result.session_id == getattr(run.native, self.attempts.session_field(run))
+        ):
+            self._record_tool_observations(run, result, receipt)
         if result.status != BackendStatus.COMPLETED:
             if result.pending:
                 run.native.active_attempt = receipt["directory"]
@@ -114,23 +123,6 @@ class NativeRunner:
             run.native.steering = None
         run.last_error = run.native.checkpoint_error
         finish = None
-        for url in result.runtime.get("source_urls", []):
-            run.observations.append(
-                {
-                    "phase": run.phase.value,
-                    "iteration": run.iteration,
-                    "tool": "native_source",
-                    "artifact": run.native.history[-1]["events"],
-                    "result": {"status": "OK", "url": url, "retrieved_at": receipt.get("source_observed_at"),
-                               "scope": "Backend-reported URL, not independently fetched source text"},
-                }
-            )
-        if result.runtime.get("search_queries"):
-            run.observations.append({
-                "phase": run.phase.value, "iteration": run.iteration, "tool": "native_search",
-                "artifact": run.native.history[-1]["events"],
-                "result": {"status": "OK", "queries": result.runtime["search_queries"], "retrieved_at": receipt.get("source_observed_at")},
-            })
         if milestone:
             if milestone.problem and run.phase == Phase.FIND:
                 record_selection(self.store, run, milestone, prepared=True)
@@ -199,6 +191,23 @@ class NativeRunner:
             return True
         report(self.store, run)
         return False
+
+    def _record_tool_observations(self, run: Run, result: BackendResult, receipt: dict) -> None:
+        artifact = run.native.history[-1]["events"]
+        observed_at = receipt.get("source_observed_at")
+        for url in result.runtime.get("source_urls", []):
+            run.observations.append({
+                "phase": run.phase.value, "iteration": run.iteration, "tool": "native_source",
+                "artifact": artifact,
+                "result": {"status": "OK", "url": url, "retrieved_at": observed_at,
+                           "scope": "Backend-reported URL, not independently fetched source text"},
+            })
+        if result.runtime.get("search_queries"):
+            run.observations.append({
+                "phase": run.phase.value, "iteration": run.iteration, "tool": "native_search",
+                "artifact": artifact,
+                "result": {"status": "OK", "queries": result.runtime["search_queries"], "retrieved_at": observed_at},
+            })
 
     def drive(self, run: Run) -> Run:
         config = Config.model_validate(run.config)

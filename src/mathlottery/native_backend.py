@@ -218,7 +218,8 @@ class NativeWorkBackend(WorkBackend):
                     errors.append(json.dumps(event, ensure_ascii=False))
                 item = event.get("item") or {}
                 if isinstance(item, dict):
-                    if kind == "item.completed":
+                    if (kind == "item.completed" and saw_session and not session_error
+                        and item.get("status") in (None, "completed") and not item.get("error")):
                         search_queries.update(queries_from_call(item))
                     if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
                         last_message = item["text"]
@@ -234,7 +235,10 @@ class NativeWorkBackend(WorkBackend):
                         "file_change",
                     ):
                         tools_used.add(item["type"])
-                    if item.get("type") == "web_search":
+                    if (item.get("type") == "web_search" and kind == "item.completed"
+                        and saw_session and not session_error
+                        and item.get("status") in (None, "completed")
+                        and not item.get("error")):
                         action = item.get("action") or {}
                         if isinstance(action, dict):
                             records = [action, *(action.get("sources") or []), *(item.get("results") or [])]
@@ -313,6 +317,7 @@ class NativeWorkBackend(WorkBackend):
         if not saw_session or session_error:
             usage, runtime["usage_scope"] = {}, "unknown: session identity was not confirmed"
         runtime["tools_observed"] = sorted(tools_used)
+        runtime["tool_observations_confirmed"] = saw_session and not session_error
         runtime["source_urls"] = sorted(source_urls)
         runtime["search_queries"] = sorted(search_queries)
         answer = directory / "answer.md"

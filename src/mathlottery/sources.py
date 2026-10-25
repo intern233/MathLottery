@@ -210,7 +210,7 @@ class WebTools:
         return output
 
 
-def conservative_status(problem: Problem, retrieved: list[dict]) -> Problem:
+def conservative_status(problem: Problem, retrieved: list[dict], *, previous_assessments=()) -> Problem:
     from mathlottery.evidence_policy import assess_problem
 
-    return assess_problem(problem, retrieved)
+    return assess_problem(problem, retrieved, previous_assessments=previous_assessments)

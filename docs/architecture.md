@@ -20,6 +20,8 @@ The CLI commands find, solve, verify and organize set an explicit Workflow on th
 
 Standalone Find stops at its shortlist so the user can choose a problem. The CLI's `run` command opts into automatic research-stage transitions and does not add this selection pause. The browser exposes Find, Solve, Verify and optional Organize as separate operations.
 
+Find records the original wording, the target's scope relative to that wording, known partial results and explicit statement risks. `statement_risks.py` projects missing evidence and ambiguities onto both shortlist cards and the Solve selection preview. These are selection disclosures, not semantic certification. Nonempty disclosures are bound into the frozen Find dossier; legacy records remain explicitly unassessed.
+
 ## Components
 
 | Module | Responsibility |

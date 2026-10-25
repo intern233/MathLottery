@@ -1,12 +1,20 @@
 from mathlottery.evidence_policy import assess_novelty, assess_sources
 from mathlottery.literature_obstacles import carry_literature
-from mathlottery.models import Candidate, Level, LiteratureSearch, Review, digest
+from mathlottery.models import (
+    Candidate,
+    EvidenceAssessment,
+    Level,
+    LiteratureSearch,
+    Review,
+    digest,
+)
 from mathlottery.proof_coverage import assess_proof_coverage
 
 
 def audit(
     candidate: Candidate, review: Review, observations: list[dict],
     *, prior_literature: list[LiteratureSearch] = (),
+    prior_assessments: list[EvidenceAssessment] = (),
     original_statement: str | None = None,
 ) -> Candidate:
     if candidate.sha256 != digest(candidate.claim + "\n" + candidate.proof):
@@ -21,7 +29,10 @@ def audit(
         [*prior_literature, *(previous.literature_search for previous in candidate.reviews)],
     )
     review.evidence_assessment = assess_sources(
-        review.citations, review.literature_search, [o.get("result", {}) for o in current]
+        review.citations, review.literature_search, [o.get("result", {}) for o in current],
+        # The frozen Find assessment precedes newer reviews. These baselines
+        # describe transitions only; current review receipts still decide closure.
+        previous_assessments=[*prior_assessments, *(previous.evidence_assessment for previous in candidate.reviews)],
     )
     review.novelty = assess_novelty(review.novelty, review.evidence_assessment, review.literature_search)
     review.formal_receipt = next((
