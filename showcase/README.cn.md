@@ -1,27 +1,41 @@
-# 结果样本
+# 投稿候选成果
 
 [English](README.md) | 简体中文
 
-[项目介绍](../README.cn.md) · [安装与使用](../docs/usage.cn.md)
+[项目介绍](../README.cn.md) · [使用说明](../docs/usage.cn.md) · [证据政策](../docs/evidence.cn.md)
 
-这里展示 MathLottery 本地实测整理出的三项完整候选解答：两份证明和一个反例。每个案例均提供完整的中英文专家报告（Markdown 和 PDF），并保留原始普通证明、审查摘要及精简验证记录；适合形式验证的案例附有 Lean 源码。
+`ai4math` 分支精选三项结果，作为后续论文准备的起点。筛选侧重论证内容、精确的无界命题和支撑证据，不代表已确认新颖性、获得专家认可或达到期刊录用标准。原先的通用展示案例仍保存在 `main` 和 Git 历史中。
 
-各案例分别记录公开来源、正确性检查与审查限制；当前未解状态和首次性仍按各案例的证据范围保留限制。
+| 结果 | 可能的数学贡献 | 已保存验证 | 论文中的定位 |
+| --- | --- | --- | --- |
+| [Sun beta 多项式](sun-beta-logconvexity/README.cn.md) | 全部行指标的逐系数对数凸性；加权卷积的显式正性证书 | 完整候选；最终 AI 审查 `NO_ISSUES_FOUND`、覆盖 `FULL`；Lean 主声明已重放；新颖性 `UNKNOWN` | 第一优先级，证书方法论文的主结果 |
+| [三次 Franel 尾序列](franel-logconvexity/README.cn.md) | 从 $F_8$ 开始逐系数对数凸，中心指标 $n\ge9$ 的内部系数严格正 | 完整候选；AI 审查 `NO_ISSUES_FOUND`、覆盖 `FULL`；无完整 Lean 证明；新颖性 `UNKNOWN` | 考虑与 beta 合写，作为另一个应用 |
+| [对合排列上的 mesh 模式](mesh-involutions/README.cn.md) | 与取逆相容的标记出现传输及轨道权重，覆盖全部 $n,k$ 的四模式等分布 | 完整书面候选；AI 审查 `NO_ISSUES_FOUND`；仅部分 Lean；新颖性 `POTENTIALLY_NEW` | 单独的组合数学论文候选 |
 
-| 案例 | 数学结果 | Lean 验证 | 新颖性评估 |
-|---|---|---|---|
-| [对合排列上的四模式等分布](mesh-involutions/README.cn.md) | 覆盖全部 n、k 的普通证明 | 部分：107 条定理通过，缺全局双射构造 | POTENTIALLY_NEW |
-| [中位三角形动点不等式](medial-triangle-inequality/README.cn.md) | Conjecture 5 的完整证明，并包含边界 | 完整形式陈述编译及内核重放通过 | UNKNOWN |
-| [阶梯不规则图度数序列](stepwise-irregular-graphs/README.cn.md) | Conjecture 1 的完整反例 | 未形式化；附有限证书检查器 | UNKNOWN |
+**初步按两篇潜在稿件准备，不把三个案例算作三篇已成立的论文。** Beta 与 Franel 的证明策略相关，但统一覆盖二者的一般定理仍待建立；若只是表面相似，就需要重新评估合写结构。Mesh 的组合论证与文献背景相对独立。
 
-三项候选都获得过独立 AI 审查的 NO_ISSUES_FOUND 结论。它表示审查未发现实质漏洞，不等于数学专家认证。POTENTIALLY_NEW 表示已查文献未发现完整先解、可能是新结果；UNKNOWN 表示现有资料不足以确认新颖性。文献状态以 2026-10-21 的核查为准，这份样本集不宣称三项均为开放问题首解。
+## 从报告开始
 
-先读各案例的 README，再进入其中链接的 `organized/` 专家报告。报告完整解释论证，区分历史独立审查与后来补充的证据，保留尚未解决的限制；Organize 是编辑整理，不是再次验真或重新确认新颖性。原始 `proof.md`、审查摘要及 `verification.json` 均保留，后者记录源码哈希和历史检查结果。形式化范围和复现命令位于各自的 `formal/README.md`。Erdős #885 的试验只有部分构造，未纳入这三项完整结果。
+| 案例 | 中文 | English | 证明与审查 |
+| --- | --- | --- | --- |
+| Beta | [Markdown](sun-beta-logconvexity/organized/report.zh.md) · [PDF](sun-beta-logconvexity/organized/report.zh.pdf) | [Markdown](sun-beta-logconvexity/organized/report.en.md) · [PDF](sun-beta-logconvexity/organized/report.en.pdf) | [证明](sun-beta-logconvexity/proof.md) · [审查](sun-beta-logconvexity/review.cn.md) · [Lean 范围](sun-beta-logconvexity/formal/README.cn.md) |
+| Franel | [Markdown](franel-logconvexity/organized/report.zh.md) · [PDF](franel-logconvexity/organized/report.zh.pdf) | [Markdown](franel-logconvexity/organized/report.en.md) · [PDF](franel-logconvexity/organized/report.en.pdf) | [证明](franel-logconvexity/proof.md) · [审查](franel-logconvexity/review.cn.md) |
+| Mesh | [Markdown](mesh-involutions/organized/report.zh.md) · [PDF](mesh-involutions/organized/report.zh.pdf) | [Markdown](mesh-involutions/organized/report.en.md) · [PDF](mesh-involutions/organized/report.en.pdf) | [证明](mesh-involutions/proof.md) · [审查](mesh-involutions/review.cn.md) · [Lean 范围](mesh-involutions/formal/README.cn.md) |
 
-这些实测使用 Codex 原生会话，模型 gpt-6-astra、推理 max。主控协助准备环境和部分证明路线，原生研究会话与独立审查会话分开进行；不是完全无人提示的自主发现。网格模式案例的原生求解因额度限制结束，之后的 Lean 补充由主控完成，其完整流水线没有正常结束。
+各案例 README 说明精确命题、可能贡献、证据边界及投稿前工作。Organize 报告解释已保存的论证，不新增证明审查。证明文件保留提交时的原话，与后来审查的结论并列呈现。
 
-样本只收录小型文本、精简报告 PDF、必要源码和反例证书。各报告的 `organized/manifest.json` 说明公开副本的编辑范围，区分原始来源哈希与导出文件哈希，并列出遗漏；公开副本已移除本地路径和私有任务标识。工具链、mathlib、编译缓存、数据库、原始会话、下载论文及完整运行日志保留在本地实验档案，不随本目录提交。原始候选保持不变，展示版的编辑范围在各案例的验证摘要中注明。
+## 距离正式论文还缺什么
 
-指南、案例介绍、审查摘要和完整专家报告均提供中英双语。原始证明文件保留原始语言：网格模式为英文，三角形不等式和图论反例为中文。
+- **Beta：**专家独立检查证明和形式声明，补回依赖锁定，更新与已有结果的比较。虽然主定理有历史重放成功记录，题意等价认证仍为 `NOT_CERTIFIED`。
+- **Franel：**补回或重建缺失的证书检查器并保存新检查，核对全部系数表和边界论证。目前没有完整形式化证明。
+- **Mesh：**明确对合限制带来的新贡献与已知全排列方法的区别，处理尚未读到全文的相关文献，并取得专家审查。已检查的 107 条 Lean 定理没有补上缺失的全局双射。
 
-本目录可以由 Git 跟踪；生成的 Lean 依赖和编译产物由本目录的 .gitignore 排除。运行 Lean 复现命令会另行下载工具链和依赖，可能需要数 GiB；这些依赖不是样本内容。复现 Lean 案例前，请先阅读[资源需求](../docs/resources.cn.md)，了解内存与磁盘规划、缓存复用和并发控制。
+Beta 和 Franel 的旧记录虽有积极的书面 AI 审查，却没有已评估的结构化关键步骤路线图。运行完成、AI 审查、有限计算、形式化编译回答的是不同问题，任何一个都不能单独认证原创数学贡献。
+
+文献判断是历史记录：beta/Franel 为 2026-10-23，mesh 为 2026-10-21。本次 2026-10-26 的编辑筛选没有重新 Solve、Verify 或检索优先权。形成论文仍需要人类作者负责，并准确说明 AI 的参与。
+
+## 文件与来源
+
+本目录收录完整中英文 Markdown/PDF 报告、完整提交证明、审查摘要、精简证据、证书数据及已有 Lean 源码。Beta、Franel 的公开清单区分原始来源哈希与导出文件哈希，记录固定标识别名和未附送的下载论文全文；PDF 从公开 Markdown 重新生成。Mesh 保留此前已整理的证据与部分形式化工程。
+
+认证信息、订阅信息、个人路径、运行会话、数据库、下载论文和编译缓存不放入本目录。原始本地实验不改动；完整性检查只核对所列文件字节，不认证数学或新颖性。复现 Lean 前请阅读[资源需求](../docs/resources.cn.md)，源码体积不代表编译内存占用。

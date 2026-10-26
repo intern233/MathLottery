@@ -1,0 +1,13 @@
+{
+  "status": "OK",
+  "record_kind": "source_snapshot",
+  "requested_url": "https://arxiv.org/html/math/0603403v1",
+  "url": "https://arxiv.org/html/math/0603403v1",
+  "retrieved_at": "2026-10-23T15:02:00.198603+00:00",
+  "sha256": "fb44ccac54da544928f4dba84a4579dfa804289e9592744908be74efa131b674",
+  "artifact": "literature/snapshots/fb44ccac54da544928f4dba84a4579dfa804289e9592744908be74efa131b674.txt",
+  "excerpt_hashes": [
+    "ff91bf56e59781b6a2135976d3f4321dbc6b906b31d6a2aafbebd987babc8583"
+  ],
+  "scope": "Text matches only; source interpretation and search completeness are not certified"
+}

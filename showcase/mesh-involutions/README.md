@@ -14,6 +14,12 @@ An involution is a permutation satisfying π² = id. Let R = {(0,0),(1,1),(1,2),
 
 The proof rotates star components in marked-occurrence graphs into path components, establishes compatibility with permutation inversion, and preserves transposition edge by edge. It assigns separate weights to orbits of sizes 1 and 2 in transposition-invariant marked objects, then recovers every occurrence count through generating polynomials. The star/path method has prior literature precedent, acknowledged in the proof. The new argument focuses on the involution restriction and orbit weights.
 
+## Manuscript development on `ai4math`
+
+This case is retained as the second manuscript direction, separate from the [beta/Franel certificate work](../README.md). The potential contribution is the inversion-compatible restriction and its orbit-weight argument; the all-permutations star/path method must be credited as prior work. Before submission, obtain an expert check of the global transport and its inverse, resolve the unread related-source gap described in [the review](review.md), and update the literature comparison. A full Lean construction would strengthen the package but is not present. Selection for publication development changes neither the historical review nor the novelty assessment.
+
+## Proof and evidence
+
 - [Complete written proof](proof.md)
 - [Separate review summary and literature limits](review.md)
 - [Lean sources, coverage, and reproduction instructions](formal/README.md)

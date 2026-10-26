@@ -1,0 +1,489 @@
+{
+  "run_id": "solver-source",
+  "workflow": "solve",
+  "created_at": "2026-10-23T13:51:39.203360+00:00",
+  "updated_at": "2026-10-23T14:23:43.649815+00:00",
+  "state": "COMPLETED",
+  "problem": {
+    "id": "sun_franel_cubic_tail_q_logconvex",
+    "title": "三次 Franel 多项式从 F_8 起的逐系数对数凸性",
+    "statement": "对整数 n>=0 定义 F_n(q)=sum_{k=0}^n binom(n,k)^3 q^k ∈ Z[q]。原问题要求尾序列 (F_n(q))_{n>=8} 是 q-log-convex；展开即：对所有整数 n>=9、d>=0，[q^d](F_{n-1}(q)F_{n+1}(q)-F_n(q)^2)>=0。中心下标是 n>=9，不是 n>=8；q为形式变量。",
+    "source_url": "https://arxiv.org/html/2505.02767v4",
+    "field": "组合数学；有限二项式和与系数不等式",
+    "status": "UNKNOWN",
+    "status_checked_at": "2026-10-23T05:28:55.885172+00:00",
+    "status_evidence": [
+      "https://arxiv.org/html/2505.02767v4",
+      "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf"
+    ],
+    "difficulty_estimate": "中高。立方权重比beta更简洁，系数回文可减半范围，低次系数揭示起点8；但需要统一控制所有 n>=9、0<=d<=2n，现有小d推导未控制中间系数。不能据n<=100通过就预测一会话成功。",
+    "verification_feasibility": "较高（若获得精确有限和或递推证书）。实验以整数运算覆盖中心n=1..100全部系数；n=8,d=2为-84，n=9,d=2为324，n=9..100未见负系数。边界清楚，适合独立复算，但一般结论仍待证明。",
+    "lean_feasibility": "中等、条件性较好。FindProbes.FranelConjecture已用现有缓存通过 elaboration；Nat.choose、Finset.sum、Polynomial.coeff_mul可用。另一个可执行卷积定义在Lean算得-84和324，尚未形式化它与Polynomial表达式的等价性。缺一般正性证书；若采用Schur/Pieri工具，库补充量可能很大。",
+    "prerequisites": [
+      "二项式系数与有限卷积",
+      "回文多项式",
+      "可选：超几何恒等式、配对与差分递推"
+    ],
+    "known_obstacles": [
+      "原尾序列从F_8开始，差分中心必须n>=9；错误地取n>=8会被-84立即否定。",
+      "同页2026年反例针对C(n+k,k)^m的另一多项式，不是本题。",
+      "完整序列n>=0在三次幂时已知不具此性质，不否定指定尾序列。",
+      "不同文献的Franel polynomials可能采用不同定义；q=1相等不足以转移系数不等式。",
+      "低次系数公式和回文性不能控制所有中间系数。"
+    ],
+    "initial_approach": "利用Delta_n的回文性约化到d<=n。精确展开已得[q^2]Delta_n=3n(n-1)(n^2-9n+6)/4（n>=2），解释n=8失败与n=9起点。下一步对任意d寻找配对卷积或有非负系数的递推证书；必须覆盖整个原尾序列，不能只解固定d或q=1。",
+    "selection_reason": "顺序仍为第2，原题、id和难度估计不变。对象与阈值明确、已有可复用系数笔记，适合作为用户拟选项；但只修复证据，不替用户选题，也不因该意向抬高状态。官方HTML题面可核查，MathOverflow/API独立获取缺口仍使其保留UNKNOWN。",
+    "references": [
+      {
+        "url": "https://arxiv.org/html/2505.02767v4",
+        "title": "A family of polynomials and related congruences and series",
+        "authors": [
+          "Zhi-Wei Sun"
+        ],
+        "published_at": "2026-02-10",
+        "retrieved_at": "2026-10-23T05:28:12.562520+00:00",
+        "summary": "完整作者官方HTML，Conjecture1.1(i)第一句与2024评论同一精确Franel尾序列。保留首次实读公开提问归属为Sun的2024-09-21评论1247286。",
+        "source": "primary_public_source",
+        "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+        "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf"
+      },
+      {
+        "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+        "title": "On the polynomials sum binom(n+k,k)^m q^k",
+        "authors": [
+          "Zhi-Wei Sun",
+          "Qiping Zhou"
+        ],
+        "published_at": "2024-09-21",
+        "retrieved_at": null,
+        "summary": "原作者评论1247286提出三次 Franel 尾序列猜想；2026-07-24回答反驳的是主问题 rising-binomial 全m猜想。原作者2026-07-25回应也针对后者。保存整页和精确时间。",
+        "source": "primary_public_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://arxiv.org/pdf/2505.02767v4",
+        "title": "A family of polynomials and related congruences and series",
+        "authors": [
+          "Zhi-Wei Sun"
+        ],
+        "published_at": "2026-02-10",
+        "retrieved_at": null,
+        "summary": "arXiv v4，全文23页；对应 FCNT 2 (2026),1–22，DOI 10.3934/fcnt.2026009。p.3 明言 beta 猜想 remains open，并在 Conjecture 1.1(i) 第一句重述三次 Franel 尾序列猜想。该条第二句为另一多项式，已有后续反例。",
+        "source": "primary_public_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+        "title": "The q-Log-convexity of the Narayana Polynomials of Type B",
+        "authors": [
+          "William Y. C. Chen",
+          "Robert L. Tang",
+          "Larry X. W. Wang",
+          "Arthur L. B. Yang"
+        ],
+        "published_at": "2010",
+        "retrieved_at": "2026-10-23T05:28:18.591273+00:00",
+        "summary": "Adv. Appl. Math.44(2),85–110。完整作者稿：式(1.1)定义平方二项式多项式，Theorem 1.1 (p.3)证明其逐系数对数凸；同页指出完整三次幂序列不满足该性质，不能据此否定从 F_8 开始的尾序列。",
+        "source": "primary_public_source",
+        "artifact": "literature/snapshots/391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7.pdf",
+        "sha256": "391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7"
+      },
+      {
+        "url": "https://emis.de/ft/31765",
+        "title": "Linear transformations preserving the strong q-log-convexity of polynomials",
+        "authors": [
+          "Bao-Xuan Zhu",
+          "Hua Sun"
+        ],
+        "published_at": "2015-08-28",
+        "retrieved_at": null,
+        "summary": "EJC22(3),P3.26，完整11页。Theorem2.1给保持性条件；Corollary2.9处理 C(n,k)^2 C(2k,k) 权重，非 beta 或三次 Franel。",
+        "source": "primary_public_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://api.stackexchange.com/2.3/comments/1247286?site=mathoverflow&filter=withbody",
+        "title": "Official Stack Exchange API: MathOverflow comment 1247286",
+        "authors": [
+          "Zhi-Wei Sun"
+        ],
+        "published_at": "2024-09-21",
+        "retrieved_at": null,
+        "summary": "官方API完整body、作者与创建时间均已取得；comment1247286属于question479301。研究端下载不冒充独立回执；robots策略获取缺口保留。",
+        "source": "official_public_API_researcher_download",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://api.stackexchange.com/2.3/questions/479301/answers?site=mathoverflow&filter=withbody",
+        "title": "Official Stack Exchange API: answers to MathOverflow question 479301",
+        "authors": [
+          "Qiping Zhou"
+        ],
+        "published_at": "2026-07-24",
+        "retrieved_at": null,
+        "summary": "answer513542给rising-binomial m=5,n=7反例，非Franel立方尾序列；完整body与作者时间已核对。独立下载策略仍有robots获取缺口。",
+        "source": "official_public_API_researcher_download",
+        "artifact": null,
+        "sha256": null
+      }
+    ],
+    "formal_target": null,
+    "educational": false,
+    "citations": [
+      {
+        "url": "https://arxiv.org/html/2505.02767v4",
+        "role": "ORIGINAL_STATEMENT",
+        "locator": "§1, HTML #S1.Thmconjecture1, Conjecture1.1(i)第一句；PDF p.3",
+        "excerpt": "(\\sum_{k=0}^{n}\\binom{n}{k}^{3}q^{k})_{n\\geq 8}\nis\nq\nq\n-log-convex.",
+        "explanation": "从官方HTML原生annotation起逐字截取到谓词末；q重复来自MathML和annotation两层文本，未自行重排。此为原作者对同一2024问题的完整重述：尾序列起点8，按前段定义中心n>=9。source_url变更只更换可访问作者载体，不更改原题。",
+        "source_date": "2026-02-10",
+        "relation": "EQUIVALENT"
+      },
+      {
+        "url": "https://arxiv.org/html/2505.02767v4",
+        "role": "EXPLICIT_OPEN",
+        "locator": "§1, HTML #S1.p6，紧接beta段、紧邻Conjecture1.1之前",
+        "excerpt": "Based on our computation, we formulate the following conjecture.",
+        "explanation": "此引导句及紧随的Conjecture1.1(i)第一句是2026年的明确猜想表述。没有把上一段只针对beta的remains open移用于Franel；当前仍因下述独立获取缺口保留UNKNOWN。",
+        "source_date": "2026-02-10",
+        "relation": "EQUIVALENT"
+      },
+      {
+        "url": "https://api.stackexchange.com/2.3/comments/1247286?site=mathoverflow&filter=withbody",
+        "role": "ORIGINAL_STATEMENT",
+        "locator": "官方API items[0]：comment_id=1247286，post_id=479301，owner.user_id=124654；body；creation_date=1726899517",
+        "excerpt": "I also conjecture that the polynomial sequence",
+        "explanation": "已用公开API核对作者Zhi-Wei Sun、UTC 2024-09-21 06:18:37、完整body中的C(n,k)^3和n>=8。这保留最早实读公开提问的归属和时间。摘要摘录仅取原生纯文字；完整原命题另由上述作者官方HTML提供。API研究端GET200不等于控制器可取：同一下载策略的robots探测仍失败，列入unresolved。",
+        "source_date": "2024-09-21",
+        "relation": "EQUIVALENT"
+      },
+      {
+        "url": "https://api.stackexchange.com/2.3/questions/479301/answers?site=mathoverflow&filter=withbody",
+        "role": "SOLUTION",
+        "locator": "官方API items[0]：answer_id=513542，question_id=479301，owner.user_id=578790；body首段；creation_date=1784873426",
+        "excerpt": "The conjecture is false.\nA counterexample is given by\n$m=5$\nand\n$n=7$",
+        "explanation": "作者Qiping Zhou，UTC 2026-07-24 06:10:26。完整body定义S_n^(m)=sum C(n+k,k)^m q^k，m=5,n=7，计算q^2系数-499140。它与Franel立方尾序列不同，沿用上轮已保存整数计算，不重算。本次API正文已读，但robots策略仍阻止独立获取；不隐去该缺口。",
+        "source_date": "2026-07-24",
+        "relation": "DIFFERENT"
+      },
+      {
+        "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+        "role": "PRIOR_RESULT",
+        "locator": "作者稿p.3, Theorem1.1后关于完整n>=0序列的说明",
+        "excerpt": "are not q-log-convex for m ≥ 3.",
+        "explanation": "逐字复制原独立提取文本。否定的是从n=0起的完整立方序列，不是F_8起的尾序列；同页m=2的定理也非本题。",
+        "source_date": "2010",
+        "relation": "DIFFERENT"
+      }
+    ],
+    "literature_search": {
+      "queries": [
+        "\"Franel polynomials\" \"log-convex\"",
+        "\"Franel\" \"q-log\" \"conjecture\" proof",
+        "\"Sun\" \"Conjecture 1.1\" \"2505.02767\"",
+        "\"q-log-convex\" \"n≥8\"",
+        "\"q-log-convex\" \"n >= 8\"",
+        "\"Franel\" \"q-log-convex\" proof 2026 correction",
+        "\"cubic binomial\" \"log-convex\" proof",
+        "\"Zhi-Wei Sun\" publications 2026 q-log-convexity",
+        "\"2505.02767\" \"counterexample\""
+      ],
+      "conclusion": "不重跑有限计算或Lean。现以arXiv官方HTML Conjecture1.1(i)第一句提供完整精确题面，并逐字截取原生文本；保留2024作者评论的历史归属。官方Stack Exchange API公开GET返回评论1247286和回答513542的完整body、作者、post关联及时间，已核对R_n^(m)与F_n不是同一多项式，反例不作用于本题。但旧MathOverflow网页的独立robots失败未消失；API的/robots.txt返回HTTP400 no_method，按当前同一下载策略测试仍失败。因此API不能充作已通过独立取得的回执，真实获取缺口仍列unresolved，状态保持UNKNOWN。用户拟选第2项不会改变此判断。",
+      "unresolved": [
+        "独立检查未能取得MathOverflow网页（robots获取失败）。官方API虽向研究端返回200及完整原始评论/反例正文，但其robots端点返回HTTP400 no_method；按当前WebTools.download策略亦无法取得。评论1247286与反例回答513542仍需控制器合规重新下载核实；不能将本地JSON冒充独立回执。"
+      ],
+      "limitations": [
+        "实际检索词沿用同一Find会话；主要英文索引、arXiv、作者公开问题页和所列原始论文，未穷尽所有语言、数据库或未索引工作。",
+        "最新作者论文猜想表述为2026-02-10。没有更晚针对Franel尾序列的专门状态重申；检索截至2026-10-23不使旧声明自动更新。",
+        "作者旧个人主页不可取得完整书目，限制作者后续作品覆盖；未识别到某篇具体未读的Franel尾序列解答。",
+        "Franel名称可能指不同多项式。已经具体比较的二次Narayana、完整立方序列及rising-binomial族均不等价；不声称穷尽所有变量变换或未知等价表述。"
+      ],
+      "obstacles": [],
+      "comparisons": []
+    },
+    "evidence_assessment": {
+      "policy_version": "evidence-v2",
+      "assessed_at": "2026-10-23T05:28:55.885172+00:00",
+      "supported": false,
+      "reasons": [
+        "https://api.stackexchange.com/2.3/comments/1247286?site=mathoverflow&filter=withbody: Unable to verify robots policy for https://api.stackexchange.com",
+        "https://api.stackexchange.com/2.3/questions/479301/answers?site=mathoverflow&filter=withbody: Unable to verify robots policy for https://api.stackexchange.com",
+        "Unresolved literature gap: 独立检查未能取得MathOverflow网页（robots获取失败）。官方API虽向研究端返回200及完整原始评论/反例正文，但其robots端点返回HTTP400 no_method；按当前WebTools.download策略亦无法取得。评论1247286与反例回答513542仍需控制器合规重新下载核实；不能将本地JSON冒充独立回执。"
+      ],
+      "checked_citations": [
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "ORIGINAL_STATEMENT",
+          "relation": "EQUIVALENT",
+          "resolved_url": "https://arxiv.org/html/2505.02767v4",
+          "locator": "§1, HTML #S1.Thmconjecture1, Conjecture1.1(i)第一句；PDF p.3",
+          "source_date": "2026-02-10",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+          "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+          "retrieved_at": "2026-10-23T05:28:12.562520+00:00"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "EXPLICIT_OPEN",
+          "relation": "EQUIVALENT",
+          "resolved_url": "https://arxiv.org/html/2505.02767v4",
+          "locator": "§1, HTML #S1.p6，紧接beta段、紧邻Conjecture1.1之前",
+          "source_date": "2026-02-10",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+          "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+          "retrieved_at": "2026-10-23T05:28:12.562520+00:00"
+        },
+        {
+          "url": "https://api.stackexchange.com/2.3/comments/1247286?site=mathoverflow&filter=withbody",
+          "role": "ORIGINAL_STATEMENT",
+          "relation": "EQUIVALENT",
+          "resolved_url": null,
+          "locator": "官方API items[0]：comment_id=1247286，post_id=479301，owner.user_id=124654；body；creation_date=1726899517",
+          "source_date": "2024-09-21",
+          "verified_excerpt": false,
+          "reason": "Unable to verify robots policy for https://api.stackexchange.com",
+          "artifact": null,
+          "sha256": null,
+          "retrieved_at": null
+        },
+        {
+          "url": "https://api.stackexchange.com/2.3/questions/479301/answers?site=mathoverflow&filter=withbody",
+          "role": "SOLUTION",
+          "relation": "DIFFERENT",
+          "resolved_url": null,
+          "locator": "官方API items[0]：answer_id=513542，question_id=479301，owner.user_id=578790；body首段；creation_date=1784873426",
+          "source_date": "2026-07-24",
+          "verified_excerpt": false,
+          "reason": "Unable to verify robots policy for https://api.stackexchange.com",
+          "artifact": null,
+          "sha256": null,
+          "retrieved_at": null
+        },
+        {
+          "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+          "role": "PRIOR_RESULT",
+          "relation": "DIFFERENT",
+          "resolved_url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+          "locator": "作者稿p.3, Theorem1.1后关于完整n>=0序列的说明",
+          "source_date": "2010",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7.pdf",
+          "sha256": "391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7",
+          "retrieved_at": "2026-10-23T05:28:18.591273+00:00"
+        }
+      ],
+      "observed_queries": [
+        "\"1104.3856\" \"log-convex\"",
+        "\"2/ln 2\" \"conjecture\" \"Hassani\"",
+        "\"2505.02767\" \"counterexample\"",
+        "\"A family of polynomials and related congruences and series\" \"conjecture\" proof -site:emergentmind.com -site:mathdb.com",
+        "\"Apéry polynomials\" \"q-log-convexity\" proof",
+        "\"Apéry\" \"beta\" \"q-log-convexity\" \"Sun\" proof",
+        "\"Calbet\" \"Conjecture 3.2\"",
+        "\"Calbet\" \"Two Families\" conjecture \"2025\"",
+        "\"Calbet\" \"Two Families\" conjecture proof",
+        "\"Calbet\" \"two families\" \"2026\"",
+        "\"Cirtoaje\" \"3+2\" inequality",
+        "\"Cirtoaje\" \"conjecture\" \"2024\"",
+        "\"Cirtoaje\" \"conjecture\" \"2025\"",
+        "\"Conjecture 4.7\" \"Sun\" \"polynomials\"",
+        "\"Conjecture 8.4\" \"hypercube\"",
+        "\"Cîrtoaje\" \"3+2\" \"open problem\"",
+        "\"Extending the Scope of the Nesbitt Inequality\" conjecture",
+        "\"Franel polynomials\" \"Sun\" conjecture",
+        "\"Franel polynomials\" \"log-convex\"",
+        "\"Franel polynomials\" proof conjecture Sun log convexity -site:researchgate.net -site:scirate.com",
+        "\"Franel\" \"q-log\" \"conjecture\" proof",
+        "\"Franel\" \"q-log-convex\" \"proof\" \"2026\"",
+        "\"Franel\" \"q-log-convex\" proof 2026 correction",
+        "\"Guggenheimer\" \"Conjecture\" \"2026\"",
+        "\"Guggenheimer\" \"inequalities E and F\"",
+        "\"Hassani\" \"2/ln\" inequality",
+        "\"Hassani\" \"Nishizawa\" \"2.88539\" proof",
+        "\"Hassani\" \"Nishizawa\" \"2024\" inequality",
+        "\"Hassani\" \"Nishizawa\" \"2025\" conjecture",
+        "\"Hassani\" \"Nishizawa\" \"237\" \"242\" power exponential",
+        "\"Hassani\" \"Nishizawa\" \"Conjecture 1\" \"power\"",
+        "\"Hassani\" \"Nishizawa\" \"Some inequalities\" correction solution",
+        "\"Hassani\" \"Nishizawa\" \"conjecture 1\"",
+        "\"Hassani\" \"Nishizawa\" \"conjecture 2\"",
+        "\"Hassani\" \"Nishizawa\" \"conjecture\" \"2026\" -site:researchgate.net -site:scribd.com",
+        "\"Hassani\" \"Nishizawa\" \"conjecture\" proof counterexample -site:reddit.com -site:eurekamag.com",
+        "\"Hassani\" \"Nishizawa\" \"conjectures\" power exponential",
+        "\"Hassani\" \"Nishizawa\" conjecture correction erratum",
+        "\"Hlawka type inequality\" \"conjecture\" matrices 2025 2026",
+        "\"Linear transformations preserving the strong q-log-convexity\" Zhu Sun arxiv",
+        "\"New three proofs of Cîrtoaje inequality\"",
+        "\"Nishizawa\" \"Hassani\" \"2023\" \"2026\" conjecture proof",
+        "\"Nishizawa\" \"Yasuda\" \"Boundness\"",
+        "\"On a Cyclic Inequality Related to Chebyshev Polynomials\"",
+        "\"On a Norm Inequality\" \"László\" solution",
+        "\"Proof of László\" \"Casimir\"",
+        "\"Some Inequalities Related To The Power Exponential Function\" pdf",
+        "\"Some Inequalities Related To The Power Exponential Function\" proof conjecture",
+        "\"Some new series for 1\" \"Sun\" arxiv \"2011\"",
+        "\"Some new series for\" \"4.7\" \"q-logconvex\"",
+        "\"Some new series for\" \"related congruences\" \"Sun\" \"2014\"",
+        "\"Sun\" \"2505.02767\" conjecture proof",
+        "\"Sun\" \"2505.02767\" proof conjectures congruences",
+        "\"Sun\" \"Conjecture 1.1\" \"2505.02767\"",
+        "\"Sun\" \"S_n\" \"q-log-convexity\" \"2026\"",
+        "\"Sun\" \"beta_n\" \"log\" convex",
+        "\"Sun\" \"binomial\" \"q-log-convex\" \"8\"",
+        "\"Sun\" \"conjectures\" \"binomial\" \"2026\" -site:reddit.com -site:arxiv-troller.com",
+        "\"Sun\" \"log-convexity\" \"2026\"",
+        "\"Sun\" \"q-log-convex\" \"beta\" proof 2026",
+        "\"Sun\" \"q-log-convexity\" \"conjecture\" proof beta",
+        "\"The q-log-convexity of the Narayana polynomials of type B\" arxiv",
+        "\"Variants of the Damascus inequality\" conjecture proof",
+        "\"Zhi-Wei Sun\" publications 2026 q-log-convexity",
+        "\"a^{rb}\" \"b^{ra}\" \"conjecture\" \"2024\"",
+        "\"b^2+k\" \"conjecture\" inequality",
+        "\"beta\" \"polynomials\" \"Sun\" \"log-convexity\"",
+        "\"beta\" \"polynomials\" \"q-log-convexity\" \"Sun\" \"2026\"",
+        "\"beta\" \"q-log-convexity\" Sun",
+        "\"beta\" \"q-logconvex\" \"Sun\"",
+        "\"beta_n\" \"Sun\" \"polynomials\" conjecture proof",
+        "\"binomial\" \"beta\" \"q-log-convex\"",
+        "\"binom{n}{k}\" \"binom{n+k}{k}\" \"q-log-convex\"",
+        "\"conjecture\" \"2025\" site:tmcs.tjacademic.org",
+        "\"conjecture\" \"2026\" \"elementary\" \"inequality\" -site:reddit.com -site:scribd.com",
+        "\"conjecture\" \"2026\" site:files.ele-math.com/articles/jmi",
+        "\"conjecture\" \"László\" \"three\" matrices",
+        "\"conjecture\" \"cyclic inequality\" \"2025\" -site:scribd.com",
+        "\"conjecture\" \"elementary inequality\" \"2025\"",
+        "\"conjecture\" \"elementary inequality\" \"2026\"",
+        "\"conjecture\" \"finite sums\" \"2025\" \"binomial\" -site:scribd.com",
+        "\"conjecture\" \"four-variable\" inequality",
+        "\"conjecture\" \"inequalities\" \"2023\" \"positive real numbers\" -site:reddit.com",
+        "\"conjecture\" \"inequalities\" \"2024\" \"positive real numbers\" -site:reddit.com",
+        "\"conjecture\" \"inequalities\" \"2025\" \"Cauchy\"",
+        "\"conjecture\" \"inequality\" \"2025\" \"three\"",
+        "\"conjecture\" \"inequality\" \"2026\" \"positive numbers\"",
+        "\"conjecture\" \"inequality\" \"four nonnegative\" -site:reddit.com",
+        "\"conjecture\" \"inequality\" \"four variables\"",
+        "\"conjecture\" \"inequality\" \"three positive\" -\"Riemann\" -site:reddit.com -site:arxiv-troller.com",
+        "\"conjecture\" \"inequality\" site:arxiv.org/abs/ \"positive real\" \"2025\"",
+        "\"conjecture\" \"inequality\" site:files.ele-math.com \"2024\"",
+        "\"conjecture\" \"inequality\" site:tjinequality.com/articles/ \"2025\"",
+        "\"conjecture\" \"positive real\" \"2025\" site:files.ele-math.com/articles/jmi",
+        "\"conjecture\" \"remains open\" \"2025\" \"binomial coefficients\"",
+        "\"conjecture\" \"three-variable\" inequality",
+        "\"cubic binomial\" \"log-convex\" proof",
+        "\"cyclic inequalities\" \"conjectures\" \"2025\"",
+        "\"cyclic inequality\" \"conjecture\" \"2024\"",
+        "\"finite\" \"conjecture\" \"inequality\" \"2024\" \"symmetric\" \"positive\" -site:scribd.com -site:reddit.com",
+        "\"inequalities\" \"open problems\" \"2025\" conjectures elementary",
+        "\"inequality\" \"Conjecture 1\" \"2025\" \"a, b, c\" symmetric",
+        "\"inequality\" \"Conjecture 3\" \"2026\" -site:reddit.com -site:arxiv-troller.com",
+        "\"inequality\" \"Conjecture\" \"2024\" \"positive real numbers\" cyclic",
+        "\"inequality\" \"Conjecture\" \"2025\" site:files.ele-math.com",
+        "\"inequality\" \"Conjecture\" site:rgmia.org/papers/v27",
+        "\"inequality\" \"We conjecture\" site:rgmia.org/papers/v28",
+        "\"inequality\" \"conjecture\" \"2024\" \"Schur\"",
+        "\"inequality\" \"conjecture\" \"2025\" \"Nesbitt\"",
+        "\"inequality\" \"conjecture\" \"2025\" \"radicals\"",
+        "\"inequality\" \"conjecture\" \"2025\" \"three variables\"",
+        "\"inequality\" \"conjecture\" \"2026\" \"Schur\"",
+        "\"inequality\" \"conjecture\" \"2026\" \"positive real numbers\"",
+        "\"inequality\" \"open problem\" site:rgmia.org",
+        "\"new conjectures\" \"inequalities\" \"2024\"",
+        "\"new conjectures\" \"inequalities\" \"2025\"",
+        "\"norm inequality\" \"Casimir\" \"László\"",
+        "\"open problem\" \"cyclic\" inequality polynomial",
+        "\"power exponential\" \"2.88539\"",
+        "\"power exponential\" \"conjectures\" \"2026\"",
+        "\"q-log-convex\" \"n >= 8\"",
+        "\"q-log-convex\" \"n≥8\"",
+        "\"q-log-convexity\" \"Apéry\" \"polynomials\"",
+        "\"q-log-convexity\" \"Sun\" \"correction\"",
+        "\"q-log-convexity\" \"beta\" Sun -site:researchgate.net -site:dblp.org",
+        "\"β\" \"Sun\" \"q-log-convex\" conjecture",
+        "Sun beta polynomials q-log-convex conjecture \"4.7\"",
+        "Zhi-Wei Sun personal homepage publications Nanjing",
+        "site.aimath.org \"open problems\" inequalities polynomial",
+        "site.erdosproblems.com \"OPEN\" \"inequality\"",
+        "site:aimpl.org \"Problem\" \"permutations\"",
+        "site:arxiv.org \"inequalities\" \"conjectures\" \"Sun\" \"2025\"",
+        "site:erdosproblems.com \"OPEN\" \"tractable\" -\"None\" -site:erdosproblems.ai",
+        "site:files.ele-math.com/articles \"CONJECTURE\" \"nonnegative real numbers\" \"2024\"",
+        "site:files.ele-math.com/articles \"CONJECTURE\" \"positive real numbers\" \"2025\"",
+        "site:files.ele-math.com/articles/ \"conjecture\" \"a,b,c\"",
+        "site:tjinequality.com \"conjecture\" \"2024\"",
+        "site:tjinequality.com/articles/ conjecture"
+      ],
+      "limitations": [
+        "实际检索词沿用同一Find会话；主要英文索引、arXiv、作者公开问题页和所列原始论文，未穷尽所有语言、数据库或未索引工作。",
+        "最新作者论文猜想表述为2026-02-10。没有更晚针对Franel尾序列的专门状态重申；检索截至2026-10-23不使旧声明自动更新。",
+        "作者旧个人主页不可取得完整书目，限制作者后续作品覆盖；未识别到某篇具体未读的Franel尾序列解答。",
+        "Franel名称可能指不同多项式。已经具体比较的二次Narayana、完整立方序列及rising-binomial族均不等价；不声称穷尽所有变量变换或未知等价表述。"
+      ],
+      "obstacles": [],
+      "unresolved_obstacle_ids": [],
+      "comparisons": [],
+      "obstacle_changes": []
+    },
+    "source_statement": "",
+    "scope_relation": "UNKNOWN",
+    "scope_description": "",
+    "prior_work_summary": "",
+    "statement_risks": []
+  },
+  "candidates": [
+    {
+      "claim": "令 F_n(q)=sum_{k=0}^n binom(n,k)^3 q^k。对所有整数 n>=9、d>=0，有 [q^d](F_{n-1}(q)F_{n+1}(q)-F_n(q)^2)>=0；更强地，当 1<=d<=2n-1 时该系数严格为正，在 d=0、d=2n 或 d>2n 时为零。因此原题从 F_8 开始的尾序列逐系数 q-log-convex。",
+      "proof": "**完整证明候选；尚待独立验证。**\n\n主张的范围为 COMPLETE：对每个整数 n≥9，原题差多项式的全部系数非负；实际上，次数 1≤d≤2n−1 的系数均严格为正。这里 q 始终是形式变量。本文没有把本候选标记为 verified，也没有调用独立 verify 流程。\n\n**命题与对称性。** 定义\n\\[\n F_n(q)=\\sum_{k=0}^{n}\\binom nk^3q^k,\n \\qquad c_{n,d}=[q^d]\\bigl(F_{n-1}(q)F_{n+1}(q)-F_n(q)^2\\bigr).\n\\]\n二项式系数按越界为零约定。由 \\(\\binom nk=\\binom n{n-k}\\)，有 \\(q^nF_n(q^{-1})=F_n(q)\\)。两个乘积都以 2n 为回文长度，因此\n\\[\n c_{n,d}=c_{n,2n-d}\\quad(0\\le d\\le2n).\n\\]\n端点 d=0,2n 的系数均为 1−1=0；d>2n 的系数为零。故只需证明 n≥9、1≤d≤n 时 \\(c_{n,d}>0\\)。\n\n**无界中间范围的正项和。** 本段证明所有整数 n≥d≥16。置\n\\[\n N=n+1,\\quad h=d/2,\\quad z=N-d,\\quad m=h+z=N-h,\n \\quad H=h-8,\\quad Z=z-1.\n\\]\n于是 h≥8、z≥1，故 H,Z≥0；允许 h 为半整数。对 0≤k≤d 置\n\\[\n x_k=k-h,\\qquad W_k=\\binom Nk^3\\binom N{d-k}^3>0.\n\\]\n以下所有单变量多项式中的 x 都是独立变量，求和时再取 x=x_k。\n\n定义\n\\[\n\\begin{aligned}\n A(x)&=(m-x)^3(h-x)^3,\\\\\n B(x)&=(m+x)^3(h+x)^3,\\\\\n S_0(x)&=A(x)(2x+1)-B(x)(2x-1),\\\\\n S_1(x)&=A(x)(2x+1)^3-B(x)(2x-1)^3.\n\\end{aligned}\n\\]\n对 0≤k<d，有精确相邻项关系\n\\[\n W_kA(x_k)=W_{k+1}B(x_{k+1}),\n\\]\n因为两边比值等式正是\n\\[\n \\frac{W_{k+1}}{W_k}\n =\\left(\\frac{(N-k)(d-k)}{(k+1)(N-d+k+1)}\\right)^3.\n\\]\n且 \\(A(x_d)=B(x_0)=0\\)。将有限和换下标，利用\n\\(2x_{k+1}-1=2x_k+1\\)，分别对一次与三次幂得到\n\\[\n \\sum_{k=0}^{d}W_k S_0(x_k)=\n \\sum_{k=0}^{d}W_k S_1(x_k)=0. \\tag{1}\n\\]\n这包括两个端点，没有余项。\n\n再定义\n\\[\n\\begin{aligned}\n P(x)={}&N^3\\left((m-x)^3(m-x-1)^3\n                   +(m+x)^3(m+x-1)^3\\right)\\\\\n       &-2(N-1)^3(m^2-x^2)^3,\\\\\n \\ell={}&[N(m-1)]^2+N(m-1)(N-1)m+[(N-1)m]^2.\n\\end{aligned}\n\\]\n由\n\\[\n \\binom{N-2}{k}=\\binom Nk\\frac{(N-k)(N-k-1)}{N(N-1)},\n \\qquad\n \\binom{N-1}{k}=\\binom Nk\\frac{N-k}{N},\n\\]\n以及求和中 k 与 d−k 的对称性，有\n\\[\n c_{n,d}=\\frac{1}{2n^3N^6}\\sum_{k=0}^{d}W_kP(x_k). \\tag{2}\n\\]\n\n令 U,V,C,D 为附录 A 中给出的四个多项式：每一行给定 Z 的一个幂次，行内数字为 H 的升幂系数。这是它们的完整定义，没有省略的非零系数。所有数字均严格为正，因而当 H,Z≥0 时\n\\[\n U>0,\\quad V>0,\\quad C>0,\\quad D>0. \\tag{3}\n\\]\n它们满足如下**多项式恒等式**，其中 N=2h+z、m=h+z、H=h−8、Z=z−1：\n\\[\n\\begin{aligned}\n 4h^2U P(x)+4\\ell U S_0(x)-NV(S_1(x)-S_0(x))\n =24N\\left(hm^3C x^2+D x^6+(2N-1)Vx^8\\right). \\tag{4}\n\\end{aligned}\n\\]\n式 (4) 只涉及整系数多项式的加法与乘法，可用附录 A 的完整系数逐项展开核对；随附 check_certificate.py 以独立于 SymPy 的整数多项式运算检查其两边所有系数相等。该恒等式是任意 h,z,x 的代数恒等式，不是对有限个参数值的采样。\n\n将 (4) 乘以 W_k、取 x=x_k 后求和，用 (1) 与 (2) 消去 S_0,S_1，得到显式正项和\n\\[\n \\boxed{\n c_{n,d}=\\frac{3}{n^3N^5h^2U}\n \\sum_{k=0}^{d}W_k\n \\left(hm^3C x_k^2+D x_k^6+(2N-1)Vx_k^8\\right).\n } \\tag{5}\n\\]\n所有分母和括号内的系数都严格为正，各偶次幂均非负；在 k=0 时 \\(x_0=-h\\ne0\\)、W_0>0，故右边严格为正。这证明所有 n≥d≥16。\n\n**有限个次数的无界 n 证明。** 下面处理 1≤d≤15、n≥max(9,d)，不是只检查有限个 n。对每个 d，记 \\(s_d=\\max(9,d)\\)，并定义\n\\[\n\\begin{aligned}\n B_{2r+1}(n)&=n\\prod_{j=1}^{r}(n-j)^3,\\\\\n B_{2r}(n)&=n(n-r)\\prod_{j=1}^{r-1}(n-j)^3\\qquad(r\\ge1).\n\\end{aligned}\n\\]\n空积为 1。附录 B 给出正有理数 a_d 和正整数系数多项式 R_d，满足精确恒等式\n\\[\n c_{n,d}=a_d B_d(n)R_d(n-s_d),\\qquad 1\\le d\\le15. \\tag{6}\n\\]\n这些有限张表的构造与检验完全是多项式运算。具体地，令\n\\((t)_{\\underline{k}}=\\prod_{j=0}^{k-1}(t-j)\\)，则由二项式定义直接得\n\\[\n\\begin{aligned}\n (d!)^3 c_{s_d+y,d}\n =\\sum_{k=0}^{d}\\binom dk^3\n \\big[&((s_d+y-1)_{\\underline{k}}\n        (s_d+y+1)_{\\underline{d-k}})^3\\\\\n      &-((s_d+y)_{\\underline{k}}\n        (s_d+y)_{\\underline{d-k}})^3\\big]. \\tag{7}\n\\end{aligned}\n\\]\n展开 (7) 后，精确除去首一因子 B_d(s_d+y)，再提取正的系数公因子，就得到附录 B。也可直接把表代回 (6)，乘以其正整数分母与 (d!)³，在整数多项式环中与 (7) 逐系数比较。随附检查程序正是后一种检验，不依赖因式分解软件或浮点计算。\n\n现在 n≥s_d，故 y=n−s_d≥0；B_d(n) 中每个因子严格为正，R_d 的常数和其他全部系数严格为正，a_d>0。因此 (6) 证明所有这些次数的 c_{n,d}>0。\n\n结合两个范围、回文性及零端点，得到原命题的全部量词：每个整数 n≥9、每个整数 d≥0 都有 c_{n,d}≥0，且 1≤d≤2n−1 时严格大于零。这等价于尾序列 (F_n(q))_{n≥8} 的逐系数对数凸性。作为阈值核对，二次系数为\n\\[\n c_{n,2}=\\frac34n(n-1)(n^2-9n+6),\n\\]\n所以 c_{8,2}=−84、c_{9,2}=324；本证明没有把原题中心下标改成 n≥8。\n\n**附录 A：大次数证书的完整系数。** 对下列每个名字 T，若其第 j 行是 [a_0,...,a_r]，则该行代表 \\(Z^j\\sum_{i=0}^r a_iH^i\\)。所有行从 j=0 开始连续排列。取 H=h−8、Z=z−1。\n\nU：\n\n```text\n[307097, 205923, 54558, 7154, 465, 12]\n[97515, 52413, 10452, 918, 30]\n[9867, 4017, 540, 24]\n[313, 87, 6]\n```\n\nV：\n\n```text\n[64781696, 46643040, 13986038, 2235552, 200900, 9624, 192]\n[32616248, 19609687, 4713694, 566258, 33996, 816]\n[6496373, 3132431, 566144, 45456, 1368]\n[645189, 234105, 28302, 1140]\n[32913, 8001, 486]\n[783, 96]\n[6]\n```\n\nC：\n\n```text\n[99860992, 211925120, 138536712, 45315104, 8632824, 1007294, 71282, 2820, 48]\n[160387152, 192549258, 90555744, 22440166, 3221715, 270695, 12402, 240]\n[61746819, 56108328, 20416035, 3853735, 400892, 21894, 492]\n[10463364, 7493063, 2099159, 289088, 19641, 528]\n[890650, 497001, 102473, 9279, 312]\n[37156, 15467, 2121, 96]\n[603, 171, 12]\n```\n\nD：\n\n```text\n[427997128832, 465018127136, 224478819170, 63191271556, 11431762918, 1378283176, 110747342, 5718788, 172208, 2304]\n[292371224424, 282851567901, 119678048430, 28925900205, 4368118770, 422024571, 25475190, 878448, 13248]\n[85543112127, 72559909640, 26368087506, 5321522637, 644159179, 46768272, 1885764, 32576]\n[13985927051, 10192998147, 3094132746, 500741365, 45567009, 2210688, 44672]\n[1397506290, 851226645, 207310326, 25234383, 1535190, 37344]\n[87623274, 42850554, 7854708, 639630, 19524]\n[3399643, 1252567, 153754, 6288]\n[77103, 19050, 1176]\n[900, 112]\n[4]\n```\n\n**附录 B：低次数证书的完整数据。** 每行给出 d、s_d、a_d 和 R_d 的系数列表，列表从常数项开始按升幂排列。B_d 由正文的统一公式定义。\n\nd=1，s_d=9，a_d=6：\n\n```text\n[1]\n```\n\nd=2，s_d=9，a_d=3/4：\n\n```text\n[6, 9, 1]\n```\n\nd=3，s_d=9，a_d=1/6：\n\n```text\n[1695, 524, 55, 2]\n```\n\nd=4，s_d=9，a_d=1/1152：\n\n```text\n[906660, 606852, 157791, 20053, 1253, 31]\n```\n\nd=5，s_d=9，a_d=1/28800：\n\n```text\n[14758200, 10140660, 2948694, 464343, 41685, 2017, 41]\n```\n\nd=6，s_d=9，a_d=1/5184000：\n\n```text\n[3018249000, 3185348400, 1452628500, 374981609, 60091171, 6136187, 390703, 14204, 226]\n```\n\nd=7，s_d=9，a_d=1/381024000：\n\n```text\n[36121734000, 40554558900, 20447564775, 6065933134, 1164396822, 149693346, 12868953, 712680, 23058, 332]\n```\n\nd=8，s_d=9，a_d=1/2731180032000：\n\n```text\n[109463378745600, 167663382874560, 115622446795440, 47498771324916, 12941751343608, 2459666153285, 333156580308, 32187939717, 2175149424, 97950615, 2646036, 32491]\n```\n\nd=9，s_d=9，a_d=1/442451165184000：\n\n```text\n[1117584848033280, 1810387011828096, 1355680881251424, 619238575993608, 191756723674876, 42335098555334, 6823863235291, 808443530058, 69833875347, 4288297434, 177678041, 4459918, 51293]\n```\n\nd=10，s_d=10，a_d=1/159282419466240000：\n\n```text\n[451699433896550400, 819623216041781760, 686594884593149568, 352399534959570848, 123936504121490456, 31620126296254340, 6038668533719606, 877281142708217, 97449034444475, 8237696335453, 521702074411, 24004320235, 758581609, 14738587, 132835]\n```\n\nd=11，s_d=11，a_d=1/48182931888537600000：\n\n```text\n[27823034669008550400, 47927580137127365760, 38595678978280963104, 19258255067061183512, 6654374275166294860, 1685775512377439410, 323350422843351867, 47808444075416264, 5492848968686090, 490368676596710, 33737000323304, 1756612187426, 67005350250, 1767716320, 28841725, 219398]\n```\n\nd=12，s_d=12，a_d=1/76321764111443558400000：\n\n```text\n[46519378688524620902400, 85706776005984113794560, 74130623502307582074624, 39992373456765757934112, 15076105170871611013632, 4215263861158366300176, 905299887281794026952, 152558810613926738894, 20423631322112138626, 2184580493187401297, 186702995238633034, 12676932684154676, 675478150170242, 27652862969278, 839953922990, 17838465118, 236503100, 1473889]\n```\n\nd=13，s_d=13，a_d=1/38695134404501884108800000：\n\n```text\n[3459404445967724713804800, 6166611738311666090181120, 5188748093707721377088448, 2737631294540610387993504, 1014747192888161349073248, 280576066602611317688208, 59968597099836256096436, 10130044396754966563278, 1370968140329631635454, 149761262206625991615, 13235927593076431017, 944193454824845142, 53961631162779938, 2437253521952256, 85085283144996, 2215356191676, 40511595360, 464318001, 2510303]\n```\n\nd=14，s_d=14，a_d=1/98595202462670800709222400000：\n\n```text\n[8387445380396926317255936000, 15696327584556243881557056000, 13931598464618789109492489600, 7798511554758385143960362976, 3087934141191123116332604736, 919415661239910468650450688, 213591710748227926762482616, 39645420868474072867286038, 5971395441429940601134984, 737051312244865319614545, 74959962714772609127826, 6292644920148239781264, 435261761599544454355, 24672594864088979776, 1134923923912841710, 41713436706372804, 1196316564824904, 25801937274591, 393709471048, 3789762118, 17307421]\n```\n\nd=15，s_d=15，a_d=1/388218609696766277792563200000000：\n\n```text\n[3731056290570604632494598720000, 6800347106090882213945814144000, 5896435691026993413000134786400, 3234669205564115860177828121760, 1259445399562339782835721329728, 370092431675858555048223067488, 85199413658273487767561109918, 15742995092350096358030697370, 2372899427067482172004667669, 294868695982007263192857097, 30405513078566738387603916, 2609689786505267187523725, 186440030871015805157295, 11052644427076578292876, 540199525826052878114, 21537110568764640400, 689204649363387591, 17278451349543405, 326916811439652, 4389985050745, 37293959717, 150701134]\n```\n\n**复算与状态。** `certificate.json` 保存上述两组系数的机器可读副本；`check_certificate.py` 仅使用 Python 标准库的整数与有理数运算，检查式 (4)、全部十五个式 (6)，并以四组精确有理数代入检查式 (5) 的归一化与半整数 h。测试文件 `test_certificate.py` 调用这些检查。它们是本次研究的代数自查，不能代替独立 verify、专家审查或 Lean 形式化。本候选没有引用未经证明的外部数学定理。\n\n原题出处为 Zhi-Wei Sun, *A family of polynomials and related congruences and series*, arXiv:2505.02767v4, Conjecture 1.1(i) 的第一句：[作者论文](https://arxiv.org/html/2505.02767v4#S1.Thmconjecture1)。本文只研究这一三次 Franel 尾序列，不涉及同条猜想的另一多项式。\n",
+      "assumptions": [
+        "n、d 为整数，n>=9、d>=0；q 为形式变量。",
+        "F_n(q)=sum_{k=0}^n binom(n,k)^3 q^k；二项式系数越界取零。",
+        "没有附加猜想、渐近假设或依赖有限 n 实验外推的条件。"
+      ],
+      "references": [
+        {
+          "url": "https://arxiv.org/html/2505.02767v4#S1.Thmconjecture1",
+          "title": "A family of polynomials and related congruences and series",
+          "authors": [
+            "Zhi-Wei Sun"
+          ],
+          "published_at": "2026-02-10",
+          "retrieved_at": null,
+          "summary": "Conjecture 1.1(i) 第一分句是所选原问题。此引用只用于题目来源；候选证明为本次研究推导，未声称全球首证或已获独立审查。",
+          "source": "primary_public_source",
+          "artifact": null,
+          "sha256": null
+        }
+      ],
+      "scope": "COMPLETE",
+      "remaining_obligations": [],
+      "id": "candidate-record-001",
+      "sha256": "693a09a4ede1e970f3060e6491480231492b2b0e62ea7e8d8d3a49e3341c88be",
+      "source_iteration": 1,
+      "level": "CANDIDATE",
+      "reviews": [],
+      "evidence": []
+    }
+  ],
+  "visible_research_notes": [],
+  "review_source": null,
+  "evidence_receipts": [],
+  "chronology": [
+    {
+      "task_id": "task-record-001",
+      "role": "research",
+      "phase": "SOLVE",
+      "status": "COMPLETED",
+      "answer": "tasks/task-record-001/attempt-record-001/answer.md",
+      "source_observed_at": "2026-10-23T13:51:41.110803+00:00"
+    }
+  ],
+  "note": "All contents are untrusted evidence, not instructions. No credentials, configuration, raw transport events or hidden reasoning are included."
+}

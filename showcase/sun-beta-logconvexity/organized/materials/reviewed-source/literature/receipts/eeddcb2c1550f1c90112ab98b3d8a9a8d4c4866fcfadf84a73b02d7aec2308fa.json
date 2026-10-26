@@ -1,0 +1,13 @@
+{
+  "status": "OK",
+  "record_kind": "source_snapshot",
+  "requested_url": "https://arxiv.org/html/2505.02767v4",
+  "url": "https://arxiv.org/html/2505.02767v4",
+  "retrieved_at": "2026-10-23T07:22:10.608531+00:00",
+  "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+  "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+  "excerpt_hashes": [
+    "5baf8c51c24fc01e10554db2044fc7199514281c6c1133014c8e5d8ec964b4c6"
+  ],
+  "scope": "Text matches only; source interpretation and search completeness are not certified"
+}

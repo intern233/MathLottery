@@ -1,0 +1,13 @@
+{
+  "status": "OK",
+  "record_kind": "source_snapshot",
+  "requested_url": "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+  "url": "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+  "retrieved_at": "2026-10-23T08:07:16.170569+00:00",
+  "sha256": "15f41314502ff56c3a4b9a35aa9290e44c88aacd349191ce1ed42bf5f4293fc3",
+  "artifact": "literature/snapshots/15f41314502ff56c3a4b9a35aa9290e44c88aacd349191ce1ed42bf5f4293fc3.pdf",
+  "excerpt_hashes": [
+    "0504a7955ef3dadf9cf6741ada999734a46bcbaf4168c1614d260f72cfa1252d"
+  ],
+  "scope": "Text matches only; source interpretation and search completeness are not certified"
+}

@@ -1,0 +1,60 @@
+{
+  "status": "ERROR",
+  "checked_at": "2026-10-23T07:22:31.181567+00:00",
+  "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+  "problem_sha256": "50b6ca7a1c36b480c5c7b20b8b07d789a08b70d6b29b119b1c25bdbc2bde01b6",
+  "request": {
+    "files": [
+      "workspace/proof/SunBeta.lean"
+    ],
+    "declarations": [
+      "SunBeta.beta_coeffwise_logconvex"
+    ],
+    "module_root": "proof"
+  },
+  "sources": [
+    {
+      "path": "workspace/proof/SunBeta.lean",
+      "module": "SunBeta",
+      "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3"
+    }
+  ],
+  "steps": [
+    {
+      "status": "ERROR",
+      "returncode": 1,
+      "elapsed_seconds": 207.363,
+      "log": "compile-0.log",
+      "log_sha256": "d6ef11d7e06f5239d6c56ecc6654f5aeedfc32e51a66e3096fe1e7880d130bc6",
+      "argv": [
+        "/lean/bin/lean",
+        "-j",
+        "1",
+        "-s",
+        "65536",
+        "-M",
+        "8192",
+        "-o",
+        "/out/SunBeta.olean",
+        "SunBeta.lean"
+      ]
+    }
+  ],
+  "declarations": [],
+  "statement_alignment": "NOT_CERTIFIED",
+  "limits": {
+    "seconds": 1800.0,
+    "memory_mb": 8192,
+    "address_space_mb": 16384,
+    "thread_stack_kb": 65536,
+    "max_object_mb": 1024,
+    "max_total_object_mb": 1536,
+    "threads": 1,
+    "memory_scope": "Lean internal threshold plus per-process RLIMIT_AS; not measured RSS or host-wide RAM"
+  },
+  "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. No independent kernel implementation or natural-language equivalence check.",
+  "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "inspector_sha256": "7023e0c16c5f00e794ebb007856ecc8bbe1c49befd70239a15059f098ef6d2b9",
+  "reason": "compile-0 did not complete successfully",
+  "artifact": "verification/formal/e11be54ba8bbfef1085efff0262fe51fa8ed6bf150af193adf433a74e64febe1/receipt.json"
+}

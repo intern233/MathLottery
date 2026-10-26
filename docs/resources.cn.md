@@ -26,7 +26,7 @@ CPU 核心多不代表构建一定跑得动。多个编译进程、编辑器的 
 
 ### 一个实测参考
 
-在 Linux x86-64 / WSL 2 环境中，使用 Lean 4.35.0 和样本固定的 mathlib 版本，单独检查 showcase 中的 [MedialAlgebra.lean](../showcase/medial-triangle-inequality/formal/MedialAlgebra.lean)，得到：
+历史上，在 Linux x86-64 / WSL 2 环境中，使用 Lean 4.35.0 和原中位三角形样本固定的 mathlib 版本，单独检查 `MedialAlgebra.lean`，得到以下测量。该案例仍保留在 `main` 和 Git 历史中；这些数字不是 `ai4math` 当前精选的 beta、Franel 或 mesh 结果的基准测试。
 
 | 测量项目 | 观测值 |
 | --- | --- |
@@ -60,7 +60,7 @@ Chromium 的下载与缓存因平台而异，通常占用数百 MB，需要在�
 
 ## 准备 Lean，避免不必要的完整重建
 
-按照 [Lean 官方安装说明](https://lean-lang.org/install/)安装工具链。项目的 `lean-toolchain` 与固定的 mathlib 版本应配套使用。[样本中的形式化工程](../showcase/medial-triangle-inequality/formal/README.cn.md)提供了完整示例。MathLottery 的环境安装和 `doctor` 不会安装 mathlib，也不会测试其内存需求。
+按照 [Lean 官方安装说明](https://lean-lang.org/install/)安装工具链。项目的 `lean-toolchain` 与固定的 mathlib 版本应配套使用。[Mesh 形式化工程](../showcase/mesh-involutions/formal/README.cn.md)提供固定依赖的项目，但只覆盖原猜想的一部分。[Beta 源码](../showcase/sun-beta-logconvexity/formal/README.cn.md)虽有主定理历史重放记录，冻结包却缺少依赖锁定，不能把其他案例的依赖当作其历史环境证据。MathLottery 的环境安装和 `doctor` 不会安装 mathlib，也不会测试其内存需求。
 
 在已经声明 mathlib 依赖的 Lean 项目中，先获取兼容的编译缓存，再检查证明：
 
@@ -80,7 +80,7 @@ env LEAN_NUM_THREADS=1 lake env lean -j 1 -M 2048 Proof.lean
 
 确实需要构建时，可从 `env LEAN_NUM_THREADS=1 lake build <target>` 和明确的目标开始。`LEAN_NUM_THREADS` 控制 Lean 运行时并发，不是全局内存配额，也不能代替对子进程的观察。不要假设 `lake -j 1 build` 可用，Lake 与 Lean 的命令参数不同。[Lake 维护者的并发说明](https://leanprover-community.github.io/archive/stream/270676-lean4/topic/Lake.20parallel.20builds.html)
 
-内核重放是另一种工作负载。对已经构建好的样本工程，可先使用 `env LEAN_NUM_THREADS=1 lake env leanchecker --verbose Conjecture5`。`--fresh` 还会重查导入依赖，可能消耗明显更多的资源。并行模块检查会同时加载多个导入环境，增加线程前应先测量。[官方 lean-action 说明](https://github.com/leanprover/lean-action#run-leanchecker-on-a-project-with-a-mathlib-dependency)
+内核重放是另一种工作负载。对已经构建好的 mesh 样本工程，可先使用 `env LEAN_NUM_THREADS=1 lake env leanchecker --verbose MeshPartial`，其数学覆盖仍为部分。`--fresh` 还会重查导入依赖，可能消耗明显更多的资源。并行模块检查会同时加载多个导入环境，增加线程前应先测量。[官方 lean-action 说明](https://github.com/leanprover/lean-action#run-leanchecker-on-a-project-with-a-mathlib-dependency)
 
 让 agent 操作时，可以在「任务补充说明」里写清楚工具链、缓存位置与并发要求，例如：“复用固定版本的 Lean/mathlib 环境；一次只启动一个编译器，使用 `-j 1 -M 2048`；尝试更大构建前记录峰值 RSS、退出码和上限失败情况。”这属于研究指令，不会自动给原生 agent 命令施加操作系统资源限制；独立附件检查器使用下文介绍的单独限额。
 

@@ -1,0 +1,109 @@
+{
+  "status": "KERNEL_REPLAYED",
+  "checked_at": "2026-10-23T07:46:45.969433+00:00",
+  "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+  "problem_sha256": "50b6ca7a1c36b480c5c7b20b8b07d789a08b70d6b29b119b1c25bdbc2bde01b6",
+  "request": {
+    "files": [
+      "workspace/proof/SunBeta.lean"
+    ],
+    "declarations": [
+      "SunBeta.beta_coeffwise_logconvex"
+    ],
+    "module_root": "proof"
+  },
+  "sources": [
+    {
+      "path": "workspace/proof/SunBeta.lean",
+      "module": "SunBeta",
+      "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3"
+    }
+  ],
+  "steps": [
+    {
+      "status": "OK",
+      "returncode": 0,
+      "elapsed_seconds": 534.384,
+      "log": "compile-0.log",
+      "log_sha256": "09500412efbf1f696c383ed7db4d7f782966d7d0fb7333f00f95a1d1997a37fd",
+      "argv": [
+        "/lean/bin/lean",
+        "-j",
+        "1",
+        "-s",
+        "65536",
+        "-M",
+        "16384",
+        "-o",
+        "/out/SunBeta.olean",
+        "SunBeta.lean"
+      ]
+    },
+    {
+      "status": "OK",
+      "returncode": 0,
+      "elapsed_seconds": 100.352,
+      "log": "replay-0.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "argv": [
+        "/lean/bin/leanchecker",
+        "SunBeta"
+      ]
+    },
+    {
+      "status": "OK",
+      "returncode": 0,
+      "elapsed_seconds": 41.802,
+      "log": "inspect.log",
+      "log_sha256": "7531bec008d433d5f83a49b83da364f3f4a75d1334765238fa66420aee47988f",
+      "argv": [
+        "/lean/bin/lean",
+        "-j",
+        "1",
+        "-s",
+        "65536",
+        "-M",
+        "16384",
+        "--run",
+        "MathLotteryInspector.lean",
+        "SunBeta",
+        "--",
+        "SunBeta.beta_coeffwise_logconvex"
+      ]
+    }
+  ],
+  "declarations": [
+    {
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "module": "SunBeta",
+      "name": "SunBeta.beta_coeffwise_logconvex",
+      "type": "forall (n : Nat), (LE.le.{0} Nat instLENat (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)) n) -> (forall (d : Nat), LE.le.{0} Int Int.instLEInt (OfNat.ofNat.{0} Int 0 (instOfNat 0)) (DFunLike.coe.{1, 1, 1} (Finsupp.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) Nat (fun (x._@.Mathlib.Basic.FunLike.Basic.2582841819._hygCtx._hyg.11 : Nat) => Int) (Finsupp.instFunLike.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) (Polynomial.coeff.{0} Int Int.instSemiring (HSub.hSub.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHSub.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instSub.{0} Int Int.instRing)) (HMul.hMul.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHMul.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instMul.{0} Int Int.instSemiring)) (SunBeta.beta (HSub.hSub.{0, 0, 0} Nat Nat Nat (instHSub.{0} Nat instSubNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)))) (SunBeta.beta (HAdd.hAdd.{0, 0, 0} Nat Nat Nat (instHAdd.{0} Nat instAddNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1))))) (HPow.hPow.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (Polynomial.{0} Int Int.instSemiring) (instHPow.{0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (NPow.toPow.{0} (Polynomial.{0} Int Int.instSemiring) (Monoid.toNPow.{0} (Polynomial.{0} Int Int.instSemiring) (Semiring.toMonoid.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.semiring.{0} Int Int.instSemiring))))) (SunBeta.beta n) (OfNat.ofNat.{0} Nat 2 (instOfNatNat 2))))) d))"
+    }
+  ],
+  "statement_alignment": "NOT_CERTIFIED",
+  "limits": {
+    "seconds": 1800.0,
+    "memory_mb": 16384,
+    "address_space_mb": 24576,
+    "thread_stack_kb": 65536,
+    "max_object_mb": 1024,
+    "max_total_object_mb": 1536,
+    "threads": 1,
+    "memory_scope": "Lean internal threshold plus per-process RLIMIT_AS; not measured RSS or host-wide RAM"
+  },
+  "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. No independent kernel implementation or natural-language equivalence check.",
+  "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "inspector_sha256": "7023e0c16c5f00e794ebb007856ecc8bbe1c49befd70239a15059f098ef6d2b9",
+  "objects": [
+    {
+      "path": "SunBeta.olean",
+      "size": 570766176,
+      "sha256": "024eabc725c7170867cf17e7f652a17144fa0fdd5b60a7e44b209a9a5cde37ff"
+    }
+  ],
+  "artifact": "verification/formal/42f471b6b8f76c0b78c3f1414a7e39c02a3375dcc3718892aa820903d4199f4a/receipt.json"
+}

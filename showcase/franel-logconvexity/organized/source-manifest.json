@@ -1,0 +1,176 @@
+{
+  "source_run_id": "reviewed-source",
+  "source_revision": 9,
+  "source_sha256": "df5a6ff472287d257aeb2d20f29b0e46aecbad19206a7c9a78d1d2c58bca4d78",
+  "problem_sha256": "9b3d92fc177c85627a748a19f196d19acfcc809a7c617d4a53e2d82cd7e5e3b6",
+  "captured_at": "2026-10-25T12:36:24.743503+00:00",
+  "language": "zh",
+  "report_languages": [
+    "zh",
+    "en"
+  ],
+  "instructions": "请从已冻结的已审查结果整理完整的中英文专家报告，各一份，不要重新求解或升级验证/新颖性结论。\n开头用简洁专家速览说明精确原题、已证明主张、量词/定义域/边界、整体还是分支、正确性与新颖性的区别。\n随后提供完整可读证明、必要引理与依赖关系、关键步骤与检查 ID 的对应、已有文献和明确证据缺口。\n逐项列出真正被 Lean 检查的定理及回执；哈希不匹配或缺失的回执不能支持本候选。附加等号、推广、最优性若只有书面复核须直说。\n只引用冻结材料；没有正式保存 Solve 来源关联时不要猜测或复制同名/同哈希任务的历史。缺失的源码/依赖/原文应列明。\n保留全部历史失败及未解除文献障碍，不能把 UNKNOWN、AI 未发现问题或局部 Lean 编译写成首解认证。\n框架会另行生成专家交接索引、文件核对工具和 PDF，请专注数学内容；避免在正文写本机路径、账号或凭据。\n虽然候选主张完整解答，仍必须忠实保留历史 scope/coverage 的 UNKNOWN 与新颖性 UNKNOWN；不得替历史记录补造认证。",
+  "candidate_hashes": [
+    {
+      "id": "candidate-record-002",
+      "sha256": "693a09a4ede1e970f3060e6491480231492b2b0e62ea7e8d8d3a49e3341c88be",
+      "snapshot_sha256": "2f22f64a69440461e3e0fc45f96eeed38ebcee5616ed2b4c872d6a066711f91a"
+    }
+  ],
+  "files": [
+    {
+      "path": "reviewed-source/dossier.json",
+      "size": 90896,
+      "sha256": "7fd2844c70f8c96d6b28db049ef732a925a1f0d85bcb33ff58ac858b779388c5"
+    },
+    {
+      "path": "reviewed-source/tasks/task-record-002/attempt-record-002/answer.md",
+      "size": 1467,
+      "sha256": "236ceca18b9667ee2f2c8f49069c1cab0806e65e761d9e1eb320bc3b54be1ff9"
+    },
+    {
+      "path": "reviewed-source/literature/receipts/420c3f8ccfa26cb393d1f401c628667d042902b02bae0c10648a5cfe65eed0cf.json",
+      "size": 847,
+      "sha256": "78f38ef13dfb63a822d3cf43b2b1b9db0b5ccd08381bd1c1be7e30298c1b65b4"
+    },
+    {
+      "path": "reviewed-source/literature/receipts/6cf136a4f1583b1200993b61ec664cb96012453cdc3ac08e14792f56e15a08ff.json",
+      "size": 246,
+      "sha256": "68143defc57be85094ecbf6d101cc28124d64e6be8ffeaf959c7144e74c97fdb"
+    },
+    {
+      "path": "reviewed-source/literature/receipts/86e133a57f3135e3a9f0152f1439a721a5ceec4a1e29b8f1fcefcba104b6c8f7.json",
+      "size": 671,
+      "sha256": "70f7ea7a4babc12bbc9632ae21b711c5ace48192eb99338d5d7b5b7de5eca837"
+    },
+    {
+      "path": "reviewed-source/literature/receipts/c3279ec33e5b91c0c9b8e05350cdd883dc77e86abf5ddd57c1c9ce03e9458a22.json",
+      "size": 179,
+      "sha256": "4c3c292c430af55c40af386e6e07e53dbbf576053a88d48e93f9f97346bb35d5"
+    },
+    {
+      "path": "reviewed-source/literature/receipts/d53a616b09dd7a95c2e236d1b432113039a01800184ed4861153576e789437a0.json",
+      "size": 603,
+      "sha256": "66889fd732bc7a6505d406f099f69f2ed45e7d84a42c97984d487d3e18aa8a24"
+    },
+    {
+      "path": "reviewed-source/literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.extracted.txt",
+      "size": 85677,
+      "sha256": "2b2d27c3ffc019626acccffdffe85844c818e0e8bda4fb7d9a0fa9cdaf6b352f"
+    },
+    {
+      "path": "reviewed-source/literature/snapshots/fb44ccac54da544928f4dba84a4579dfa804289e9592744908be74efa131b674.extracted.txt",
+      "size": 50536,
+      "sha256": "027df3094708a930bacca7a2dc60a64cd04d739252f5564b95b7e5fdf6b38b81"
+    },
+    {
+      "path": "solver-source/dossier.json",
+      "size": 42182,
+      "sha256": "ae8c94ae0f406ab7c73580e89ac4fcde1bcb3d2cef8afd279246fe2c31473117"
+    },
+    {
+      "path": "solver-source/tasks/task-record-001/attempt-record-001/answer.md",
+      "size": 770,
+      "sha256": "8147165a9259dd918c0eb0f5b7d79050163f7d1122b4e3cae701bce7cafae5b2"
+    }
+  ],
+  "omitted": [
+    "reviewed-source/workspace/discovery-context/workspace/research/StatementProbes.lean: private or excluded source path",
+    "reviewed-source/literature/snapshots/391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7.extracted.txt: binary content"
+  ],
+  "lineage": [
+    {
+      "run_id": "reviewed-source",
+      "revision": 9,
+      "sha256": "df5a6ff472287d257aeb2d20f29b0e46aecbad19206a7c9a78d1d2c58bca4d78",
+      "relation": "selected reviewed result"
+    },
+    {
+      "run_id": "solver-source",
+      "revision": 8,
+      "sha256": "cf7b1e2a1903da22b2bf752a70af6e524b6848d42c6047c7863cfdb787fa2802",
+      "relation": "explicitly linked solver"
+    }
+  ],
+  "limitations": [
+    "This is an editorial reconstruction of visible saved evidence, not hidden reasoning, an independent mathematical verification, or a certification of novelty.",
+    "reviewed-source: only saved answers, named notes, proof/formal files and source receipts are included; arbitrary workspace files, binaries and caches are excluded.",
+    "solver-source: only saved answers, named notes, proof/formal files and source receipts are included; arbitrary workspace files, binaries and caches are excluded.",
+    "The linked solver is frozen at the revision shown in this manifest, which may include work saved after the review. The original reviewed candidate is matched exactly; later work is not retroactively verified."
+  ],
+  "report": {
+    "markdown": "report.md",
+    "sha256": "dfe5c45049157617c1099d53c19aa0c3fe0d53517f62f770ec5fdcc696330d6a",
+    "expert_brief": {
+      "version": "expert-brief-v2",
+      "sha256": "0c3d2c814204e3e295e556c7a300af9c7a8dfceb86b09679fe5f75c21d755743",
+      "source_sha256": "df5a6ff472287d257aeb2d20f29b0e46aecbad19206a7c9a78d1d2c58bca4d78",
+      "placement": "report_prefix",
+      "source_language_preserved": true
+    },
+    "pdf": "report.pdf",
+    "pdf_status": "ready",
+    "pdf_error": null,
+    "pdf_details": {
+      "filename": "report.zh.pdf",
+      "pages": 20,
+      "bytes": 523241,
+      "sha256": "8f9496068897cbb7aee9271b87e836d5c02c87a4250a69a277291ed776705cb1",
+      "renderer": "chromium+katex-0.19.0",
+      "formula_count": 203,
+      "warnings": [],
+      "size": 523241
+    }
+  },
+  "reports": {
+    "zh": {
+      "markdown": "report.zh.md",
+      "sha256": "dfe5c45049157617c1099d53c19aa0c3fe0d53517f62f770ec5fdcc696330d6a",
+      "expert_brief": {
+        "version": "expert-brief-v2",
+        "sha256": "0c3d2c814204e3e295e556c7a300af9c7a8dfceb86b09679fe5f75c21d755743",
+        "source_sha256": "df5a6ff472287d257aeb2d20f29b0e46aecbad19206a7c9a78d1d2c58bca4d78",
+        "placement": "report_prefix",
+        "source_language_preserved": true
+      },
+      "pdf": "report.zh.pdf",
+      "pdf_status": "ready",
+      "pdf_error": null,
+      "pdf_details": {
+        "filename": "report.zh.pdf",
+        "pages": 20,
+        "bytes": 523241,
+        "sha256": "8f9496068897cbb7aee9271b87e836d5c02c87a4250a69a277291ed776705cb1",
+        "renderer": "chromium+katex-0.19.0",
+        "formula_count": 203,
+        "warnings": [],
+        "size": 523241
+      }
+    },
+    "en": {
+      "markdown": "report.en.md",
+      "sha256": "c21fee5309f22a4ca3129a2ea269af876d7700a74ec95edc15ab5c754a510632",
+      "expert_brief": {
+        "version": "expert-brief-v2",
+        "sha256": "c7989fdb42b1e4567e69fc465cddd3e76a40d479ecebfb682259a0d9bde6208b",
+        "source_sha256": "df5a6ff472287d257aeb2d20f29b0e46aecbad19206a7c9a78d1d2c58bca4d78",
+        "placement": "report_prefix",
+        "source_language_preserved": true
+      },
+      "pdf": "report.en.pdf",
+      "pdf_status": "ready",
+      "pdf_error": null,
+      "pdf_details": {
+        "filename": "report.en.pdf",
+        "pages": 23,
+        "bytes": 454439,
+        "sha256": "ad95704e3056658f9961ffd5bbd37c9d0044d05ef4f86b4c1df036bef09a04a5",
+        "renderer": "chromium+katex-0.19.0",
+        "formula_count": 203,
+        "warnings": [],
+        "size": 454439
+      }
+    }
+  },
+  "materials_prefix": "materials/"
+}

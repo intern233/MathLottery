@@ -1,0 +1,2151 @@
+{
+  "candidate_id": "candidate-record-002",
+  "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+  "claim": "对每个整数 n≥0，令 beta_n(q)=Σ_{k=0}^n binom(n,k)^2 binom(n+k,k)q^k∈Z[q]。对所有整数 n≥1 和 d≥0，都有 [q^d](beta_{n-1}(q)beta_{n+1}(q)-beta_n(q)^2)≥0。完整 Lean 主定理为 SunBeta.beta_coeffwise_logconvex，单一源文件 proof/SunBeta.lean。本主张是覆盖原题全部量词的候选证明，不是独立 Verify 的结论。",
+  "assumptions": [
+    "仅原题条件：n、d 为整数，n≥1、d≥0；beta_n 对全部 n≥0 按原二项式有限和定义。",
+    "q 是形式变量，系数在 Z 中比较；不增加点值、有限范围或额外参数假设。"
+  ],
+  "scope": "COMPLETE",
+  "level": "PARTIALLY_VERIFIED",
+  "remaining_obligations": [],
+  "reviews": [
+    {
+      "verdict": "INCONCLUSIVE",
+      "truth_assessment": "独立审阅支持候选的完整命题成立：对每个n≥1和每个d≥0，精确定义beta_n=∑binom(n,k)^2binom(n+k,k)q^k的相邻乘积差在ℤ[q]中的d次系数非负。依据是对全部指标的符号推导、两个独立算法对完整正系数证书的精确核查，以及冻结主定理的本地编译和内核重放；有限数值实验不是证明依据。本结论是独立LLM审阅，不标称外部专家或控制器最终认证。",
+      "proof_assessment": "提交证明作为整体闭合。已逐一核对正权重与全部支撑边界、相邻行/列递推、卷积配对系数2n、零和式端点、d>2n的零系数、奇偶参数化、所有m=0/m=1/r=0边界、H非零与D>0、Cramer常数不依赖求和指标、两张完整系数表以及最后除以2nD的步骤。334和415项证书与正文、附件、Lean定义逐项一致；SymPy精确展开和仅用整数运算的独立稀疏多项式重放均给出零余数。不存在把核心结论放入假设、Nat截断系数差或仅点值证明的情况。第一次本地编译超时没有算通过；第二次原样源码编译、独立原题声明探针和leanchecker均实际成功，公理仅为标准三项。",
+      "issues": [],
+      "evidence": [
+        "formal-probes/ReviewNotes.md",
+        "formal-probes/algebra_results.json",
+        "formal-probes/sparse_results.json",
+        "formal-probes/lean_results.json",
+        "formal-probes/statement_probe.log",
+        "formal-probes/kernel_replay.log",
+        "formal-probes/sources.json",
+        "formal-probes/citations.json"
+      ],
+      "novelty": "KNOWN",
+      "novelty_notes": "Sun2014 Conjecture4.7第一种形式与候选完全等价，2026-02-10原作者仍明确称其开放。本次独立检索没有识别出其后的精确beta解答。Narayana、S_n、D_n、Zhu–Sun及2026 Hoggatt/Baxter定理均已按定义、量词和参数比较，不能直接作为本题的已知证明；所见2026反例涉及另一族rising-binomial多项式。故候选证明可能新，但不宣称全球首次或已获专家认可。作者另在2014-12-29版本追述2011-05-07提出同一猜想，不把2014当作首次提出日期。各项逐字摘录及关系见citations；检索范围限制保持可见。",
+      "novelty_references": [],
+      "original_problem_coverage": "UNKNOWN",
+      "coverage_explanation": "独立确认了实际SunBeta.beta : ℕ → Polynomial ℤ以及完整主定理。其有限和权重恰为binom(n,k)^2binom(n+k,k)，求和k=0..n，中心下标任意n≥1，次数任意d:ℕ，无上界。n−1仅为受hn保护的下标减法；差与比较发生在整数系数多项式和ℤ中。辅助证明把d≤2n的全部系数和d>2n的恒零情况都纳入，并包括n=1与beta_0。另写的原题有限和声明可直接由冻结主定理闭合。因此不是有限范围、点值、S_n/D_n或其他部分命题；FULL是本次对实际源码和证明的比较结果，不是沿用solver的COMPLETE标签。自然语言语义对应仍是本独立审阅的解释，并不冒充外部专家认证。",
+      "remaining_obligations": [],
+      "checks": [
+        {
+          "id": "",
+          "claim": "冻结定义和主定理完整表达原题，无额外数学假设或有限指标限制。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "beta : ℕ → Polynomial ℤ，定义为对 range(n+1) 求和的 monomial k ((n.choose k : ℤ)^2*((n+k).choose k : ℤ))。beta_coeffwise_logconvex 的参数只有 n : ℕ、hn : 1≤n、d : ℕ，结论为 0≤(beta(n−1)*beta(n+1)−beta(n)^2).coeff d。多项式减法及比较在 ℤ 中，不是 Nat 截断减法；任意 d : ℕ 覆盖全部 d≥0。hn 保证 n−1+1=n、n−1+2=n+1。辅助 P,T0,T1,w 均在 ℚ 中。没有代入实数 q，也没有把 q=1 的结论冒充逐系数结论。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:203 (beta), :206 (a), :279 (w), :712 (main theorem)",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "n≥1 时归一化权重合法、非负，全部相邻行及列递推包括支撑边界。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "a(n,k)=n!(n+k)!/[k!³(n−k)!²] (k≤n)。对 k≤n+1，b_k=n!(n+k−1)!/[k!³(n+1−k)!²]>0；分母 (n+1)(n+k)(n+k+1)>0。阶乘消去给出 a(n,k)=(n+k)(n−k+1)²b_k，n a(n−1,k)=(n−k)²(n−k+1)²b_k，(k+1)³b_(k+1)=(n+k)(n−k+1)²b_k。k=n 时第二式由 (n−k)²=0 处理；k=n+1 时由 (n−k+1)²=0 处理；k>n+1 时所有相关权重和行系数都为零。递推无需除以可能为零的 n−k。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:214–320, choose_row/choose_col/a_row/a_col/w_above/w_center/w_below/w_recur",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "式(3)的配对卷积恒等式及 P,T0,T1 的对称性成立。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "由三个相邻行公式，b_kb_l P(n,k,l)=n[a(n−1,k)a(n+1,l)+a(n+1,k)a(n−1,l)−2a(n,k)a(n,l)]。在全部 k+l=d 的有序非负整数对上交换 k,l 是双射，故总和等于 2n C(n,d)，其中 C(n,d) 是原差多项式系数。k=l 的项同样成立，没有遗漏或重复半权重。直接交换可得 P,T0,T1 都对称，独立多项式展开也验证其差恒为零。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:570 (paired_term), :595 (delta_sum), :631 (delta_coeff)",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "式(4)的两项修正和严格为零，包括 d=0、k=0 或 l=0 的边界。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "用 (k+1)³b_(k+1)=(n+k)(n−k+1)²b_k 代入 G(k+1,l) 与 G(k,l+1)，逐项得到 b_kb_l(c0T0+c1T1)=G(k+1,l)−G(k,l+1)。对 k+l=d 求和，第一和覆盖 i+j=d+1,i≥1，第二和覆盖同一反对角线,j≥1；差仅为 G(d+1,0)−G(0,d+1)=0，因为 G 含 i³j³。c0,c1 不依赖求和指标这一条件由候选(7)或(11)满足。所有和有限，负的 c0,c1 不影响恒等式。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:529–568 (flux, flux_sum, weighted_flux, weighted_telescopes)",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "次数划分和奇偶重参数化覆盖所有 n≥1,d≥0 及全部有权项。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "deg beta_s≤s，因此 d>2n 时两乘积的 d 次系数分别为零。对 d≤2n，取 ε=d mod 2、m=(d−ε)/2、r=n−m−ε，则 m,r≥0。若 k≤l、k+l=2m+ε、k,l≤n+1，整数 j=m−k 满足 0≤j≤m 和 j≤r+1，并有 k=m−j,l=m+j+ε。P,T0,T1 对称，所以排序不丢项。超出 k,l≤n+1 的权重为零。这一划分包含最高两次 d=2n、2n−1 和最低次数0、1。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:333 (sorted_suffices), :504 (exists_certificate), :678 (delta_nonneg)",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "m=0、m=1 或 r=0 的全部边界证书成立且 D>0。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "m=0 时 P(n,0,0)=0、P(n,0,1)=2n²(n+1)²(3n+1)>0。m≥1 且 m=1 或 r=0 强制 j∈{0,1}；(7)取 D=m² 或 m³，均正。独立展开给出 j=0 时 Q=0，j=1 时依次为 2(r+1)(r+2)²(3r²−3r+4)、8m(m+1)²、36(r+2)(r+3)²(2r²+9r+14)、144m(m+2)²(3m+4)，与(8)一致。唯一含负系数的因子满足 4(3r²−3r+4)=3(2r−1)²+13>0。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json (P_at_0_0/P_at_0_1 and both edge cases)",
+            "submitted-evidence/proof/SunBeta.lean:360–502"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "内部情形 H 非零、D 正、c0,c1 定义合法，且使 j=0,1 的 Q 为零。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "m≥2,r≥1 时 D0=3m²r²(m−1)³(2m+r+1)>0，D1=3m³r²(m−1)³(2m+r+3)>0。独立计算 H=V0W1−V1W0，分别得到 −12m³r²(m−1)³(2m+r)(r+1)²(2m+r+1) 和 −24m³r²(m−1)³(r+1)²(2m+r+2)(2m+r+3)，均严格负。Cramer 公式 c0=D(U1W0−U0W1)/H、c1=D(V1U0−V0U1)/H 解出两条线性方程。化简所得 c0,c1∈ℤ[m,r] 与冻结 JSON、Lean alpha/beta 多项式完全一致。第二套整数稀疏多项式程序另外检查 H*c0、H*c1 的清分母等式，差的全部系数均为零。",
+          "evidence": [
+            "formal-probes/algebra_results.json",
+            "formal-probes/sparse_results.json",
+            "submitted-evidence/proof/SunBeta.lean:40–87"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "(12)两条大多项式恒等式与附录749个系数完整一致。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "从 P,T0,T1,D 和独立算出的 Cramer 解构造 Q，精确多项式除以偶数因子 2j²(j²−1) 或奇数因子 2j(j−1)(j+1)(j+2)，余数均为零。代入 m=u+t+2,r=v+t+1,j=t+2，完整指数→系数字典分别为 334、415 项，总次数11、12，最小非零系数均为36，全部为正整数。逐项比较了 candidate.json 正文、冻结 Proof.md、CertificateTable.md、certificates.json、Lean posEven/posOdd，完全一致。check_sparse.py 只使用 Python 整数加乘和指数字典，再独立验证两恒等式的每个差系数为零；并非有限取值测试。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json",
+            "formal-probes/check_sparse.py",
+            "formal-probes/sparse_results.json",
+            "submitted-evidence/proof/CertificateTable.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "证书正性与零和式合成，推出原题对全部无限指标的系数非负。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "j≥2 且 j≤m,r+1 时 u=m−j,v=r+1−j,t=j−2 均非负，E0,E1 的正系数保证取值非负；(12)的额外因子也非负。j=0,1 已证明 Q=0。结合边界证书得到每个有权项 Q≥0。于是 0≤∑b_kb_lQ=D∑b_kb_lP=2nD C(n,d)。n≥1,D>0，故 C(n,d)≥0；d>2n 先前已证为零。没有将原结论放入假设或使用文献中不同权重的结论。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:649–717 (sumP_nonneg through beta_coeffwise_logconvex)",
+            "formal-probes/ReviewNotes.md",
+            "formal-probes/sparse_results.json"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "独立低次、最高次与最小中心的边界公式无异常。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "常数项相减为0。a(n,1)=n²(n+1) 的二阶差为6n+2，所以 C(n,1)=6n+2。最高系数 C(n,2n)=binom(2n−2,n−1)binom(2n+2,n+1)−binom(2n,n)²=binom(2n,n)²/[(2n−1)(n+1)]>0。n=1 的差是8q+2q²，n=2 是14q+6q²+56q³+4q⁴。",
+          "evidence": [
+            "formal-probes/ReviewNotes.md",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "直接整数卷积的有限检查覆盖 n=1..120、d=0..2n+2，没有发现反例。",
+          "method": "FINITE_TEST",
+          "result": "SUPPORTED",
+          "reasoning": "使用 math.comb 和 Python 任意精度整数，从原 beta 定义直接卷积，共检查14880个系数，负系数数目0；另外4440次 Fraction 精确比较验证递推的小指标及越界实例。此检查仅支持所列有限范围，不承担无限定理或新颖性结论。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "原始公开陈述与最新开放声明指向同一个 beta 命题；最接近的已知解不直接覆盖其权重。",
+          "method": "REFERENCE",
+          "result": "SUPPORTED",
+          "reasoning": "独立下载核对 Sun 2014 Conjecture4.7 第一式和2026-02-10 v4 §1 beta定义与 remains open 句。Narayana type B 缺少 binom(n+k,k)；Dou–Ren S_n/D_n 分别有 binom(2k,k)binom(2n−2k,n−k)；Zhu–Sun Corollary2.9 用 binom(2k,k)。其 Proposition2.8 的固定输入 f_k 不能带外层 n，Theorem2.1 的 C1 也不能把 beta 的强 q-log-convexity当成已知。2026 Hoggatt/Baxter 定理行多项式最高项系数1，与 beta 的 binom(2n,n)不同。逐条假设和结论比较见 citations；不将找不到解答解释成已证首次性。",
+          "evidence": [
+            "https://arxiv.org/html/1104.3856v8",
+            "https://arxiv.org/html/2505.02767v4",
+            "https://emis.de/ft/31765",
+            "https://arxiv.org/html/2609.33732v1",
+            "formal-probes/citations.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "检索到的2026反例针对另一条 rising-binomial 猜想，不是否定 beta 的证据。",
+          "method": "COUNTEREXAMPLE",
+          "result": "SUPPORTED",
+          "reasoning": "Qiping Zhou 的一手回答研究 R_n^(m)=∑binom(n+k,k)^m q^k。m=5,n=7 时 q² 差系数精确为 28^5+9^5·7^5+45^5−2·36^5−8^10=−499140。beta 在 n=7,d=2 的差系数为1316。权重不同，故此更正不能改变本题真假判断。",
+          "evidence": [
+            "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "冻结单文件完整主定理可独立编译、匹配原题声明并通过本地内核重放，未使用额外公理或 sorryAx。",
+          "method": "FORMAL",
+          "result": "SUPPORTED",
+          "reasoning": "先核对冻结SHA-256并原样复制，未接受候选预编译对象，也未执行其check.py。使用已有Lean 4.35.0和mathlib库、单线程独立编译：首次900秒外部超时，保留记录；第二次开启profile，在426.962秒退出0，生成570766176字节对象。另写StatementProbe.lean直接展开原题三个Polynomial ℤ有限和，以SunBeta.beta_coeffwise_logconvex闭合，19.833秒退出0；打印实际类型为∀n:ℕ,1≤n→∀d:ℕ,0≤(beta(n−1)*beta(n+1)−beta(n)^2).coeff d。实际公理清单仅propext、Classical.choice、Quot.sound。leanchecker --verbose SunBeta在93.236秒退出0，日志replaying SunBeta。它重放此模块的声明到导入环境，仍以预装Lean/mathlib为信任基础；不是外部专家认证。本条记录本审阅工具实际结果，控制器formal_receipt另行生成。",
+          "evidence": [
+            "formal-probes/run_lean.py",
+            "formal-probes/lean_first_results.json",
+            "formal-probes/lean_results.json",
+            "formal-probes/compile.log",
+            "formal-probes/StatementProbe.lean",
+            "formal-probes/statement_probe.log",
+            "formal-probes/kernel_replay.log"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        }
+      ],
+      "proof_steps": [],
+      "statement_alignment": [],
+      "citations": [
+        {
+          "url": "https://arxiv.org/html/1104.3856v8",
+          "role": "PRIOR_RESULT",
+          "locator": "§4 Conjecture 4.7，HTML #Thmconjecture7，第一种形式及紧前 q-logconvex 定义",
+          "excerpt": "\\sum_{k=0}^{n}\\binom{n}{k}^{2}\\binom{n+k}{k}q^{k}",
+          "explanation": "摘录为官方 HTML 原生 TeX annotation 的字面子串。该猜想的第一种形式就是 beta；紧前定义对所有 n≥1 要求整数差多项式全部系数非负。与候选完全等价。PRIOR_RESULT 在此标记已公开的原猜想，不将猜想算作既有证明。",
+          "source_date": "2014-12-24",
+          "relation": "EQUIVALENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "PRIOR_RESULT",
+          "locator": "§1，HTML #S1.p5.2 最后一句，前面同段给出 beta 的完整定义",
+          "excerpt": "(\\beta_{n}(q))_{n\\geq 0}\n\nremains open.",
+          "explanation": "同段的 beta 权重精确为 binom(n,k)^2 binom(n+k,k)，并回指 Conjecture 4.7。这是截至 2026-02-10 的明确开放声明，不是本候选正确性的依据，也不保证其后没有解答。",
+          "source_date": "2026-02-10",
+          "relation": "EQUIVALENT"
+        },
+        {
+          "url": "https://arxiv.org/html/0810.2247v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§1 Theorem 1.1；式(1.1)定义 W_n；2010 Narayana type B 论文的作者预印本",
+          "excerpt": "W_{n}(q)\n form a \nq\nq\n-log-convex sequence.",
+          "explanation": "此源是 2008-10-13 预印本，不将其版本日期写成 2010。已另核对作者所存 2010 稿 Theorem 1.1。对所有 n≥0，其 W_n=sum binom(n,k)^2 q^k 是 q-log-convex；候选额外因子 binom(n+k,k) 同时依赖 n,k。W_1=1+q 而 beta_1=1+2q，不能直接引用此定理。候选在该已知结果之外证明精确 beta 权重的结论。",
+          "source_date": "2008-10-13",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1308.2736v2",
+          "role": "SOLUTION",
+          "locator": "§3 Theorem 3.1，HTML #S3.Thmtheo1；式(1.1)",
+          "excerpt": "S_{n}(q)\n given by (\n1.1\n) form a \nq\nq\n-log-convex sequence.",
+          "explanation": "对全部 n≥0，S_n=sum binom(n,k)binom(2k,k)binom(2n−2k,n−k)q^k 为 q-log-convex。它解决原并列猜想的第二种形式。S_n 常数项为 binom(2n,n)，beta_n 常数项为 1；权重并不相同，未覆盖本候选。",
+          "source_date": "2013-08-15",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1308.2961v1",
+          "role": "SOLUTION",
+          "locator": "§3 Theorem 3.1，HTML #S3.Thmthm1；式(1.1)",
+          "excerpt": "\\{D_{n}(q)\\}_{n\\geq 0}\n is \nq\nq\n-log-convex.",
+          "explanation": "D_n=sum binom(n,k)^2 binom(2k,k)binom(2n−2k,n−k)q^k。定理证明整个 n≥0 序列 q-log-convex，是原并列猜想的第三种形式。D_n 的额外权重不等于 binom(n+k,k)，常数项也不同；候选 beta 的结论不由此定理的参数限制直接得到。",
+          "source_date": "2013-08-13",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://emis.de/ft/31765",
+          "role": "PRIOR_RESULT",
+          "locator": "PDF p.9 Corollary 2.9 及紧前 P_n 定义；p.8 Proposition 2.8；p.3 Theorem 2.1",
+          "excerpt": "The hypergeometric polynomials Pn(q) form a strongly q-log-convex",
+          "explanation": "短摘录保留 PDF 可提取字面文本，公式仅在解释中转写。P_n=sum binom(n,k)^2 binom(2k,k)q^k 的强 q-log-convexity 比普通性质强，但权重不同：P_2=1+8q+6q²，beta_2=1+12q+6q²。Proposition 2.8 要求一个固定、与外层 n 无关的强 q-log-convex 输入序列 f_k(q)，不能直接取 f_k=binom(n+k,k)q^k。Theorem 2.1 条件 C1 已要求行生成多项式强 q-log-convex；直接取 beta 数组会把更强目标当作前提。",
+          "source_date": "2015-08-28",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2609.33732v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§1 Theorem 1.2，HTML #S1.Thmtheorem2，H_n^(d) 的定义在紧前段",
+          "excerpt": "\\big(H^{(d)}_{n}(q)\\big)_{n\\geq 0}\n is strongly \nq\nq\n-log-convex.",
+          "explanation": "Theorem 1.2 对每个固定整数 d≥1、所有 n≥0 证明 H_n^(d) 的强 q-log-convexity。该行多项式常数项与最高项均为 1；beta_n 的最高项为 binom(2n,n)，所以没有一个 d 的限制把这些多项式变成 beta。论文中的 beta 符号另表示符号分析的辅助量，非本题序列。候选对不同权重给出普通 q-log-convexity。",
+          "source_date": "2026-09-27",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2608.22258v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§5 Theorem 5.1，HTML #S5.Thmtheorem1；§4 的 B(n,k) 定义",
+          "excerpt": "B_{n}(x)\n form a \nq\nq\n-log-convex sequence.",
+          "explanation": "该定理对所有 n≥0 证明 Baxter 行多项式 q-log-convex。权重 B(n,k)=binom(n,k)binom(n+1,k)binom(n+2,k)/[binom(k+1,k)binom(k+2,k)]，最高项系数为 1；本题最高项为 binom(2n,n)。其 d-Hoggatt 的 d=3 特例仍不同于 beta，不能把此最新结果标作 beta 解答。",
+          "source_date": "2026-08-23",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+          "role": "CORRECTION",
+          "locator": "Qiping Zhou 的 2026-07-24 回答，n=7,m=5 的 q² 系数反例",
+          "excerpt": "The conjecture is false.\n A counterexample is given by \n$m=5$\n and \n$n=7$",
+          "explanation": "这是一手作者公开反例，针对 R_n^(m)=sum binom(n+k,k)^m q^k，纠正 Sun 的另一条猜想。独立整数重算给出 [q²](R_6^(5)R_8^(5)−(R_7^(5))²)=28^5+9^5·7^5+45^5−2·36^5−8^10=−499140。相同 n,d 的 beta 差系数为 1316。该反例不否定 beta 命题，也没有给出 beta 的证明。",
+          "source_date": "2026-07-24",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1102.5649v47",
+          "role": "PRIOR_RESULT",
+          "locator": "§2 末、§3 前的 q-logconvex 段，HTML #id4205.1 及紧后四个公式",
+          "excerpt": "on May 7, 2011 I conjectured that",
+          "explanation": "该 2014-12-29 版本由作者追述 2011-05-07 提出猜想，其紧后第一公式仍为精确 beta 权重。与候选的数学目标等价，但只给猜想、未给证明。因此保留题目指定 2014 Conjecture 4.7 出处，同时不声称 2014 是首次提出日期。",
+          "source_date": "2014-12-29",
+          "relation": "EQUIVALENT"
+        }
+      ],
+      "literature_search": {
+        "queries": [
+          "\"Sun\" \"beta\" \"q-log-convex\" proof",
+          "\"Conjecture 4.7\" \"log\" \"2026\"",
+          "\"beta_n\" \"q-log-convexity\"",
+          "\"Sun\" \"q-log-convexity\" correction",
+          "\"beta\" \"q-log-convexity\" Sun 2026 proof",
+          "\"Apéry polynomials\" \"q-log-convex\" proof",
+          "\"binom{n+k}{k}\" \"q-log-convex\"",
+          "\"The q-Log-convexity of the Narayana Polynomials of Type B\" arxiv",
+          "\"Sun\" \"beta polynomials\" log convex proof 2026",
+          "\"Sun\" \"q-logconvex\" beta solution",
+          "\"1104.3856\" \"q-log\" proof beta",
+          "\"2505.02767\" \"correction\"",
+          "\"beta\" \"q-log-convexity\" \"proof\" -site:researchgate.net -site:scribd.com",
+          "\"q-log-convexity\" \"Sun\" \"2026\" \"beta\"",
+          "\"Apéry\" \"zeta(2)\" \"polynomials\" \"log-convex\"",
+          "\"q-log-convex\" \"binomial\" \"n+k\" \"2026\"",
+          "\"beta_n(q)\" \"log\" convex",
+          "\"β_n\" \"Sun\" convex",
+          "\"q-log-convexity\" \"Sun\" \"beta\" solution 2025 2026 -site:scribd.com",
+          "\"Sun\" \"beta\" \"log-convexity\" certificate",
+          "\"q-log-convexity\" \"Sun\" \"beta\" 2026 proof conjecture",
+          "\"binom{n}{k}^{2}\" \"binom{n+k}{k}\" \"log\" \"convex\"",
+          "\"Sun\" \"beta 多项式\" \"对数凸\"",
+          "\"q-log-convexity\" \"beta\" \"counterexample\""
+        ],
+        "conclusion": "以上均为本独立会话实际执行的 search_query；最后一组的前两条另限 arxiv.org。独立获取并读取2014与2026官方HTML、Narayana作者稿/2008预印本、两篇Dou–Ren全文、Zhu–Sun2015全文，以及搜索新发现的2026年8月Baxter和9月Hoggatt论文的定义与主定理。精确beta在2026-02-10仍有作者明确开放声明；检索未识别出随后解决精确beta权重的既有定理。新发现的rising-binomial反例已核对原始MathOverflow回答，作用对象不同。搜索命中的AI-Has-Taste目录也已检查相关词，未识别出beta论文条目。另核对arXiv:1102.5649v47的作者追述，不把2014当首次提出日期。结论为POTENTIALLY_NEW，不是首次性认证。",
+        "unresolved": [],
+        "limitations": [
+          "检索截至2026-10-23，主要覆盖公开网络索引、arXiv、期刊/作者公开稿及检索命中的一手来源；英文为主，辅以一条中文检索，不穷尽全部语言或数据库。",
+          "最新直接称精确beta问题开放的已核对来源日期为2026-02-10；检索和下载日期不能将该状态声明更新为2026-10-23。2026年8月至9月的新论文已比较，但未索引、未公开或未命中的解答仍可能存在。",
+          "已逐一检查列出定理的对象、量词和可见参数特例，不宣称排除全体文献中的非显然推论或重构证明。没有已识别但未读的潜在精确beta解答；若后来发现这类来源，需要重新评价新颖性。",
+          "LLM文献审阅和本地计算不是外部专家对原创性或自然语言/形式化语义对应的认证。"
+        ],
+        "obstacles": [],
+        "comparisons": []
+      },
+      "formal_check": {
+        "files": [
+          "workspace/proof/SunBeta.lean"
+        ],
+        "declarations": [
+          "SunBeta.beta_coeffwise_logconvex"
+        ],
+        "module_root": "proof"
+      },
+      "evidence_assessment": {
+        "policy_version": "evidence-v2",
+        "assessed_at": "2026-10-23T07:25:59.057229+00:00",
+        "supported": false,
+        "reasons": [
+          "https://emis.de/ft/31765: Unable to verify robots policy for https://emis.de",
+          "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk: Unable to verify robots policy for https://mathoverflow.net"
+        ],
+        "checked_citations": [
+          {
+            "url": "https://arxiv.org/html/1104.3856v8",
+            "role": "PRIOR_RESULT",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/1104.3856v8",
+            "locator": "§4 Conjecture 4.7，HTML #Thmconjecture7，第一种形式及紧前 q-logconvex 定义",
+            "source_date": "2014-12-24",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7.txt",
+            "sha256": "0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7",
+            "retrieved_at": "2026-10-23T07:22:07.181670+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2505.02767v4",
+            "role": "PRIOR_RESULT",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/2505.02767v4",
+            "locator": "§1，HTML #S1.p5.2 最后一句，前面同段给出 beta 的完整定义",
+            "source_date": "2026-02-10",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+            "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+            "retrieved_at": "2026-10-23T07:22:10.608531+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/0810.2247v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/0810.2247v1",
+            "locator": "§1 Theorem 1.1；式(1.1)定义 W_n；2010 Narayana type B 论文的作者预印本",
+            "source_date": "2008-10-13",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2df26028ae92e79b845a2910022fd399e13267b46e63cccf5a5368b782adbf3e.txt",
+            "sha256": "2df26028ae92e79b845a2910022fd399e13267b46e63cccf5a5368b782adbf3e",
+            "retrieved_at": "2026-10-23T07:22:13.735154+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/1308.2736v2",
+            "role": "SOLUTION",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/1308.2736v2",
+            "locator": "§3 Theorem 3.1，HTML #S3.Thmtheo1；式(1.1)",
+            "source_date": "2013-08-15",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd.txt",
+            "sha256": "610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd",
+            "retrieved_at": "2026-10-23T07:22:15.792987+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/1308.2961v1",
+            "role": "SOLUTION",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/1308.2961v1",
+            "locator": "§3 Theorem 3.1，HTML #S3.Thmthm1；式(1.1)",
+            "source_date": "2013-08-13",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2996953e8889711daae8d93eead7df92013d33ff2cb97c2813598d0de7b1e40a.txt",
+            "sha256": "2996953e8889711daae8d93eead7df92013d33ff2cb97c2813598d0de7b1e40a",
+            "retrieved_at": "2026-10-23T07:22:19.405956+00:00"
+          },
+          {
+            "url": "https://emis.de/ft/31765",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": null,
+            "locator": "PDF p.9 Corollary 2.9 及紧前 P_n 定义；p.8 Proposition 2.8；p.3 Theorem 2.1",
+            "source_date": "2015-08-28",
+            "verified_excerpt": false,
+            "reason": "Unable to verify robots policy for https://emis.de",
+            "artifact": null,
+            "sha256": null,
+            "retrieved_at": null
+          },
+          {
+            "url": "https://arxiv.org/html/2609.33732v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2609.33732v1",
+            "locator": "§1 Theorem 1.2，HTML #S1.Thmtheorem2，H_n^(d) 的定义在紧前段",
+            "source_date": "2026-09-27",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2cd2abe07370a82a4f69d0ddd9b5014d27c672c8432c0d5c673161e2eae60867.txt",
+            "sha256": "2cd2abe07370a82a4f69d0ddd9b5014d27c672c8432c0d5c673161e2eae60867",
+            "retrieved_at": "2026-10-23T07:22:24.290146+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2608.22258v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2608.22258v1",
+            "locator": "§5 Theorem 5.1，HTML #S5.Thmtheorem1；§4 的 B(n,k) 定义",
+            "source_date": "2026-08-23",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/4bf8cc3389e0f83c612191a480afd4848b07b1a8abd210b3eb841ad719cb4b1b.txt",
+            "sha256": "4bf8cc3389e0f83c612191a480afd4848b07b1a8abd210b3eb841ad719cb4b1b",
+            "retrieved_at": "2026-10-23T07:22:27.865983+00:00"
+          },
+          {
+            "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "role": "CORRECTION",
+            "relation": "DIFFERENT",
+            "resolved_url": null,
+            "locator": "Qiping Zhou 的 2026-07-24 回答，n=7,m=5 的 q² 系数反例",
+            "source_date": "2026-07-24",
+            "verified_excerpt": false,
+            "reason": "Unable to verify robots policy for https://mathoverflow.net",
+            "artifact": null,
+            "sha256": null,
+            "retrieved_at": null
+          },
+          {
+            "url": "https://arxiv.org/html/1102.5649v47",
+            "role": "PRIOR_RESULT",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/1102.5649v47",
+            "locator": "§2 末、§3 前的 q-logconvex 段，HTML #id4205.1 及紧后四个公式",
+            "source_date": "2014-12-29",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/71f51b489c32443bfcc7b98ddd817bcc79fdf913d30c91a994888732214129da.txt",
+            "sha256": "71f51b489c32443bfcc7b98ddd817bcc79fdf913d30c91a994888732214129da",
+            "retrieved_at": "2026-10-23T07:22:31.173597+00:00"
+          }
+        ],
+        "observed_queries": [
+          "\"1104.3856\" \"q-log\" proof beta",
+          "\"2505.02767\" \"correction\"",
+          "\"Apéry polynomials\" \"q-log-convex\" proof",
+          "\"Apéry\" \"zeta(2)\" \"polynomials\" \"log-convex\"",
+          "\"Conjecture 4.7\" \"log\" \"2026\"",
+          "\"Sun\" \"beta polynomials\" log convex proof 2026",
+          "\"Sun\" \"beta 多项式\" \"对数凸\"",
+          "\"Sun\" \"beta\" \"log-convexity\" certificate",
+          "\"Sun\" \"beta\" \"q-log-convex\" proof",
+          "\"Sun\" \"q-log-convexity\" correction",
+          "\"Sun\" \"q-logconvex\" beta solution",
+          "\"The q-Log-convexity of the Narayana Polynomials of Type B\" arxiv",
+          "\"beta\" \"q-log-convexity\" \"proof\" -site:researchgate.net -site:scribd.com",
+          "\"beta\" \"q-log-convexity\" Sun 2026 proof",
+          "\"beta_n\" \"q-log-convexity\"",
+          "\"beta_n(q)\" \"log\" convex",
+          "\"binom{n+k}{k}\" \"q-log-convex\"",
+          "\"binom{n}{k}^{2}\" \"binom{n+k}{k}\" \"log\" \"convex\"",
+          "\"q-log-convex\" \"binomial\" \"n+k\" \"2026\"",
+          "\"q-log-convexity\" \"Sun\" \"2026\" \"beta\"",
+          "\"q-log-convexity\" \"Sun\" \"beta\" 2026 proof conjecture",
+          "\"q-log-convexity\" \"Sun\" \"beta\" solution 2025 2026 -site:scribd.com",
+          "\"q-log-convexity\" \"beta\" \"counterexample\"",
+          "\"β_n\" \"Sun\" convex"
+        ],
+        "limitations": [
+          "检索截至2026-10-23，主要覆盖公开网络索引、arXiv、期刊/作者公开稿及检索命中的一手来源；英文为主，辅以一条中文检索，不穷尽全部语言或数据库。",
+          "最新直接称精确beta问题开放的已核对来源日期为2026-02-10；检索和下载日期不能将该状态声明更新为2026-10-23。2026年8月至9月的新论文已比较，但未索引、未公开或未命中的解答仍可能存在。",
+          "已逐一检查列出定理的对象、量词和可见参数特例，不宣称排除全体文献中的非显然推论或重构证明。没有已识别但未读的潜在精确beta解答；若后来发现这类来源，需要重新评价新颖性。",
+          "LLM文献审阅和本地计算不是外部专家对原创性或自然语言/形式化语义对应的认证。"
+        ],
+        "obstacles": [],
+        "unresolved_obstacle_ids": [],
+        "comparisons": [],
+        "obstacle_changes": []
+      },
+      "proof_coverage": {
+        "policy_version": null,
+        "assessed_at": null,
+        "proof_complete": false,
+        "statement_aligned": false,
+        "total_steps": 0,
+        "essential_steps": 0,
+        "supported_steps": [],
+        "unresolved_steps": [],
+        "reasons": [],
+        "formal_alignment_certified": false
+      },
+      "validation_notes": [
+        "A blocking formal check has no independently successful execution receipt",
+        "Full coverage requires a supported comparison to the original statement"
+      ],
+      "reported_verdict": "NO_ISSUES_FOUND",
+      "reported_novelty": "POTENTIALLY_NEW",
+      "formal_receipt": {
+        "status": "ERROR",
+        "checked_at": "2026-10-23T07:22:31.181567+00:00",
+        "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+        "problem_sha256": "50b6ca7a1c36b480c5c7b20b8b07d789a08b70d6b29b119b1c25bdbc2bde01b6",
+        "request": {
+          "files": [
+            "workspace/proof/SunBeta.lean"
+          ],
+          "declarations": [
+            "SunBeta.beta_coeffwise_logconvex"
+          ],
+          "module_root": "proof"
+        },
+        "sources": [
+          {
+            "path": "workspace/proof/SunBeta.lean",
+            "module": "SunBeta",
+            "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3"
+          }
+        ],
+        "steps": [
+          {
+            "status": "ERROR",
+            "returncode": 1,
+            "elapsed_seconds": 207.363,
+            "log": "compile-0.log",
+            "log_sha256": "d6ef11d7e06f5239d6c56ecc6654f5aeedfc32e51a66e3096fe1e7880d130bc6",
+            "argv": [
+              "/lean/bin/lean",
+              "-j",
+              "1",
+              "-s",
+              "65536",
+              "-M",
+              "8192",
+              "-o",
+              "/out/SunBeta.olean",
+              "SunBeta.lean"
+            ]
+          }
+        ],
+        "declarations": [],
+        "statement_alignment": "NOT_CERTIFIED",
+        "limits": {
+          "seconds": 1800.0,
+          "memory_mb": 8192,
+          "address_space_mb": 16384,
+          "thread_stack_kb": 65536,
+          "max_object_mb": 1024,
+          "max_total_object_mb": 1536,
+          "threads": 1,
+          "memory_scope": "Lean internal threshold plus per-process RLIMIT_AS; not measured RSS or host-wide RAM"
+        },
+        "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. No independent kernel implementation or natural-language equivalence check.",
+        "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+        "inspector_sha256": "7023e0c16c5f00e794ebb007856ecc8bbe1c49befd70239a15059f098ef6d2b9",
+        "reason": "compile-0 did not complete successfully",
+        "artifact": "verification/formal/e11be54ba8bbfef1085efff0262fe51fa8ed6bf150af193adf433a74e64febe1/receipt.json"
+      }
+    },
+    {
+      "verdict": "INCONCLUSIVE",
+      "truth_assessment": "数学审阅继续支持完整beta系数非负命题：保留此前逐项推导和两套独立精确多项式核查，没有发现新的数学反例、Nat截断减法陷阱或循环论证。其支持不是基于有限测试或候选自述编译成功。然而控制器首轮正式检查实际失败，本轮尚无成功重试回执；故最终审阅状态为INCONCLUSIVE，不把本地成功日志升级成控制器认证。",
+      "proof_assessment": "自然语言证明及完整749项证书的既有独立核查仍支持论证闭合：正权重及相邻递推、配对卷积的2n因子、零和式端点、次数域和奇偶参数化、全部边界、H非零/D正、Cramer系数、两条大恒等式和最终除以2nD均已检查。冻结源码未改，本地重新编译、原题展开声明探针与leanchecker曾实际成功；此次不重复这些实验。控制器-M8192下在identityEven/identityOdd发生内核内存错误，未产生成功检查的主定理声明清单。新formal_check请求相同文件、相同完整主定理、module_root=proof，须由控制器按用户新资源设置实际重试。",
+      "issues": [
+        "验证未完成：控制器首轮编译返回1，在两个关键恒等式处报告(kernel) excessive memory consumption detected；本轮资源提高后的结果尚未产生。",
+        "首次审阅三条来源角色标错，把原猜想/开放声明写成PRIOR_RESULT。此错误发生在审阅证据分类，不是候选证明；本次纠正并保留旧记录。",
+        "EMIS载体已用公开原期刊PDF替代；MathOverflow原回答仍无可独立核验的替代载体，其具体来源缺口保持可见。"
+      ],
+      "evidence": [
+        "formal-probes/ReviewNotes.md",
+        "formal-probes/algebra_results.json",
+        "formal-probes/sparse_results.json",
+        "formal-probes/lean_results.json",
+        "formal-probes/statement_probe.log",
+        "formal-probes/kernel_replay.log",
+        "formal-probes/sources.json",
+        "formal-probes/citations.json",
+        "formal-probes/Corrections.md",
+        "formal-probes/frozen-hashes.json",
+        "formal-probes/first-controller-receipt.json",
+        "formal-probes/first-controller-compile-0.log",
+        "formal-probes/publisher-download.json",
+        "formal-probes/zhusun2015-publisher.txt",
+        "formal-probes/rising-independent-comparison.json",
+        "formal-probes/citations.json"
+      ],
+      "novelty": "UNKNOWN",
+      "novelty_notes": "不能由原猜想和开放声明推出KNOWN。1104.3856v8与1102.5649v47标为ORIGINAL_STATEMENT，2505.02767v4标为EXPLICIT_OPEN；三者的EQUIVALENT只表示同一目标。已成立的近邻定理均为DIFFERENT，Zhu–Sun期刊公开全文现已取得。未发现精确beta已有完整证明，故有潜在新颖性；但MathOverflow反例条目的独立来源复核缺口未补齐，本轮保守保持UNKNOWN。已见反例与beta不同可由Sun原文和算术独立确证，来源缺口不被误写成beta反例或代数证明失败。不存在首次性或外部专家原创性认证。",
+      "novelty_references": [],
+      "original_problem_coverage": "PARTIAL",
+      "coverage_explanation": "独立确认了实际SunBeta.beta : ℕ → Polynomial ℤ以及完整主定理。其有限和权重恰为binom(n,k)^2binom(n+k,k)，求和k=0..n，中心下标任意n≥1，次数任意d:ℕ，无上界。n−1仅为受hn保护的下标减法；差与比较发生在整数系数多项式和ℤ中。辅助证明把d≤2n的全部系数和d>2n的恒零情况都纳入，并包括n=1与beta_0。另写的原题有限和声明可直接由冻结主定理闭合。因此不是有限范围、点值、S_n/D_n或其他部分命题；FULL是本次对实际源码和证明的比较结果，不是沿用solver的COMPLETE标签。自然语言语义对应仍是本独立审阅的解释，并不冒充外部专家认证。本轮FULL仅保留可直接核对的命题与原题范围对应判断。控制器首轮因编译失败把其有效coverage投影为UNKNOWN，其receipt的statement_alignment仍为NOT_CERTIFIED；本审阅不改写该结果，也不把FULL解释为正式检查已通过。源码是否表达完整命题与控制器是否已验证其证明分开判断。",
+      "remaining_obligations": [
+        "控制器按新设置16384 MiB Lean内存阈值、24576 MiB地址空间及1800秒时限，重新编译同一冻结SunBeta.lean，重放SunBeta.beta_coeffwise_logconvex并检查公理。新回执产生前不得视为通过。",
+        "补齐MathOverflow回答的独立可核验原始载体或作者发表版本；目前保留具体来源unresolved及novelty UNKNOWN。已见反例的数学区别已解决，无需修改候选来应对它。"
+      ],
+      "checks": [
+        {
+          "id": "",
+          "claim": "冻结定义和主定理完整表达原题，无额外数学假设或有限指标限制。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "beta : ℕ → Polynomial ℤ，定义为对 range(n+1) 求和的 monomial k ((n.choose k : ℤ)^2*((n+k).choose k : ℤ))。beta_coeffwise_logconvex 的参数只有 n : ℕ、hn : 1≤n、d : ℕ，结论为 0≤(beta(n−1)*beta(n+1)−beta(n)^2).coeff d。多项式减法及比较在 ℤ 中，不是 Nat 截断减法；任意 d : ℕ 覆盖全部 d≥0。hn 保证 n−1+1=n、n−1+2=n+1。辅助 P,T0,T1,w 均在 ℚ 中。没有代入实数 q，也没有把 q=1 的结论冒充逐系数结论。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:203 (beta), :206 (a), :279 (w), :712 (main theorem)",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "n≥1 时归一化权重合法、非负，全部相邻行及列递推包括支撑边界。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "a(n,k)=n!(n+k)!/[k!³(n−k)!²] (k≤n)。对 k≤n+1，b_k=n!(n+k−1)!/[k!³(n+1−k)!²]>0；分母 (n+1)(n+k)(n+k+1)>0。阶乘消去给出 a(n,k)=(n+k)(n−k+1)²b_k，n a(n−1,k)=(n−k)²(n−k+1)²b_k，(k+1)³b_(k+1)=(n+k)(n−k+1)²b_k。k=n 时第二式由 (n−k)²=0 处理；k=n+1 时由 (n−k+1)²=0 处理；k>n+1 时所有相关权重和行系数都为零。递推无需除以可能为零的 n−k。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:214–320, choose_row/choose_col/a_row/a_col/w_above/w_center/w_below/w_recur",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "式(3)的配对卷积恒等式及 P,T0,T1 的对称性成立。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "由三个相邻行公式，b_kb_l P(n,k,l)=n[a(n−1,k)a(n+1,l)+a(n+1,k)a(n−1,l)−2a(n,k)a(n,l)]。在全部 k+l=d 的有序非负整数对上交换 k,l 是双射，故总和等于 2n C(n,d)，其中 C(n,d) 是原差多项式系数。k=l 的项同样成立，没有遗漏或重复半权重。直接交换可得 P,T0,T1 都对称，独立多项式展开也验证其差恒为零。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:570 (paired_term), :595 (delta_sum), :631 (delta_coeff)",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "式(4)的两项修正和严格为零，包括 d=0、k=0 或 l=0 的边界。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "用 (k+1)³b_(k+1)=(n+k)(n−k+1)²b_k 代入 G(k+1,l) 与 G(k,l+1)，逐项得到 b_kb_l(c0T0+c1T1)=G(k+1,l)−G(k,l+1)。对 k+l=d 求和，第一和覆盖 i+j=d+1,i≥1，第二和覆盖同一反对角线,j≥1；差仅为 G(d+1,0)−G(0,d+1)=0，因为 G 含 i³j³。c0,c1 不依赖求和指标这一条件由候选(7)或(11)满足。所有和有限，负的 c0,c1 不影响恒等式。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:529–568 (flux, flux_sum, weighted_flux, weighted_telescopes)",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "次数划分和奇偶重参数化覆盖所有 n≥1,d≥0 及全部有权项。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "deg beta_s≤s，因此 d>2n 时两乘积的 d 次系数分别为零。对 d≤2n，取 ε=d mod 2、m=(d−ε)/2、r=n−m−ε，则 m,r≥0。若 k≤l、k+l=2m+ε、k,l≤n+1，整数 j=m−k 满足 0≤j≤m 和 j≤r+1，并有 k=m−j,l=m+j+ε。P,T0,T1 对称，所以排序不丢项。超出 k,l≤n+1 的权重为零。这一划分包含最高两次 d=2n、2n−1 和最低次数0、1。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:333 (sorted_suffices), :504 (exists_certificate), :678 (delta_nonneg)",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "m=0、m=1 或 r=0 的全部边界证书成立且 D>0。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "m=0 时 P(n,0,0)=0、P(n,0,1)=2n²(n+1)²(3n+1)>0。m≥1 且 m=1 或 r=0 强制 j∈{0,1}；(7)取 D=m² 或 m³，均正。独立展开给出 j=0 时 Q=0，j=1 时依次为 2(r+1)(r+2)²(3r²−3r+4)、8m(m+1)²、36(r+2)(r+3)²(2r²+9r+14)、144m(m+2)²(3m+4)，与(8)一致。唯一含负系数的因子满足 4(3r²−3r+4)=3(2r−1)²+13>0。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json (P_at_0_0/P_at_0_1 and both edge cases)",
+            "submitted-evidence/proof/SunBeta.lean:360–502"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "内部情形 H 非零、D 正、c0,c1 定义合法，且使 j=0,1 的 Q 为零。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "m≥2,r≥1 时 D0=3m²r²(m−1)³(2m+r+1)>0，D1=3m³r²(m−1)³(2m+r+3)>0。独立计算 H=V0W1−V1W0，分别得到 −12m³r²(m−1)³(2m+r)(r+1)²(2m+r+1) 和 −24m³r²(m−1)³(r+1)²(2m+r+2)(2m+r+3)，均严格负。Cramer 公式 c0=D(U1W0−U0W1)/H、c1=D(V1U0−V0U1)/H 解出两条线性方程。化简所得 c0,c1∈ℤ[m,r] 与冻结 JSON、Lean alpha/beta 多项式完全一致。第二套整数稀疏多项式程序另外检查 H*c0、H*c1 的清分母等式，差的全部系数均为零。",
+          "evidence": [
+            "formal-probes/algebra_results.json",
+            "formal-probes/sparse_results.json",
+            "submitted-evidence/proof/SunBeta.lean:40–87"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "(12)两条大多项式恒等式与附录749个系数完整一致。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "从 P,T0,T1,D 和独立算出的 Cramer 解构造 Q，精确多项式除以偶数因子 2j²(j²−1) 或奇数因子 2j(j−1)(j+1)(j+2)，余数均为零。代入 m=u+t+2,r=v+t+1,j=t+2，完整指数→系数字典分别为 334、415 项，总次数11、12，最小非零系数均为36，全部为正整数。逐项比较了 candidate.json 正文、冻结 Proof.md、CertificateTable.md、certificates.json、Lean posEven/posOdd，完全一致。check_sparse.py 只使用 Python 整数加乘和指数字典，再独立验证两恒等式的每个差系数为零；并非有限取值测试。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json",
+            "formal-probes/check_sparse.py",
+            "formal-probes/sparse_results.json",
+            "submitted-evidence/proof/CertificateTable.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "证书正性与零和式合成，推出原题对全部无限指标的系数非负。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "j≥2 且 j≤m,r+1 时 u=m−j,v=r+1−j,t=j−2 均非负，E0,E1 的正系数保证取值非负；(12)的额外因子也非负。j=0,1 已证明 Q=0。结合边界证书得到每个有权项 Q≥0。于是 0≤∑b_kb_lQ=D∑b_kb_lP=2nD C(n,d)。n≥1,D>0，故 C(n,d)≥0；d>2n 先前已证为零。没有将原结论放入假设或使用文献中不同权重的结论。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:649–717 (sumP_nonneg through beta_coeffwise_logconvex)",
+            "formal-probes/ReviewNotes.md",
+            "formal-probes/sparse_results.json"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "独立低次、最高次与最小中心的边界公式无异常。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "常数项相减为0。a(n,1)=n²(n+1) 的二阶差为6n+2，所以 C(n,1)=6n+2。最高系数 C(n,2n)=binom(2n−2,n−1)binom(2n+2,n+1)−binom(2n,n)²=binom(2n,n)²/[(2n−1)(n+1)]>0。n=1 的差是8q+2q²，n=2 是14q+6q²+56q³+4q⁴。",
+          "evidence": [
+            "formal-probes/ReviewNotes.md",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "直接整数卷积的有限检查覆盖 n=1..120、d=0..2n+2，没有发现反例。",
+          "method": "FINITE_TEST",
+          "result": "SUPPORTED",
+          "reasoning": "使用 math.comb 和 Python 任意精度整数，从原 beta 定义直接卷积，共检查14880个系数，负系数数目0；另外4440次 Fraction 精确比较验证递推的小指标及越界实例。此检查仅支持所列有限范围，不承担无限定理或新颖性结论。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "原始公开陈述与最新开放声明指向同一个 beta 命题；最接近的已知解不直接覆盖其权重。",
+          "method": "REFERENCE",
+          "result": "SUPPORTED",
+          "reasoning": "独立下载核对 Sun 2014 Conjecture4.7 第一式和2026-02-10 v4 §1 beta定义与 remains open 句。Narayana type B 缺少 binom(n+k,k)；Dou–Ren S_n/D_n 分别有 binom(2k,k)binom(2n−2k,n−k)；Zhu–Sun Corollary2.9 用 binom(2k,k)。其 Proposition2.8 的固定输入 f_k 不能带外层 n，Theorem2.1 的 C1 也不能把 beta 的强 q-log-convexity当成已知。2026 Hoggatt/Baxter 定理行多项式最高项系数1，与 beta 的 binom(2n,n)不同。逐条假设和结论比较见 citations；不将找不到解答解释成已证首次性。本轮重新核对原期刊Zhu–Sun全文并纠正猜想/开放声明角色：只有已成立定理标为PRIOR_RESULT或SOLUTION，三个等价的猜想/状态来源均不属于这些角色。",
+          "evidence": [
+            "https://arxiv.org/html/1104.3856v8",
+            "https://arxiv.org/html/2505.02767v4",
+            "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+            "https://arxiv.org/html/2609.33732v1",
+            "formal-probes/citations.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "已见rising-binomial反例的数学内容与beta目标不同，此区别可独立核查。",
+          "method": "COUNTEREXAMPLE",
+          "result": "SUPPORTED",
+          "reasoning": "从Sun2026 Conjecture1.1(i)第二句读取R_n^(m)=sum binom(n+k,k)^m q^k，无需依赖MathOverflow的作者归属即可重算：m=5,n=7时二次差系数28^5+7^5·9^5+45^5−2·36^5−8^10=−499140。beta在n=7,d=2的系数为1316。故该具体反例不反驳beta。此SUPPORTED仅指数学计算和不同权重的比较，不声称MathOverflow条目的独立来源复核已完成。",
+          "evidence": [
+            "https://arxiv.org/html/2505.02767v4#S1.Thmconjecture1",
+            "formal-probes/rising-independent-comparison.json",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "本独立会话此前的本地编译、原题声明探针和leanchecker重放成功记录存在且与冻结字节对应。",
+          "method": "FORMAL",
+          "result": "SUPPORTED",
+          "reasoning": "先核对冻结SHA-256并原样复制，未接受候选预编译对象，也未执行其check.py。使用已有Lean 4.35.0和mathlib库、单线程独立编译：首次900秒外部超时，保留记录；第二次开启profile，在426.962秒退出0，生成570766176字节对象。另写StatementProbe.lean直接展开原题三个Polynomial ℤ有限和，以SunBeta.beta_coeffwise_logconvex闭合，19.833秒退出0；打印实际类型为∀n:ℕ,1≤n→∀d:ℕ,0≤(beta(n−1)*beta(n+1)−beta(n)^2).coeff d。实际公理清单仅propext、Classical.choice、Quot.sound。leanchecker --verbose SunBeta在93.236秒退出0，日志replaying SunBeta。它重放此模块的声明到导入环境，仍以预装Lean/mathlib为信任基础；不是外部专家认证。本条记录本审阅工具实际结果，控制器formal_receipt另行生成。本轮按用户要求不重复已完成的本地实验。随后控制器在更低的-M 8192阈值下编译失败；该失败见下一独立检查。本地成功记录不等于控制器成功回执，不能覆盖或替代该失败。",
+          "evidence": [
+            "formal-probes/run_lean.py",
+            "formal-probes/lean_first_results.json",
+            "formal-probes/lean_results.json",
+            "formal-probes/compile.log",
+            "formal-probes/StatementProbe.lean",
+            "formal-probes/statement_probe.log",
+            "formal-probes/kernel_replay.log"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "控制器能够在本次重新配置的资源限制下编译、重放冻结主定理并核对公理依赖。",
+          "method": "FORMAL",
+          "result": "UNRESOLVED",
+          "reasoning": "实际读取并原样保存首轮receipt.json：status=ERROR、compile-0返回码1、elapsed_seconds=207.363、memory_mb=8192、address_space_mb=16384，declarations为空，statement_alignment=NOT_CERTIFIED。compile-0.log在SunBeta.lean:102:8(identityEven)、:152:8(identityOdd)报告(kernel) excessive memory consumption detected。错误后的#print axioms还列出identityEven、identityOdd，不能当作完整定理通过。用户已通过前端将内存/地址空间改为16384/24576 MiB，超时1800秒；本次只重提同一冻结文件和完整主定理，等待控制器实际结果，未修改源字节或伪造任何receipt。这属于资源限制导致的验证未完成，没有构成数学反例；但在成功重试前本审阅不报正面终局。",
+          "evidence": [
+            "formal-probes/first-controller-receipt.json",
+            "formal-probes/first-controller-compile-0.log",
+            "formal-probes/frozen-hashes.json",
+            "submitted-evidence/proof/SunBeta.lean:102",
+            "submitted-evidence/proof/SunBeta.lean:152"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "三条等价来源属于猜想或开放声明；Zhu–Sun期刊原文可以替代EMIS来源。",
+          "method": "REFERENCE",
+          "result": "SUPPORTED",
+          "reasoning": "1104.3856v8标题Conjecture4.7、1102.5649v47原句on May 7, 2011 I conjectured that，都只是原问题或作者追述，角色改为ORIGINAL_STATEMENT。2505.02767v4的remains open改为EXPLICIT_OPEN。EQUIVALENT只指同一数学目标，不能推导KNOWN。重新下载期刊公开PDF，核对Cor2.9、Prop2.8和Thm2.1；其权重binom(n,k)^2binom(2k,k)及固定输入序列要求均与beta有上述区别，关系仍是DIFFERENT。",
+          "evidence": [
+            "formal-probes/citations.json",
+            "formal-probes/publisher-download.json",
+            "formal-probes/publisher-robots.txt",
+            "formal-probes/zhusun2015-publisher.txt"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "MathOverflow反例条目的完整内容、作者归属及发布日期具有独立下载器可复核的原始公开载体。",
+          "method": "REFERENCE",
+          "result": "UNRESOLVED",
+          "reasoning": "已进行针对作者、题名、−499140和反例的查询，没有找到另一份原始作者版本。未绕过MathOverflow的访问策略；第一次本地取得的文本保留，不能替代控制器独立下载器的策略核验。可校验的Sun原文及算术已解决已见反例与beta不同这一数学比较；尚未解决的是该公开回答完整来源的独立复核。此项不是beta证明的数学前提，故blocking=false，但本次保守保留novelty=UNKNOWN并在literature_search.unresolved列出具体缺口。",
+          "evidence": [
+            "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "formal-probes/literature_search.json",
+            "formal-probes/rising_correction.txt",
+            "https://arxiv.org/html/2505.02767v4#S1.Thmconjecture1"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        }
+      ],
+      "proof_steps": [],
+      "statement_alignment": [],
+      "citations": [
+        {
+          "url": "https://arxiv.org/html/1104.3856v8",
+          "role": "ORIGINAL_STATEMENT",
+          "locator": "§4 Conjecture 4.7，HTML #Thmconjecture7，第一种形式及紧前 q-logconvex 定义",
+          "excerpt": "\\sum_{k=0}^{n}\\binom{n}{k}^{2}\\binom{n+k}{k}q^{k}",
+          "explanation": "摘录为官方HTML原生TeX annotation的字面子串。Conjecture 4.7第一种形式就是beta；紧前定义对所有n≥1要求整数差多项式全部系数非负。EQUIVALENT表示猜想陈述与候选目标等价，不表示已被证明。此处纠正第一次审阅误用PRIOR_RESULT的分类。",
+          "source_date": "2014-12-24",
+          "relation": "EQUIVALENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "EXPLICIT_OPEN",
+          "locator": "§1，HTML #S1.p5.2 最后一句，前面同段给出 beta 的完整定义",
+          "excerpt": "(\\beta_{n}(q))_{n\\geq 0}\n\nremains open.",
+          "explanation": "同段的 beta 权重精确为 binom(n,k)^2 binom(n+k,k)，并回指 Conjecture 4.7。这是截至 2026-02-10 的明确开放声明，不是本候选正确性的依据，也不保证其后没有解答。本次重新查看官方HTML，仍是对该猜想的开放声明；纠正第一次审阅误用PRIOR_RESULT的分类。",
+          "source_date": "2026-02-10",
+          "relation": "EQUIVALENT"
+        },
+        {
+          "url": "https://arxiv.org/html/0810.2247v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§1 Theorem 1.1；式(1.1)定义 W_n；2010 Narayana type B 论文的作者预印本",
+          "excerpt": "W_{n}(q)\n form a \nq\nq\n-log-convex sequence.",
+          "explanation": "此源是 2008-10-13 预印本，不将其版本日期写成 2010。已另核对作者所存 2010 稿 Theorem 1.1。对所有 n≥0，其 W_n=sum binom(n,k)^2 q^k 是 q-log-convex；候选额外因子 binom(n+k,k) 同时依赖 n,k。W_1=1+q 而 beta_1=1+2q，不能直接引用此定理。候选在该已知结果之外证明精确 beta 权重的结论。",
+          "source_date": "2008-10-13",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1308.2736v2",
+          "role": "SOLUTION",
+          "locator": "§3 Theorem 3.1，HTML #S3.Thmtheo1；式(1.1)",
+          "excerpt": "S_{n}(q)\n given by (\n1.1\n) form a \nq\nq\n-log-convex sequence.",
+          "explanation": "对全部 n≥0，S_n=sum binom(n,k)binom(2k,k)binom(2n−2k,n−k)q^k 为 q-log-convex。它解决原并列猜想的第二种形式。S_n 常数项为 binom(2n,n)，beta_n 常数项为 1；权重并不相同，未覆盖本候选。",
+          "source_date": "2013-08-15",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1308.2961v1",
+          "role": "SOLUTION",
+          "locator": "§3 Theorem 3.1，HTML #S3.Thmthm1；式(1.1)",
+          "excerpt": "\\{D_{n}(q)\\}_{n\\geq 0}\n is \nq\nq\n-log-convex.",
+          "explanation": "D_n=sum binom(n,k)^2 binom(2k,k)binom(2n−2k,n−k)q^k。定理证明整个 n≥0 序列 q-log-convex，是原并列猜想的第三种形式。D_n 的额外权重不等于 binom(n+k,k)，常数项也不同；候选 beta 的结论不由此定理的参数限制直接得到。",
+          "source_date": "2013-08-13",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+          "role": "PRIOR_RESULT",
+          "locator": "PDF p.9 Corollary 2.9 及紧前 P_n 定义；p.8 Proposition 2.8；p.3 Theorem 2.1",
+          "excerpt": "The hypergeometric polynomials Pn(q) form a strongly q-log-convex",
+          "explanation": "短摘录保留 PDF 可提取字面文本，公式仅在解释中转写。P_n=sum binom(n,k)^2 binom(2k,k)q^k 的强 q-log-convexity 比普通性质强，但权重不同：P_2=1+8q+6q²，beta_2=1+12q+6q²。Proposition 2.8 要求一个固定、与外层 n 无关的强 q-log-convex 输入序列 f_k(q)，不能直接取 f_k=binom(n+k,k)q^k。Theorem 2.1 条件 C1 已要求行生成多项式强 q-log-convex；直接取 beta 数组会把更强目标当作前提。现以原期刊Electronic Journal of Combinatorics 22(3), P3.26的公开PDF替代EMIS链接。本次robots.txt返回200且允许该路径，独立下载11页原文并核对上述定理；摘录逐字见新保存PDF的文本。原EMIS下载器失败记录不删除，尚不预判控制器对新URL的核验结果。",
+          "source_date": "2015-08-28",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2609.33732v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§1 Theorem 1.2，HTML #S1.Thmtheorem2，H_n^(d) 的定义在紧前段",
+          "excerpt": "\\big(H^{(d)}_{n}(q)\\big)_{n\\geq 0}\n is strongly \nq\nq\n-log-convex.",
+          "explanation": "Theorem 1.2 对每个固定整数 d≥1、所有 n≥0 证明 H_n^(d) 的强 q-log-convexity。该行多项式常数项与最高项均为 1；beta_n 的最高项为 binom(2n,n)，所以没有一个 d 的限制把这些多项式变成 beta。论文中的 beta 符号另表示符号分析的辅助量，非本题序列。候选对不同权重给出普通 q-log-convexity。",
+          "source_date": "2026-09-27",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2608.22258v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§5 Theorem 5.1，HTML #S5.Thmtheorem1；§4 的 B(n,k) 定义",
+          "excerpt": "B_{n}(x)\n form a \nq\nq\n-log-convex sequence.",
+          "explanation": "该定理对所有 n≥0 证明 Baxter 行多项式 q-log-convex。权重 B(n,k)=binom(n,k)binom(n+1,k)binom(n+2,k)/[binom(k+1,k)binom(k+2,k)]，最高项系数为 1；本题最高项为 binom(2n,n)。其 d-Hoggatt 的 d=3 特例仍不同于 beta，不能把此最新结果标作 beta 解答。",
+          "source_date": "2026-08-23",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+          "role": "CORRECTION",
+          "locator": "Qiping Zhou 的 2026-07-24 回答，n=7,m=5 的 q² 系数反例",
+          "excerpt": "The conjecture is false.\n A counterexample is given by \n$m=5$\n and \n$n=7$",
+          "explanation": "第一次独立审阅取得的文本含此逐字摘录，但控制器独立下载器未能核实该URL的robots policy。本次没有绕过策略，也没有找到可替代的作者稿或正式发表版本；此引文的独立来源复核仍未解决，不是已通过控制器的引文。其已见反例涉及R_n^(m)=sum binom(n+k,k)^m q^k；该族的定义另见可核验的Sun2026 Conjecture1.1(i)第二句。独立算术给出m=5,n=7时[q²](R_6R_8−R_7²)=28^5+7^5·9^5+45^5−2·36^5−8^10=−499140，而beta同一位置为1316。因此已见反例与精确beta目标的关系为DIFFERENT；作者归属、日期及完整页面的独立来源复核缺口保留在unresolved，不用一般limitations遮盖。",
+          "source_date": "2026-07-24",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1102.5649v47",
+          "role": "ORIGINAL_STATEMENT",
+          "locator": "§2 末、§3 前的 q-logconvex 段，HTML #id4205.1 及紧后四个公式",
+          "excerpt": "on May 7, 2011 I conjectured that",
+          "explanation": "该 2014-12-29 版本由作者追述 2011-05-07 提出猜想，其紧后第一公式仍为精确 beta 权重。与候选的数学目标等价，但只给猜想、未给证明。因此保留题目指定 2014 Conjecture 4.7 出处，同时不声称 2014 是首次提出日期。这是作者对猜想来源的追述，不是证明，故角色为ORIGINAL_STATEMENT。",
+          "source_date": "2014-12-29",
+          "relation": "EQUIVALENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "ORIGINAL_STATEMENT",
+          "locator": "§1 Conjecture 1.1(i)第二句，HTML #S1.Thmconjecture1",
+          "excerpt": "(\\sum_{k=0}^{n}\\binom{n+k}{k}^{m}q^{k})_{n\\geq 0}",
+          "explanation": "此原生TeX annotation字面摘录定义rising-binomial族，对每个固定整数m≥2提出q-log-convex猜想。它没有beta的binom(n,k)^2因子，且binom(n+k,k)被整体取m次幂。R_1^(m)=1+2^m q，而beta_1=1+2q，所以对允许的m≥2不是同一序列。这一公开原始来源及独立整数计算足以核对已见−499140反例所针对的对象；不能用来认证MathOverflow回答的作者或发布日期，也不把这个不同猜想当作beta的先前证明。",
+          "source_date": "2026-02-10",
+          "relation": "DIFFERENT"
+        }
+      ],
+      "literature_search": {
+        "queries": [
+          "\"Sun\" \"beta\" \"q-log-convex\" proof",
+          "\"Conjecture 4.7\" \"log\" \"2026\"",
+          "\"beta_n\" \"q-log-convexity\"",
+          "\"Sun\" \"q-log-convexity\" correction",
+          "\"beta\" \"q-log-convexity\" Sun 2026 proof",
+          "\"Apéry polynomials\" \"q-log-convex\" proof",
+          "\"binom{n+k}{k}\" \"q-log-convex\"",
+          "\"The q-Log-convexity of the Narayana Polynomials of Type B\" arxiv",
+          "\"Sun\" \"beta polynomials\" log convex proof 2026",
+          "\"Sun\" \"q-logconvex\" beta solution",
+          "\"1104.3856\" \"q-log\" proof beta",
+          "\"2505.02767\" \"correction\"",
+          "\"beta\" \"q-log-convexity\" \"proof\" -site:researchgate.net -site:scribd.com",
+          "\"q-log-convexity\" \"Sun\" \"2026\" \"beta\"",
+          "\"Apéry\" \"zeta(2)\" \"polynomials\" \"log-convex\"",
+          "\"q-log-convex\" \"binomial\" \"n+k\" \"2026\"",
+          "\"beta_n(q)\" \"log\" convex",
+          "\"β_n\" \"Sun\" convex",
+          "\"q-log-convexity\" \"Sun\" \"beta\" solution 2025 2026 -site:scribd.com",
+          "\"Sun\" \"beta\" \"log-convexity\" certificate",
+          "\"q-log-convexity\" \"Sun\" \"beta\" 2026 proof conjecture",
+          "\"binom{n}{k}^{2}\" \"binom{n+k}{k}\" \"log\" \"convex\"",
+          "\"Sun\" \"beta 多项式\" \"对数凸\"",
+          "\"q-log-convexity\" \"beta\" \"counterexample\"",
+          "\"Linear transformations preserving the strong q-log-convexity of polynomials\" Zhu Sun",
+          "\"Qiping Zhou\" \"499140\"",
+          "\"q-log-convex\" \"479301\" counterexample",
+          "\"Qiping Zhou\" \"binomial\" \"conjecture\"",
+          "\"499140\" \"conjecture\"",
+          "\"On the polynomials\" \"Sun\" \"counterexample\""
+        ],
+        "conclusion": "保留本独立会话第一次的24条实际查询，并列出此次6条针对性搜索，共30条。新近重开2014原猜想、2014作者追述和2026开放声明；arXiv摘要页仍列2026-02-10 v4为最新版本。纠正三条角色，不再将原猜想或开放声明算成既有证明。Zhu–Sun已找到原期刊公开全文，robots允许后实际下载并逐字核对，替代未通过独立下载策略核验的EMIS链接。MathOverflow反例没有找到可替代的原始作者版本，具体来源缺口仍保留。Sun2026 Conjecture1.1(i)明确给出不同的rising-binomial权重，独立整数计算再现−499140且beta同位置1316，因此已见反例的数学关系可确定为DIFFERENT。此前逐项核对的Narayana、S_n、D_n及2026 Hoggatt/Baxter定理比较继续保留；未识别到精确beta命题的既有完整证明，但这不能证明首次性。因仍有明确来源复核缺口，本轮新颖性保留UNKNOWN。",
+        "unresolved": [
+          "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk：控制器第一轮独立下载器无法核实robots policy；本次针对性查询未找到作者版或正式发表替代。第一次本地文本保留，但其完整内容、作者归属及日期仍缺控制器可独立复核的原始载体。已见−499140反例的数学对象及与beta的区别已由Sun2026原文和独立算术核实；此未解决项是具体来源复核问题，不是beta证明中的代数缺口，也不能移入一般检索limitations。"
+        ],
+        "limitations": [
+          "检索截至2026-10-23，以公开网络索引、arXiv、期刊/作者公开稿为主，主要英文并含中文查询；不穷尽全部数据库或语言。",
+          "直接称精确beta猜想开放的最新已核对文字日期是2026-02-10；后续下载时间不更新该状态。未索引或未公开解答仍可能存在。",
+          "对列出结果核对了定义、量词和可见参数特例，不宣称排除全体文献中的非显然推论。LLM检索不能认证全球首次性。",
+          "本独立会话的源码语义比较及本地计算不是外部专家对自然语言/形式化对应或原创性的认证。"
+        ],
+        "obstacles": [],
+        "comparisons": []
+      },
+      "formal_check": {
+        "files": [
+          "workspace/proof/SunBeta.lean"
+        ],
+        "declarations": [
+          "SunBeta.beta_coeffwise_logconvex"
+        ],
+        "module_root": "proof"
+      },
+      "evidence_assessment": {
+        "policy_version": "evidence-v2",
+        "assessed_at": "2026-10-23T07:58:05.384018+00:00",
+        "supported": false,
+        "reasons": [
+          "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk: Unable to verify robots policy for https://mathoverflow.net",
+          "Unresolved literature gap: https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk：控制器第一轮独立下载器无法核实robots policy；本次针对性查询未找到作者版或正式发表替代。第一次本地文本保留，但其完整内容、作者归属及日期仍缺控制器可独立复核的原始载体。已见−499140反例的数学对象及与beta的区别已由Sun2026原文和独立算术核实；此未解决项是具体来源复核问题，不是beta证明中的代数缺口，也不能移入一般检索limitations。"
+        ],
+        "checked_citations": [
+          {
+            "url": "https://arxiv.org/html/1104.3856v8",
+            "role": "ORIGINAL_STATEMENT",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/1104.3856v8",
+            "locator": "§4 Conjecture 4.7，HTML #Thmconjecture7，第一种形式及紧前 q-logconvex 定义",
+            "source_date": "2014-12-24",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7.txt",
+            "sha256": "0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7",
+            "retrieved_at": "2026-10-23T07:46:17.764975+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2505.02767v4",
+            "role": "EXPLICIT_OPEN",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/2505.02767v4",
+            "locator": "§1，HTML #S1.p5.2 最后一句，前面同段给出 beta 的完整定义",
+            "source_date": "2026-02-10",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+            "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+            "retrieved_at": "2026-10-23T07:46:21.237044+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/0810.2247v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/0810.2247v1",
+            "locator": "§1 Theorem 1.1；式(1.1)定义 W_n；2010 Narayana type B 论文的作者预印本",
+            "source_date": "2008-10-13",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2df26028ae92e79b845a2910022fd399e13267b46e63cccf5a5368b782adbf3e.txt",
+            "sha256": "2df26028ae92e79b845a2910022fd399e13267b46e63cccf5a5368b782adbf3e",
+            "retrieved_at": "2026-10-23T07:46:24.576703+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/1308.2736v2",
+            "role": "SOLUTION",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/1308.2736v2",
+            "locator": "§3 Theorem 3.1，HTML #S3.Thmtheo1；式(1.1)",
+            "source_date": "2013-08-15",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd.txt",
+            "sha256": "610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd",
+            "retrieved_at": "2026-10-23T07:46:26.748124+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/1308.2961v1",
+            "role": "SOLUTION",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/1308.2961v1",
+            "locator": "§3 Theorem 3.1，HTML #S3.Thmthm1；式(1.1)",
+            "source_date": "2013-08-13",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2996953e8889711daae8d93eead7df92013d33ff2cb97c2813598d0de7b1e40a.txt",
+            "sha256": "2996953e8889711daae8d93eead7df92013d33ff2cb97c2813598d0de7b1e40a",
+            "retrieved_at": "2026-10-23T07:46:29.965134+00:00"
+          },
+          {
+            "url": "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+            "locator": "PDF p.9 Corollary 2.9 及紧前 P_n 定义；p.8 Proposition 2.8；p.3 Theorem 2.1",
+            "source_date": "2015-08-28",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/15f41314502ff56c3a4b9a35aa9290e44c88aacd349191ce1ed42bf5f4293fc3.pdf",
+            "sha256": "15f41314502ff56c3a4b9a35aa9290e44c88aacd349191ce1ed42bf5f4293fc3",
+            "retrieved_at": "2026-10-23T07:46:36.237175+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2609.33732v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2609.33732v1",
+            "locator": "§1 Theorem 1.2，HTML #S1.Thmtheorem2，H_n^(d) 的定义在紧前段",
+            "source_date": "2026-09-27",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2cd2abe07370a82a4f69d0ddd9b5014d27c672c8432c0d5c673161e2eae60867.txt",
+            "sha256": "2cd2abe07370a82a4f69d0ddd9b5014d27c672c8432c0d5c673161e2eae60867",
+            "retrieved_at": "2026-10-23T07:46:38.679088+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2608.22258v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2608.22258v1",
+            "locator": "§5 Theorem 5.1，HTML #S5.Thmtheorem1；§4 的 B(n,k) 定义",
+            "source_date": "2026-08-23",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/4bf8cc3389e0f83c612191a480afd4848b07b1a8abd210b3eb841ad719cb4b1b.txt",
+            "sha256": "4bf8cc3389e0f83c612191a480afd4848b07b1a8abd210b3eb841ad719cb4b1b",
+            "retrieved_at": "2026-10-23T07:46:42.631684+00:00"
+          },
+          {
+            "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "role": "CORRECTION",
+            "relation": "DIFFERENT",
+            "resolved_url": null,
+            "locator": "Qiping Zhou 的 2026-07-24 回答，n=7,m=5 的 q² 系数反例",
+            "source_date": "2026-07-24",
+            "verified_excerpt": false,
+            "reason": "Unable to verify robots policy for https://mathoverflow.net",
+            "artifact": null,
+            "sha256": null,
+            "retrieved_at": null
+          },
+          {
+            "url": "https://arxiv.org/html/1102.5649v47",
+            "role": "ORIGINAL_STATEMENT",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/1102.5649v47",
+            "locator": "§2 末、§3 前的 q-logconvex 段，HTML #id4205.1 及紧后四个公式",
+            "source_date": "2014-12-29",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/71f51b489c32443bfcc7b98ddd817bcc79fdf913d30c91a994888732214129da.txt",
+            "sha256": "71f51b489c32443bfcc7b98ddd817bcc79fdf913d30c91a994888732214129da",
+            "retrieved_at": "2026-10-23T07:46:45.962542+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2505.02767v4",
+            "role": "ORIGINAL_STATEMENT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2505.02767v4",
+            "locator": "§1 Conjecture 1.1(i)第二句，HTML #S1.Thmconjecture1",
+            "source_date": "2026-02-10",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+            "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+            "retrieved_at": "2026-10-23T07:46:21.237044+00:00"
+          }
+        ],
+        "observed_queries": [
+          "\"1104.3856\" \"q-log\" proof beta",
+          "\"2505.02767\" \"correction\"",
+          "\"499140\" \"conjecture\"",
+          "\"Apéry polynomials\" \"q-log-convex\" proof",
+          "\"Apéry\" \"zeta(2)\" \"polynomials\" \"log-convex\"",
+          "\"Conjecture 4.7\" \"log\" \"2026\"",
+          "\"Linear transformations preserving the strong q-log-convexity of polynomials\" Zhu Sun",
+          "\"On the polynomials\" \"Sun\" \"counterexample\"",
+          "\"Qiping Zhou\" \"499140\"",
+          "\"Qiping Zhou\" \"binomial\" \"conjecture\"",
+          "\"Sun\" \"beta polynomials\" log convex proof 2026",
+          "\"Sun\" \"beta 多项式\" \"对数凸\"",
+          "\"Sun\" \"beta\" \"log-convexity\" certificate",
+          "\"Sun\" \"beta\" \"q-log-convex\" proof",
+          "\"Sun\" \"q-log-convexity\" correction",
+          "\"Sun\" \"q-logconvex\" beta solution",
+          "\"The q-Log-convexity of the Narayana Polynomials of Type B\" arxiv",
+          "\"beta\" \"q-log-convexity\" \"proof\" -site:researchgate.net -site:scribd.com",
+          "\"beta\" \"q-log-convexity\" Sun 2026 proof",
+          "\"beta_n\" \"q-log-convexity\"",
+          "\"beta_n(q)\" \"log\" convex",
+          "\"binom{n+k}{k}\" \"q-log-convex\"",
+          "\"binom{n}{k}^{2}\" \"binom{n+k}{k}\" \"log\" \"convex\"",
+          "\"q-log-convex\" \"479301\" counterexample",
+          "\"q-log-convex\" \"binomial\" \"n+k\" \"2026\"",
+          "\"q-log-convexity\" \"Sun\" \"2026\" \"beta\"",
+          "\"q-log-convexity\" \"Sun\" \"beta\" 2026 proof conjecture",
+          "\"q-log-convexity\" \"Sun\" \"beta\" solution 2025 2026 -site:scribd.com",
+          "\"q-log-convexity\" \"beta\" \"counterexample\"",
+          "\"β_n\" \"Sun\" convex"
+        ],
+        "limitations": [
+          "检索截至2026-10-23，以公开网络索引、arXiv、期刊/作者公开稿为主，主要英文并含中文查询；不穷尽全部数据库或语言。",
+          "直接称精确beta猜想开放的最新已核对文字日期是2026-02-10；后续下载时间不更新该状态。未索引或未公开解答仍可能存在。",
+          "对列出结果核对了定义、量词和可见参数特例，不宣称排除全体文献中的非显然推论。LLM检索不能认证全球首次性。",
+          "本独立会话的源码语义比较及本地计算不是外部专家对自然语言/形式化对应或原创性的认证。"
+        ],
+        "obstacles": [],
+        "unresolved_obstacle_ids": [],
+        "comparisons": [],
+        "obstacle_changes": []
+      },
+      "proof_coverage": {
+        "policy_version": null,
+        "assessed_at": null,
+        "proof_complete": false,
+        "statement_aligned": false,
+        "total_steps": 0,
+        "essential_steps": 0,
+        "supported_steps": [],
+        "unresolved_steps": [],
+        "reasons": [],
+        "formal_alignment_certified": false
+      },
+      "validation_notes": [
+        "Full coverage conflicts with the candidate scope or remaining obligations"
+      ],
+      "reported_verdict": "INCONCLUSIVE",
+      "reported_novelty": "UNKNOWN",
+      "formal_receipt": {
+        "status": "KERNEL_REPLAYED",
+        "checked_at": "2026-10-23T07:46:45.969433+00:00",
+        "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+        "problem_sha256": "50b6ca7a1c36b480c5c7b20b8b07d789a08b70d6b29b119b1c25bdbc2bde01b6",
+        "request": {
+          "files": [
+            "workspace/proof/SunBeta.lean"
+          ],
+          "declarations": [
+            "SunBeta.beta_coeffwise_logconvex"
+          ],
+          "module_root": "proof"
+        },
+        "sources": [
+          {
+            "path": "workspace/proof/SunBeta.lean",
+            "module": "SunBeta",
+            "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3"
+          }
+        ],
+        "steps": [
+          {
+            "status": "OK",
+            "returncode": 0,
+            "elapsed_seconds": 534.384,
+            "log": "compile-0.log",
+            "log_sha256": "09500412efbf1f696c383ed7db4d7f782966d7d0fb7333f00f95a1d1997a37fd",
+            "argv": [
+              "/lean/bin/lean",
+              "-j",
+              "1",
+              "-s",
+              "65536",
+              "-M",
+              "16384",
+              "-o",
+              "/out/SunBeta.olean",
+              "SunBeta.lean"
+            ]
+          },
+          {
+            "status": "OK",
+            "returncode": 0,
+            "elapsed_seconds": 100.352,
+            "log": "replay-0.log",
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "argv": [
+              "/lean/bin/leanchecker",
+              "SunBeta"
+            ]
+          },
+          {
+            "status": "OK",
+            "returncode": 0,
+            "elapsed_seconds": 41.802,
+            "log": "inspect.log",
+            "log_sha256": "7531bec008d433d5f83a49b83da364f3f4a75d1334765238fa66420aee47988f",
+            "argv": [
+              "/lean/bin/lean",
+              "-j",
+              "1",
+              "-s",
+              "65536",
+              "-M",
+              "16384",
+              "--run",
+              "MathLotteryInspector.lean",
+              "SunBeta",
+              "--",
+              "SunBeta.beta_coeffwise_logconvex"
+            ]
+          }
+        ],
+        "declarations": [
+          {
+            "axioms": [
+              "propext",
+              "Classical.choice",
+              "Quot.sound"
+            ],
+            "module": "SunBeta",
+            "name": "SunBeta.beta_coeffwise_logconvex",
+            "type": "forall (n : Nat), (LE.le.{0} Nat instLENat (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)) n) -> (forall (d : Nat), LE.le.{0} Int Int.instLEInt (OfNat.ofNat.{0} Int 0 (instOfNat 0)) (DFunLike.coe.{1, 1, 1} (Finsupp.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) Nat (fun (x._@.Mathlib.Basic.FunLike.Basic.2582841819._hygCtx._hyg.11 : Nat) => Int) (Finsupp.instFunLike.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) (Polynomial.coeff.{0} Int Int.instSemiring (HSub.hSub.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHSub.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instSub.{0} Int Int.instRing)) (HMul.hMul.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHMul.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instMul.{0} Int Int.instSemiring)) (SunBeta.beta (HSub.hSub.{0, 0, 0} Nat Nat Nat (instHSub.{0} Nat instSubNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)))) (SunBeta.beta (HAdd.hAdd.{0, 0, 0} Nat Nat Nat (instHAdd.{0} Nat instAddNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1))))) (HPow.hPow.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (Polynomial.{0} Int Int.instSemiring) (instHPow.{0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (NPow.toPow.{0} (Polynomial.{0} Int Int.instSemiring) (Monoid.toNPow.{0} (Polynomial.{0} Int Int.instSemiring) (Semiring.toMonoid.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.semiring.{0} Int Int.instSemiring))))) (SunBeta.beta n) (OfNat.ofNat.{0} Nat 2 (instOfNatNat 2))))) d))"
+          }
+        ],
+        "statement_alignment": "NOT_CERTIFIED",
+        "limits": {
+          "seconds": 1800.0,
+          "memory_mb": 16384,
+          "address_space_mb": 24576,
+          "thread_stack_kb": 65536,
+          "max_object_mb": 1024,
+          "max_total_object_mb": 1536,
+          "threads": 1,
+          "memory_scope": "Lean internal threshold plus per-process RLIMIT_AS; not measured RSS or host-wide RAM"
+        },
+        "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. No independent kernel implementation or natural-language equivalence check.",
+        "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+        "inspector_sha256": "7023e0c16c5f00e794ebb007856ecc8bbe1c49befd70239a15059f098ef6d2b9",
+        "objects": [
+          {
+            "path": "SunBeta.olean",
+            "size": 570766176,
+            "sha256": "024eabc725c7170867cf17e7f652a17144fa0fdd5b60a7e44b209a9a5cde37ff"
+          }
+        ],
+        "artifact": "verification/formal/42f471b6b8f76c0b78c3f1414a7e39c02a3375dcc3718892aa820903d4199f4a/receipt.json"
+      }
+    },
+    {
+      "verdict": "NO_ISSUES_FOUND",
+      "truth_assessment": "独立数学审阅支持候选完整命题成立：对任意n≥1和d≥0，精确beta多项式的相邻乘积差在ℤ[q]中的第d项系数非负。依据是此前逐项推导、两套独立完整多项式恒等式核查，以及本轮实际核验的匹配候选哈希的控制器KERNEL_REPLAYED回执。未发现反例、循环论证或未解决的阻断数学步骤；有限实验仅作补充。NO_ISSUES_FOUND是本次LLM对数学命题与证明的审阅结论，不表示文献新颖性已确定。",
+      "proof_assessment": "提交证明作为整体完整有效。核对内容包括正权重及全部支撑边界、相邻行列递推、配对卷积的2n因子、零和式端点、d>2n系数为零、奇偶重参数化、m=0/m=1/r=0边界、H非零和D正、与求和指标无关的Cramer系数、334和415项正系数证书、最终除以2nD。SymPy重建和只用整数稀疏多项式运算的第二套核查都精确验证全部恒等式，非有限取值检验。本轮直接检查控制器实际回执和日志：同一冻结SunBeta.lean编译、leanchecker重放、完整主定理公理检查均成功，公理仅propext、Classical.choice、Quot.sound。先前8192 MiB下的失败是已保存的资源失败，已由同一字节的16384 MiB成功重试解除。仍信任所用Lean内核及导入库；回执不认证自然语言对应或新颖性。没有修改候选或用修订证明替代原证明。",
+      "issues": [],
+      "evidence": [
+        "formal-probes/ReviewNotes.md",
+        "formal-probes/algebra_results.json",
+        "formal-probes/sparse_results.json",
+        "formal-probes/lean_results.json",
+        "formal-probes/statement_probe.log",
+        "formal-probes/kernel_replay.log",
+        "formal-probes/sources.json",
+        "formal-probes/citations.json",
+        "formal-probes/Corrections.md",
+        "formal-probes/frozen-hashes.json",
+        "formal-probes/first-controller-receipt.json",
+        "formal-probes/first-controller-compile-0.log",
+        "formal-probes/publisher-download.json",
+        "formal-probes/zhusun2015-publisher.txt",
+        "formal-probes/rising-independent-comparison.json",
+        "formal-probes/citations.json",
+        "verification/formal/42f471b6b8f76c0b78c3f1414a7e39c02a3375dcc3718892aa820903d4199f4a/receipt.json",
+        "formal-probes/controller-receipt.json",
+        "formal-probes/controller-compile-0.log",
+        "formal-probes/controller-replay-0.log",
+        "formal-probes/controller-inspect.log",
+        "formal-probes/frozen-hashes.json",
+        "formal-probes/FinalReview.md",
+        "formal-probes/citations.json"
+      ],
+      "novelty": "UNKNOWN",
+      "novelty_notes": "数学正确性与新颖性分别判断。Sun2014原猜想及其2014追述继续标为ORIGINAL_STATEMENT，2026-02-10明确开放声明标为EXPLICIT_OPEN；EQUIVALENT仅指同一目标，不表示已有证明。已成立的Narayana、S_n、D_n、Zhu–Sun和2026 Hoggatt/Baxter结果均按假设、权重及参数比较为DIFFERENT。控制器最新评估核实了除MathOverflow之外的十条引用；MathOverflow的robots策略核验仍失败，完整原始回答来源缺口保持具体unresolved。已见反例针对另一族的区别已由Sun原文与算术确认，但本轮按现有证据保留UNKNOWN，不声称全球首次、不删除具体缺口或通过改标签消除它。",
+      "novelty_references": [],
+      "original_problem_coverage": "FULL",
+      "coverage_explanation": "独立比较实际源码及控制器实际声明：SunBeta.beta : ℕ → Polynomial ℤ，定义为∑k∈range(n+1), monomial k ((n.choose k:ℤ)^2*((n+k).choose k:ℤ))，恰等于原题从k=0到n的二项式有限和。主定理只有n:ℕ、hn:1≤n、d:ℕ三个参数，结论是0≤(beta(n−1)*beta(n+1)−beta(n)^2).coeff d；没有额外数学假设、指标上界或实数q代入。n−1是有hn保护的下标减一，差和比较分别在Polynomial ℤ和ℤ中，不是Nat截断系数减法。证明覆盖n=1和beta_0、d=0/1、最高两次、全部内部次数及d>2n的恒零系数。本会话另写的原题三个有限和的声明探针已由冻结主定理直接闭合。因此候选覆盖完整原题；remaining_obligations为空表示没有尚缺的数学覆盖义务。MathOverflow来源复核问题单列literature_search.unresolved，并不缩小原题数学覆盖。FULL是本独立LLM对定义及语义的比较判断；控制器的statement_alignment仍为NOT_CERTIFIED，没有把内核重放冒充外部专家或机器对自然语言等价性的认证。",
+      "remaining_obligations": [],
+      "checks": [
+        {
+          "id": "",
+          "claim": "冻结定义和主定理完整表达原题，无额外数学假设或有限指标限制。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "beta : ℕ → Polynomial ℤ，定义为对 range(n+1) 求和的 monomial k ((n.choose k : ℤ)^2*((n+k).choose k : ℤ))。beta_coeffwise_logconvex 的参数只有 n : ℕ、hn : 1≤n、d : ℕ，结论为 0≤(beta(n−1)*beta(n+1)−beta(n)^2).coeff d。多项式减法及比较在 ℤ 中，不是 Nat 截断减法；任意 d : ℕ 覆盖全部 d≥0。hn 保证 n−1+1=n、n−1+2=n+1。辅助 P,T0,T1,w 均在 ℚ 中。没有代入实数 q，也没有把 q=1 的结论冒充逐系数结论。本轮再读冻结源码第203行定义、第712行主定理，并对照控制器inspect.log中的实际声明：外层量词forall(n:Nat)、条件1≤n、forall(d:Nat)，系数比较的类型为Int。先前另写原题三个有限和的声明探针已实际通过。FULL是这一数学语义比较的审阅结论，不把receipt.statement_alignment=NOT_CERTIFIED改成已认证。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:203 (beta), :206 (a), :279 (w), :712 (main theorem)",
+            "formal-probes/ReviewNotes.md",
+            "formal-probes/controller-inspect.log",
+            "formal-probes/StatementProbe.lean",
+            "formal-probes/statement_probe.log"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "n≥1 时归一化权重合法、非负，全部相邻行及列递推包括支撑边界。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "a(n,k)=n!(n+k)!/[k!³(n−k)!²] (k≤n)。对 k≤n+1，b_k=n!(n+k−1)!/[k!³(n+1−k)!²]>0；分母 (n+1)(n+k)(n+k+1)>0。阶乘消去给出 a(n,k)=(n+k)(n−k+1)²b_k，n a(n−1,k)=(n−k)²(n−k+1)²b_k，(k+1)³b_(k+1)=(n+k)(n−k+1)²b_k。k=n 时第二式由 (n−k)²=0 处理；k=n+1 时由 (n−k+1)²=0 处理；k>n+1 时所有相关权重和行系数都为零。递推无需除以可能为零的 n−k。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:214–320, choose_row/choose_col/a_row/a_col/w_above/w_center/w_below/w_recur",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "式(3)的配对卷积恒等式及 P,T0,T1 的对称性成立。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "由三个相邻行公式，b_kb_l P(n,k,l)=n[a(n−1,k)a(n+1,l)+a(n+1,k)a(n−1,l)−2a(n,k)a(n,l)]。在全部 k+l=d 的有序非负整数对上交换 k,l 是双射，故总和等于 2n C(n,d)，其中 C(n,d) 是原差多项式系数。k=l 的项同样成立，没有遗漏或重复半权重。直接交换可得 P,T0,T1 都对称，独立多项式展开也验证其差恒为零。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:570 (paired_term), :595 (delta_sum), :631 (delta_coeff)",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "式(4)的两项修正和严格为零，包括 d=0、k=0 或 l=0 的边界。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "用 (k+1)³b_(k+1)=(n+k)(n−k+1)²b_k 代入 G(k+1,l) 与 G(k,l+1)，逐项得到 b_kb_l(c0T0+c1T1)=G(k+1,l)−G(k,l+1)。对 k+l=d 求和，第一和覆盖 i+j=d+1,i≥1，第二和覆盖同一反对角线,j≥1；差仅为 G(d+1,0)−G(0,d+1)=0，因为 G 含 i³j³。c0,c1 不依赖求和指标这一条件由候选(7)或(11)满足。所有和有限，负的 c0,c1 不影响恒等式。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:529–568 (flux, flux_sum, weighted_flux, weighted_telescopes)",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "次数划分和奇偶重参数化覆盖所有 n≥1,d≥0 及全部有权项。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "deg beta_s≤s，因此 d>2n 时两乘积的 d 次系数分别为零。对 d≤2n，取 ε=d mod 2、m=(d−ε)/2、r=n−m−ε，则 m,r≥0。若 k≤l、k+l=2m+ε、k,l≤n+1，整数 j=m−k 满足 0≤j≤m 和 j≤r+1，并有 k=m−j,l=m+j+ε。P,T0,T1 对称，所以排序不丢项。超出 k,l≤n+1 的权重为零。这一划分包含最高两次 d=2n、2n−1 和最低次数0、1。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:333 (sorted_suffices), :504 (exists_certificate), :678 (delta_nonneg)",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "m=0、m=1 或 r=0 的全部边界证书成立且 D>0。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "m=0 时 P(n,0,0)=0、P(n,0,1)=2n²(n+1)²(3n+1)>0。m≥1 且 m=1 或 r=0 强制 j∈{0,1}；(7)取 D=m² 或 m³，均正。独立展开给出 j=0 时 Q=0，j=1 时依次为 2(r+1)(r+2)²(3r²−3r+4)、8m(m+1)²、36(r+2)(r+3)²(2r²+9r+14)、144m(m+2)²(3m+4)，与(8)一致。唯一含负系数的因子满足 4(3r²−3r+4)=3(2r−1)²+13>0。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json (P_at_0_0/P_at_0_1 and both edge cases)",
+            "submitted-evidence/proof/SunBeta.lean:360–502"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "内部情形 H 非零、D 正、c0,c1 定义合法，且使 j=0,1 的 Q 为零。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "m≥2,r≥1 时 D0=3m²r²(m−1)³(2m+r+1)>0，D1=3m³r²(m−1)³(2m+r+3)>0。独立计算 H=V0W1−V1W0，分别得到 −12m³r²(m−1)³(2m+r)(r+1)²(2m+r+1) 和 −24m³r²(m−1)³(r+1)²(2m+r+2)(2m+r+3)，均严格负。Cramer 公式 c0=D(U1W0−U0W1)/H、c1=D(V1U0−V0U1)/H 解出两条线性方程。化简所得 c0,c1∈ℤ[m,r] 与冻结 JSON、Lean alpha/beta 多项式完全一致。第二套整数稀疏多项式程序另外检查 H*c0、H*c1 的清分母等式，差的全部系数均为零。",
+          "evidence": [
+            "formal-probes/algebra_results.json",
+            "formal-probes/sparse_results.json",
+            "submitted-evidence/proof/SunBeta.lean:40–87"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "(12)两条大多项式恒等式与附录749个系数完整一致。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "从 P,T0,T1,D 和独立算出的 Cramer 解构造 Q，精确多项式除以偶数因子 2j²(j²−1) 或奇数因子 2j(j−1)(j+1)(j+2)，余数均为零。代入 m=u+t+2,r=v+t+1,j=t+2，完整指数→系数字典分别为 334、415 项，总次数11、12，最小非零系数均为36，全部为正整数。逐项比较了 candidate.json 正文、冻结 Proof.md、CertificateTable.md、certificates.json、Lean posEven/posOdd，完全一致。check_sparse.py 只使用 Python 整数加乘和指数字典，再独立验证两恒等式的每个差系数为零；并非有限取值测试。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json",
+            "formal-probes/check_sparse.py",
+            "formal-probes/sparse_results.json",
+            "submitted-evidence/proof/CertificateTable.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "证书正性与零和式合成，推出原题对全部无限指标的系数非负。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "j≥2 且 j≤m,r+1 时 u=m−j,v=r+1−j,t=j−2 均非负，E0,E1 的正系数保证取值非负；(12)的额外因子也非负。j=0,1 已证明 Q=0。结合边界证书得到每个有权项 Q≥0。于是 0≤∑b_kb_lQ=D∑b_kb_lP=2nD C(n,d)。n≥1,D>0，故 C(n,d)≥0；d>2n 先前已证为零。没有将原结论放入假设或使用文献中不同权重的结论。",
+          "evidence": [
+            "submitted-evidence/proof/SunBeta.lean:649–717 (sumP_nonneg through beta_coeffwise_logconvex)",
+            "formal-probes/ReviewNotes.md",
+            "formal-probes/sparse_results.json"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "独立低次、最高次与最小中心的边界公式无异常。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "常数项相减为0。a(n,1)=n²(n+1) 的二阶差为6n+2，所以 C(n,1)=6n+2。最高系数 C(n,2n)=binom(2n−2,n−1)binom(2n+2,n+1)−binom(2n,n)²=binom(2n,n)²/[(2n−1)(n+1)]>0。n=1 的差是8q+2q²，n=2 是14q+6q²+56q³+4q⁴。",
+          "evidence": [
+            "formal-probes/ReviewNotes.md",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "直接整数卷积的有限检查覆盖 n=1..120、d=0..2n+2，没有发现反例。",
+          "method": "FINITE_TEST",
+          "result": "SUPPORTED",
+          "reasoning": "使用 math.comb 和 Python 任意精度整数，从原 beta 定义直接卷积，共检查14880个系数，负系数数目0；另外4440次 Fraction 精确比较验证递推的小指标及越界实例。此检查仅支持所列有限范围，不承担无限定理或新颖性结论。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "原始公开陈述与最新开放声明指向同一个 beta 命题；最接近的已知解不直接覆盖其权重。",
+          "method": "REFERENCE",
+          "result": "SUPPORTED",
+          "reasoning": "独立下载核对 Sun 2014 Conjecture4.7 第一式和2026-02-10 v4 §1 beta定义与 remains open 句。Narayana type B 缺少 binom(n+k,k)；Dou–Ren S_n/D_n 分别有 binom(2k,k)binom(2n−2k,n−k)；Zhu–Sun Corollary2.9 用 binom(2k,k)。其 Proposition2.8 的固定输入 f_k 不能带外层 n，Theorem2.1 的 C1 也不能把 beta 的强 q-log-convexity当成已知。2026 Hoggatt/Baxter 定理行多项式最高项系数1，与 beta 的 binom(2n,n)不同。逐条假设和结论比较见 citations；不将找不到解答解释成已证首次性。本轮重新核对原期刊Zhu–Sun全文并纠正猜想/开放声明角色：只有已成立定理标为PRIOR_RESULT或SOLUTION，三个等价的猜想/状态来源均不属于这些角色。",
+          "evidence": [
+            "https://arxiv.org/html/1104.3856v8",
+            "https://arxiv.org/html/2505.02767v4",
+            "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+            "https://arxiv.org/html/2609.33732v1",
+            "formal-probes/citations.json"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "已见rising-binomial反例的数学内容与beta目标不同，此区别可独立核查。",
+          "method": "COUNTEREXAMPLE",
+          "result": "SUPPORTED",
+          "reasoning": "从Sun2026 Conjecture1.1(i)第二句读取R_n^(m)=sum binom(n+k,k)^m q^k，无需依赖MathOverflow的作者归属即可重算：m=5,n=7时二次差系数28^5+7^5·9^5+45^5−2·36^5−8^10=−499140。beta在n=7,d=2的系数为1316。故该具体反例不反驳beta。此SUPPORTED仅指数学计算和不同权重的比较，不声称MathOverflow条目的独立来源复核已完成。",
+          "evidence": [
+            "https://arxiv.org/html/2505.02767v4#S1.Thmconjecture1",
+            "formal-probes/rising-independent-comparison.json",
+            "formal-probes/ReviewNotes.md"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "本独立会话此前的本地编译、原题声明探针和leanchecker重放成功记录存在且与冻结字节对应。",
+          "method": "FORMAL",
+          "result": "SUPPORTED",
+          "reasoning": "本会话此前原样复制冻结源码独立编译，未运行候选check.py、未接受预编译对象：第一次900秒外部超时，第二次编译426.962秒退出0。独立StatementProbe.lean把原题的三个Polynomial ℤ有限和直接写出，以SunBeta.beta_coeffwise_logconvex闭合，19.833秒退出0；实际类型为∀n:ℕ,1≤n→∀d:ℕ,0≤(beta(n−1)*beta(n+1)−beta(n)^2).coeff d。本地公理清单为标准三项，leanchecker重放93.236秒退出0。本轮查看这些既有记录并再次对照源码，按用户要求不重复实验。随后控制器首轮-M8192失败和第二轮-M16384成功均有实际回执，在下一检查中分开记录；本地记录从未替代控制器回执。",
+          "evidence": [
+            "formal-probes/run_lean.py",
+            "formal-probes/lean_first_results.json",
+            "formal-probes/lean_results.json",
+            "formal-probes/compile.log",
+            "formal-probes/StatementProbe.lean",
+            "formal-probes/statement_probe.log",
+            "formal-probes/kernel_replay.log"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "控制器实际对当前冻结候选的完整主定理完成编译、内核重放和公理检查。",
+          "method": "FORMAL",
+          "result": "SUPPORTED",
+          "reasoning": "本轮直接读取当前审阅运行保存的42f471b6…/receipt.json及三份原始日志，不是根据口头成功声明推断。receipt.candidate_sha256=87fe6633…15fbf9与当前manifest一致；SunBeta.lean实际SHA-256=5664f903…70aa3与receipt.sources及附加manifest一致，另重新核对全部六个冻结附件。请求只含workspace/proof/SunBeta.lean，module_root=proof，声明精确为SunBeta.beta_coeffwise_logconvex。status=KERNEL_REPLAYED；编译534.384秒、leanchecker重放100.352秒、声明检查41.802秒，三步均status=OK、returncode=0；实际日志哈希全部与receipt相符。inspect.log与receipt.declarations逐项一致，主定理仅依赖propext、Classical.choice、Quot.sound，无sorryAx或额外假设。资源限制为-M16384、地址空间24576 MiB、单线程，实际对象大小570766176字节。此前-M8192内存失败记录继续保留，但等待成功检查的义务已被这份匹配候选的实际成功回执解除。本轮复用此回执，不再次申请编译。其信任范围是目标声明、已导入库和Lean内核；不是独立实现的内核，也不认证自然语言对应或新颖性。statement_alignment仍为NOT_CERTIFIED。",
+          "evidence": [
+            "verification/formal/42f471b6b8f76c0b78c3f1414a7e39c02a3375dcc3718892aa820903d4199f4a/receipt.json",
+            "formal-probes/controller-receipt.json",
+            "formal-probes/controller-compile-0.log",
+            "formal-probes/controller-replay-0.log",
+            "formal-probes/controller-inspect.log",
+            "formal-probes/frozen-hashes.json",
+            "formal-probes/first-controller-receipt.json",
+            "formal-probes/first-controller-compile-0.log"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "三条等价来源属于猜想或开放声明；Zhu–Sun期刊原文可以替代EMIS来源。",
+          "method": "REFERENCE",
+          "result": "SUPPORTED",
+          "reasoning": "1104.3856v8标题Conjecture4.7、1102.5649v47原句on May 7, 2011 I conjectured that，都只是原问题或作者追述，角色改为ORIGINAL_STATEMENT。2505.02767v4的remains open改为EXPLICIT_OPEN。EQUIVALENT只指同一数学目标，不能推导KNOWN。重新下载期刊公开PDF，核对Cor2.9、Prop2.8和Thm2.1；其权重binom(n,k)^2binom(2k,k)及固定输入序列要求均与beta有上述区别，关系仍是DIFFERENT。",
+          "evidence": [
+            "formal-probes/citations.json",
+            "formal-probes/publisher-download.json",
+            "formal-probes/publisher-robots.txt",
+            "formal-probes/zhusun2015-publisher.txt"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "MathOverflow反例条目的完整内容、作者归属及发布日期具有独立下载器可复核的原始公开载体。",
+          "method": "REFERENCE",
+          "result": "UNRESOLVED",
+          "reasoning": "控制器2026-10-23T07:58:05.384018+00:00的来源评估仍报告该URLUnable to verify robots policy for https://mathoverflow.net，verified_excerpt=false。此前针对作者、题名和−499140的查询没有找到另一份可核验的作者或期刊版本；本轮没有绕过访问策略，也没有把未核实页面改称已核实。已见反例与beta不同的数学比较由Sun2026原文及独立整数计算支持。原回答完整来源、归属和日期的独立复核仍未解决；它不参与beta证明，blocking=false，只在literature_search.unresolved和novelty=UNKNOWN中保留。",
+          "evidence": [
+            "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "formal-probes/literature_search.json",
+            "formal-probes/rising_correction.txt",
+            "https://arxiv.org/html/2505.02767v4#S1.Thmconjecture1"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        }
+      ],
+      "proof_steps": [],
+      "statement_alignment": [],
+      "citations": [
+        {
+          "url": "https://arxiv.org/html/1104.3856v8",
+          "role": "ORIGINAL_STATEMENT",
+          "locator": "§4 Conjecture 4.7，HTML #Thmconjecture7，第一种形式及紧前 q-logconvex 定义",
+          "excerpt": "\\sum_{k=0}^{n}\\binom{n}{k}^{2}\\binom{n+k}{k}q^{k}",
+          "explanation": "摘录为官方HTML原生TeX annotation的字面子串。Conjecture 4.7第一种形式就是beta；紧前定义对所有n≥1要求整数差多项式全部系数非负。EQUIVALENT表示猜想陈述与候选目标等价，不表示已被证明。此处纠正第一次审阅误用PRIOR_RESULT的分类。",
+          "source_date": "2014-12-24",
+          "relation": "EQUIVALENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "EXPLICIT_OPEN",
+          "locator": "§1，HTML #S1.p5.2 最后一句，前面同段给出 beta 的完整定义",
+          "excerpt": "(\\beta_{n}(q))_{n\\geq 0}\n\nremains open.",
+          "explanation": "同段的 beta 权重精确为 binom(n,k)^2 binom(n+k,k)，并回指 Conjecture 4.7。这是截至 2026-02-10 的明确开放声明，不是本候选正确性的依据，也不保证其后没有解答。本次重新查看官方HTML，仍是对该猜想的开放声明；纠正第一次审阅误用PRIOR_RESULT的分类。",
+          "source_date": "2026-02-10",
+          "relation": "EQUIVALENT"
+        },
+        {
+          "url": "https://arxiv.org/html/0810.2247v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§1 Theorem 1.1；式(1.1)定义 W_n；2010 Narayana type B 论文的作者预印本",
+          "excerpt": "W_{n}(q)\n form a \nq\nq\n-log-convex sequence.",
+          "explanation": "此源是 2008-10-13 预印本，不将其版本日期写成 2010。已另核对作者所存 2010 稿 Theorem 1.1。对所有 n≥0，其 W_n=sum binom(n,k)^2 q^k 是 q-log-convex；候选额外因子 binom(n+k,k) 同时依赖 n,k。W_1=1+q 而 beta_1=1+2q，不能直接引用此定理。候选在该已知结果之外证明精确 beta 权重的结论。",
+          "source_date": "2008-10-13",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1308.2736v2",
+          "role": "SOLUTION",
+          "locator": "§3 Theorem 3.1，HTML #S3.Thmtheo1；式(1.1)",
+          "excerpt": "S_{n}(q)\n given by (\n1.1\n) form a \nq\nq\n-log-convex sequence.",
+          "explanation": "对全部 n≥0，S_n=sum binom(n,k)binom(2k,k)binom(2n−2k,n−k)q^k 为 q-log-convex。它解决原并列猜想的第二种形式。S_n 常数项为 binom(2n,n)，beta_n 常数项为 1；权重并不相同，未覆盖本候选。",
+          "source_date": "2013-08-15",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1308.2961v1",
+          "role": "SOLUTION",
+          "locator": "§3 Theorem 3.1，HTML #S3.Thmthm1；式(1.1)",
+          "excerpt": "\\{D_{n}(q)\\}_{n\\geq 0}\n is \nq\nq\n-log-convex.",
+          "explanation": "D_n=sum binom(n,k)^2 binom(2k,k)binom(2n−2k,n−k)q^k。定理证明整个 n≥0 序列 q-log-convex，是原并列猜想的第三种形式。D_n 的额外权重不等于 binom(n+k,k)，常数项也不同；候选 beta 的结论不由此定理的参数限制直接得到。",
+          "source_date": "2013-08-13",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+          "role": "PRIOR_RESULT",
+          "locator": "PDF p.9 Corollary 2.9 及紧前 P_n 定义；p.8 Proposition 2.8；p.3 Theorem 2.1",
+          "excerpt": "The hypergeometric polynomials Pn(q) form a strongly q-log-convex",
+          "explanation": "逐字摘录原期刊Electronic Journal of Combinatorics 22(3), P3.26公开PDF。P_n=sum binom(n,k)^2 binom(2k,k)q^k；P_2=1+8q+6q²而beta_2=1+12q+6q²。Prop2.8要求固定、与外层n无关的强q-log-convex输入f_k，不能取f_k=binom(n+k,k)q^k。Thm2.1的C1先要求数组行生成多项式强q-log-convex；直接取beta会预设更强目标。因此本候选不是这些陈述的直接参数特例。原EMIS载体已由此原期刊载体替代；本会话已下载核对全文，控制器最新来源评估也实际核实该URL的摘录，PDF哈希15f41314…93fc3。",
+          "source_date": "2015-08-28",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2609.33732v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§1 Theorem 1.2，HTML #S1.Thmtheorem2，H_n^(d) 的定义在紧前段",
+          "excerpt": "\\big(H^{(d)}_{n}(q)\\big)_{n\\geq 0}\n is strongly \nq\nq\n-log-convex.",
+          "explanation": "Theorem 1.2 对每个固定整数 d≥1、所有 n≥0 证明 H_n^(d) 的强 q-log-convexity。该行多项式常数项与最高项均为 1；beta_n 的最高项为 binom(2n,n)，所以没有一个 d 的限制把这些多项式变成 beta。论文中的 beta 符号另表示符号分析的辅助量，非本题序列。候选对不同权重给出普通 q-log-convexity。",
+          "source_date": "2026-09-27",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2608.22258v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§5 Theorem 5.1，HTML #S5.Thmtheorem1；§4 的 B(n,k) 定义",
+          "excerpt": "B_{n}(x)\n form a \nq\nq\n-log-convex sequence.",
+          "explanation": "该定理对所有 n≥0 证明 Baxter 行多项式 q-log-convex。权重 B(n,k)=binom(n,k)binom(n+1,k)binom(n+2,k)/[binom(k+1,k)binom(k+2,k)]，最高项系数为 1；本题最高项为 binom(2n,n)。其 d-Hoggatt 的 d=3 特例仍不同于 beta，不能把此最新结果标作 beta 解答。",
+          "source_date": "2026-08-23",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+          "role": "CORRECTION",
+          "locator": "Qiping Zhou 的 2026-07-24 回答，n=7,m=5 的 q² 系数反例",
+          "excerpt": "The conjecture is false.\n A counterexample is given by \n$m=5$\n and \n$n=7$",
+          "explanation": "此逐字摘录来自本会话第一次取得的文本，但控制器最新来源评估仍无法核实该URL的robots policy，没有可独立复核的替代原始载体。保留此CORRECTION条目和具体unresolved，不能将其称为已验证来源。其已见反例针对R_n^(m)=sum binom(n+k,k)^m q^k；这一族另由Sun2026 Conjecture1.1(i)第二句定义。对m=5,n=7，独立计算[q²](R_6R_8−R_7²)=28^5+7^5·9^5+45^5−2·36^5−8^10=−499140，beta同一位置为1316。已见反例与beta的数学关系为DIFFERENT；其作者归属、日期及完整页面的独立来源复核仍未知，不影响候选证明的数学步骤，但阻止肯定的新颖性判断。",
+          "source_date": "2026-07-24",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/1102.5649v47",
+          "role": "ORIGINAL_STATEMENT",
+          "locator": "§2 末、§3 前的 q-logconvex 段，HTML #id4205.1 及紧后四个公式",
+          "excerpt": "on May 7, 2011 I conjectured that",
+          "explanation": "该 2014-12-29 版本由作者追述 2011-05-07 提出猜想，其紧后第一公式仍为精确 beta 权重。与候选的数学目标等价，但只给猜想、未给证明。因此保留题目指定 2014 Conjecture 4.7 出处，同时不声称 2014 是首次提出日期。这是作者对猜想来源的追述，不是证明，故角色为ORIGINAL_STATEMENT。",
+          "source_date": "2014-12-29",
+          "relation": "EQUIVALENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "ORIGINAL_STATEMENT",
+          "locator": "§1 Conjecture 1.1(i)第二句，HTML #S1.Thmconjecture1",
+          "excerpt": "(\\sum_{k=0}^{n}\\binom{n+k}{k}^{m}q^{k})_{n\\geq 0}",
+          "explanation": "此原生TeX annotation字面摘录定义rising-binomial族，对每个固定整数m≥2提出q-log-convex猜想。它没有beta的binom(n,k)^2因子，且binom(n+k,k)被整体取m次幂。R_1^(m)=1+2^m q，而beta_1=1+2q，所以对允许的m≥2不是同一序列。这一公开原始来源及独立整数计算足以核对已见−499140反例所针对的对象；不能用来认证MathOverflow回答的作者或发布日期，也不把这个不同猜想当作beta的先前证明。",
+          "source_date": "2026-02-10",
+          "relation": "DIFFERENT"
+        }
+      ],
+      "literature_search": {
+        "queries": [
+          "\"Sun\" \"beta\" \"q-log-convex\" proof",
+          "\"Conjecture 4.7\" \"log\" \"2026\"",
+          "\"beta_n\" \"q-log-convexity\"",
+          "\"Sun\" \"q-log-convexity\" correction",
+          "\"beta\" \"q-log-convexity\" Sun 2026 proof",
+          "\"Apéry polynomials\" \"q-log-convex\" proof",
+          "\"binom{n+k}{k}\" \"q-log-convex\"",
+          "\"The q-Log-convexity of the Narayana Polynomials of Type B\" arxiv",
+          "\"Sun\" \"beta polynomials\" log convex proof 2026",
+          "\"Sun\" \"q-logconvex\" beta solution",
+          "\"1104.3856\" \"q-log\" proof beta",
+          "\"2505.02767\" \"correction\"",
+          "\"beta\" \"q-log-convexity\" \"proof\" -site:researchgate.net -site:scribd.com",
+          "\"q-log-convexity\" \"Sun\" \"2026\" \"beta\"",
+          "\"Apéry\" \"zeta(2)\" \"polynomials\" \"log-convex\"",
+          "\"q-log-convex\" \"binomial\" \"n+k\" \"2026\"",
+          "\"beta_n(q)\" \"log\" convex",
+          "\"β_n\" \"Sun\" convex",
+          "\"q-log-convexity\" \"Sun\" \"beta\" solution 2025 2026 -site:scribd.com",
+          "\"Sun\" \"beta\" \"log-convexity\" certificate",
+          "\"q-log-convexity\" \"Sun\" \"beta\" 2026 proof conjecture",
+          "\"binom{n}{k}^{2}\" \"binom{n+k}{k}\" \"log\" \"convex\"",
+          "\"Sun\" \"beta 多项式\" \"对数凸\"",
+          "\"q-log-convexity\" \"beta\" \"counterexample\"",
+          "\"Linear transformations preserving the strong q-log-convexity of polynomials\" Zhu Sun",
+          "\"Qiping Zhou\" \"499140\"",
+          "\"q-log-convex\" \"479301\" counterexample",
+          "\"Qiping Zhou\" \"binomial\" \"conjecture\"",
+          "\"499140\" \"conjecture\"",
+          "\"On the polynomials\" \"Sun\" \"counterexample\""
+        ],
+        "conclusion": "复用同一独立审阅会话已实际执行的30条查询，本轮仅检查已完成的控制器反馈，不重新扩展检索。原猜想、作者追述和明确开放声明的角色已纠正；2026-02-10是已核对开放文字的来源日期，不是由今日下载更新的状态。公开原期刊Zhu–Sun全文已替代EMIS，控制器也实际核实其摘录。列出的Narayana、S_n、D_n、Zhu–Sun、Hoggatt/Baxter结果均已按原文定义及参数比较。没有识别出精确beta的既有完整证明，但搜索未命中不能证明首次性。MathOverflow原回答的独立来源核验仍失败；已见rising-binomial反例的数学对象则由Sun2026 Conjecture1.1(i)和独立计算明确区别于beta。具体来源缺口继续列在unresolved，novelty保持UNKNOWN。",
+        "unresolved": [
+          "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk：控制器最新来源评估仍报告Unable to verify robots policy for https://mathoverflow.net，verified_excerpt=false。此前针对性查询没有找到可替代的作者或正式发表版本；本会话旧文本不能代替控制器独立复核的原始载体。完整回答、作者归属及日期仍存在具体来源核验缺口。已见−499140反例所针对的R_n^(m)=sum binom(n+k,k)^m q^k及其与beta的区别已由Sun2026原文和独立整数计算核实；此来源问题不参与beta证明，仍使新颖性保持UNKNOWN。"
+        ],
+        "limitations": [
+          "检索截至2026-10-23，以公开网络索引、arXiv、期刊/作者公开稿为主，主要英文并含中文查询；不穷尽全部数据库或语言。",
+          "直接称精确beta猜想开放的最新已核对文字日期是2026-02-10；后续下载时间不更新该状态。未索引或未公开解答仍可能存在。",
+          "对列出结果核对了定义、量词和可见参数特例，不宣称排除全体文献中的非显然推论。LLM检索不能认证全球首次性。",
+          "本独立会话的源码语义比较及本地计算不是外部专家对自然语言/形式化对应或原创性的认证。"
+        ],
+        "obstacles": [],
+        "comparisons": []
+      },
+      "formal_check": null,
+      "evidence_assessment": {
+        "policy_version": "evidence-v2",
+        "assessed_at": "2026-10-23T08:07:26.232579+00:00",
+        "supported": false,
+        "reasons": [
+          "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk: Unable to verify robots policy for https://mathoverflow.net",
+          "Unresolved literature gap: https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk：控制器最新来源评估仍报告Unable to verify robots policy for https://mathoverflow.net，verified_excerpt=false。此前针对性查询没有找到可替代的作者或正式发表版本；本会话旧文本不能代替控制器独立复核的原始载体。完整回答、作者归属及日期仍存在具体来源核验缺口。已见−499140反例所针对的R_n^(m)=sum binom(n+k,k)^m q^k及其与beta的区别已由Sun2026原文和独立整数计算核实；此来源问题不参与beta证明，仍使新颖性保持UNKNOWN。"
+        ],
+        "checked_citations": [
+          {
+            "url": "https://arxiv.org/html/1104.3856v8",
+            "role": "ORIGINAL_STATEMENT",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/1104.3856v8",
+            "locator": "§4 Conjecture 4.7，HTML #Thmconjecture7，第一种形式及紧前 q-logconvex 定义",
+            "source_date": "2014-12-24",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7.txt",
+            "sha256": "0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7",
+            "retrieved_at": "2026-10-23T08:06:57.997598+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2505.02767v4",
+            "role": "EXPLICIT_OPEN",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/2505.02767v4",
+            "locator": "§1，HTML #S1.p5.2 最后一句，前面同段给出 beta 的完整定义",
+            "source_date": "2026-02-10",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+            "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+            "retrieved_at": "2026-10-23T08:07:01.240468+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/0810.2247v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/0810.2247v1",
+            "locator": "§1 Theorem 1.1；式(1.1)定义 W_n；2010 Narayana type B 论文的作者预印本",
+            "source_date": "2008-10-13",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2df26028ae92e79b845a2910022fd399e13267b46e63cccf5a5368b782adbf3e.txt",
+            "sha256": "2df26028ae92e79b845a2910022fd399e13267b46e63cccf5a5368b782adbf3e",
+            "retrieved_at": "2026-10-23T08:07:04.964156+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/1308.2736v2",
+            "role": "SOLUTION",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/1308.2736v2",
+            "locator": "§3 Theorem 3.1，HTML #S3.Thmtheo1；式(1.1)",
+            "source_date": "2013-08-15",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd.txt",
+            "sha256": "610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd",
+            "retrieved_at": "2026-10-23T08:07:06.727618+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/1308.2961v1",
+            "role": "SOLUTION",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/1308.2961v1",
+            "locator": "§3 Theorem 3.1，HTML #S3.Thmthm1；式(1.1)",
+            "source_date": "2013-08-13",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2996953e8889711daae8d93eead7df92013d33ff2cb97c2813598d0de7b1e40a.txt",
+            "sha256": "2996953e8889711daae8d93eead7df92013d33ff2cb97c2813598d0de7b1e40a",
+            "retrieved_at": "2026-10-23T08:07:10.246389+00:00"
+          },
+          {
+            "url": "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://www.combinatorics.org/ojs/index.php/eljc/article/download/v22i3p26/pdf/",
+            "locator": "PDF p.9 Corollary 2.9 及紧前 P_n 定义；p.8 Proposition 2.8；p.3 Theorem 2.1",
+            "source_date": "2015-08-28",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/15f41314502ff56c3a4b9a35aa9290e44c88aacd349191ce1ed42bf5f4293fc3.pdf",
+            "sha256": "15f41314502ff56c3a4b9a35aa9290e44c88aacd349191ce1ed42bf5f4293fc3",
+            "retrieved_at": "2026-10-23T08:07:16.170569+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2609.33732v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2609.33732v1",
+            "locator": "§1 Theorem 1.2，HTML #S1.Thmtheorem2，H_n^(d) 的定义在紧前段",
+            "source_date": "2026-09-27",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/2cd2abe07370a82a4f69d0ddd9b5014d27c672c8432c0d5c673161e2eae60867.txt",
+            "sha256": "2cd2abe07370a82a4f69d0ddd9b5014d27c672c8432c0d5c673161e2eae60867",
+            "retrieved_at": "2026-10-23T08:07:18.615242+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2608.22258v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2608.22258v1",
+            "locator": "§5 Theorem 5.1，HTML #S5.Thmtheorem1；§4 的 B(n,k) 定义",
+            "source_date": "2026-08-23",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/4bf8cc3389e0f83c612191a480afd4848b07b1a8abd210b3eb841ad719cb4b1b.txt",
+            "sha256": "4bf8cc3389e0f83c612191a480afd4848b07b1a8abd210b3eb841ad719cb4b1b",
+            "retrieved_at": "2026-10-23T08:07:23.222175+00:00"
+          },
+          {
+            "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "role": "CORRECTION",
+            "relation": "DIFFERENT",
+            "resolved_url": null,
+            "locator": "Qiping Zhou 的 2026-07-24 回答，n=7,m=5 的 q² 系数反例",
+            "source_date": "2026-07-24",
+            "verified_excerpt": false,
+            "reason": "Unable to verify robots policy for https://mathoverflow.net",
+            "artifact": null,
+            "sha256": null,
+            "retrieved_at": null
+          },
+          {
+            "url": "https://arxiv.org/html/1102.5649v47",
+            "role": "ORIGINAL_STATEMENT",
+            "relation": "EQUIVALENT",
+            "resolved_url": "https://arxiv.org/html/1102.5649v47",
+            "locator": "§2 末、§3 前的 q-logconvex 段，HTML #id4205.1 及紧后四个公式",
+            "source_date": "2014-12-29",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/71f51b489c32443bfcc7b98ddd817bcc79fdf913d30c91a994888732214129da.txt",
+            "sha256": "71f51b489c32443bfcc7b98ddd817bcc79fdf913d30c91a994888732214129da",
+            "retrieved_at": "2026-10-23T08:07:26.214163+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2505.02767v4",
+            "role": "ORIGINAL_STATEMENT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2505.02767v4",
+            "locator": "§1 Conjecture 1.1(i)第二句，HTML #S1.Thmconjecture1",
+            "source_date": "2026-02-10",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+            "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+            "retrieved_at": "2026-10-23T08:07:01.240468+00:00"
+          }
+        ],
+        "observed_queries": [
+          "\"1104.3856\" \"q-log\" proof beta",
+          "\"2505.02767\" \"correction\"",
+          "\"499140\" \"conjecture\"",
+          "\"Apéry polynomials\" \"q-log-convex\" proof",
+          "\"Apéry\" \"zeta(2)\" \"polynomials\" \"log-convex\"",
+          "\"Conjecture 4.7\" \"log\" \"2026\"",
+          "\"Linear transformations preserving the strong q-log-convexity of polynomials\" Zhu Sun",
+          "\"On the polynomials\" \"Sun\" \"counterexample\"",
+          "\"Qiping Zhou\" \"499140\"",
+          "\"Qiping Zhou\" \"binomial\" \"conjecture\"",
+          "\"Sun\" \"beta polynomials\" log convex proof 2026",
+          "\"Sun\" \"beta 多项式\" \"对数凸\"",
+          "\"Sun\" \"beta\" \"log-convexity\" certificate",
+          "\"Sun\" \"beta\" \"q-log-convex\" proof",
+          "\"Sun\" \"q-log-convexity\" correction",
+          "\"Sun\" \"q-logconvex\" beta solution",
+          "\"The q-Log-convexity of the Narayana Polynomials of Type B\" arxiv",
+          "\"beta\" \"q-log-convexity\" \"proof\" -site:researchgate.net -site:scribd.com",
+          "\"beta\" \"q-log-convexity\" Sun 2026 proof",
+          "\"beta_n\" \"q-log-convexity\"",
+          "\"beta_n(q)\" \"log\" convex",
+          "\"binom{n+k}{k}\" \"q-log-convex\"",
+          "\"binom{n}{k}^{2}\" \"binom{n+k}{k}\" \"log\" \"convex\"",
+          "\"q-log-convex\" \"479301\" counterexample",
+          "\"q-log-convex\" \"binomial\" \"n+k\" \"2026\"",
+          "\"q-log-convexity\" \"Sun\" \"2026\" \"beta\"",
+          "\"q-log-convexity\" \"Sun\" \"beta\" 2026 proof conjecture",
+          "\"q-log-convexity\" \"Sun\" \"beta\" solution 2025 2026 -site:scribd.com",
+          "\"q-log-convexity\" \"beta\" \"counterexample\"",
+          "\"β_n\" \"Sun\" convex"
+        ],
+        "limitations": [
+          "检索截至2026-10-23，以公开网络索引、arXiv、期刊/作者公开稿为主，主要英文并含中文查询；不穷尽全部数据库或语言。",
+          "直接称精确beta猜想开放的最新已核对文字日期是2026-02-10；后续下载时间不更新该状态。未索引或未公开解答仍可能存在。",
+          "对列出结果核对了定义、量词和可见参数特例，不宣称排除全体文献中的非显然推论。LLM检索不能认证全球首次性。",
+          "本独立会话的源码语义比较及本地计算不是外部专家对自然语言/形式化对应或原创性的认证。"
+        ],
+        "obstacles": [],
+        "unresolved_obstacle_ids": [],
+        "comparisons": [],
+        "obstacle_changes": []
+      },
+      "proof_coverage": {
+        "policy_version": null,
+        "assessed_at": null,
+        "proof_complete": false,
+        "statement_aligned": false,
+        "total_steps": 0,
+        "essential_steps": 0,
+        "supported_steps": [],
+        "unresolved_steps": [],
+        "reasons": [],
+        "formal_alignment_certified": false
+      },
+      "validation_notes": [],
+      "reported_verdict": "NO_ISSUES_FOUND",
+      "reported_novelty": "UNKNOWN",
+      "formal_receipt": {
+        "status": "KERNEL_REPLAYED",
+        "checked_at": "2026-10-23T07:46:45.969433+00:00",
+        "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+        "problem_sha256": "50b6ca7a1c36b480c5c7b20b8b07d789a08b70d6b29b119b1c25bdbc2bde01b6",
+        "request": {
+          "files": [
+            "workspace/proof/SunBeta.lean"
+          ],
+          "declarations": [
+            "SunBeta.beta_coeffwise_logconvex"
+          ],
+          "module_root": "proof"
+        },
+        "sources": [
+          {
+            "path": "workspace/proof/SunBeta.lean",
+            "module": "SunBeta",
+            "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3"
+          }
+        ],
+        "steps": [
+          {
+            "status": "OK",
+            "returncode": 0,
+            "elapsed_seconds": 534.384,
+            "log": "compile-0.log",
+            "log_sha256": "09500412efbf1f696c383ed7db4d7f782966d7d0fb7333f00f95a1d1997a37fd",
+            "argv": [
+              "/lean/bin/lean",
+              "-j",
+              "1",
+              "-s",
+              "65536",
+              "-M",
+              "16384",
+              "-o",
+              "/out/SunBeta.olean",
+              "SunBeta.lean"
+            ]
+          },
+          {
+            "status": "OK",
+            "returncode": 0,
+            "elapsed_seconds": 100.352,
+            "log": "replay-0.log",
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "argv": [
+              "/lean/bin/leanchecker",
+              "SunBeta"
+            ]
+          },
+          {
+            "status": "OK",
+            "returncode": 0,
+            "elapsed_seconds": 41.802,
+            "log": "inspect.log",
+            "log_sha256": "7531bec008d433d5f83a49b83da364f3f4a75d1334765238fa66420aee47988f",
+            "argv": [
+              "/lean/bin/lean",
+              "-j",
+              "1",
+              "-s",
+              "65536",
+              "-M",
+              "16384",
+              "--run",
+              "MathLotteryInspector.lean",
+              "SunBeta",
+              "--",
+              "SunBeta.beta_coeffwise_logconvex"
+            ]
+          }
+        ],
+        "declarations": [
+          {
+            "axioms": [
+              "propext",
+              "Classical.choice",
+              "Quot.sound"
+            ],
+            "module": "SunBeta",
+            "name": "SunBeta.beta_coeffwise_logconvex",
+            "type": "forall (n : Nat), (LE.le.{0} Nat instLENat (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)) n) -> (forall (d : Nat), LE.le.{0} Int Int.instLEInt (OfNat.ofNat.{0} Int 0 (instOfNat 0)) (DFunLike.coe.{1, 1, 1} (Finsupp.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) Nat (fun (x._@.Mathlib.Basic.FunLike.Basic.2582841819._hygCtx._hyg.11 : Nat) => Int) (Finsupp.instFunLike.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) (Polynomial.coeff.{0} Int Int.instSemiring (HSub.hSub.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHSub.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instSub.{0} Int Int.instRing)) (HMul.hMul.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHMul.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instMul.{0} Int Int.instSemiring)) (SunBeta.beta (HSub.hSub.{0, 0, 0} Nat Nat Nat (instHSub.{0} Nat instSubNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)))) (SunBeta.beta (HAdd.hAdd.{0, 0, 0} Nat Nat Nat (instHAdd.{0} Nat instAddNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1))))) (HPow.hPow.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (Polynomial.{0} Int Int.instSemiring) (instHPow.{0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (NPow.toPow.{0} (Polynomial.{0} Int Int.instSemiring) (Monoid.toNPow.{0} (Polynomial.{0} Int Int.instSemiring) (Semiring.toMonoid.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.semiring.{0} Int Int.instSemiring))))) (SunBeta.beta n) (OfNat.ofNat.{0} Nat 2 (instOfNatNat 2))))) d))"
+          }
+        ],
+        "statement_alignment": "NOT_CERTIFIED",
+        "limits": {
+          "seconds": 1800.0,
+          "memory_mb": 16384,
+          "address_space_mb": 24576,
+          "thread_stack_kb": 65536,
+          "max_object_mb": 1024,
+          "max_total_object_mb": 1536,
+          "threads": 1,
+          "memory_scope": "Lean internal threshold plus per-process RLIMIT_AS; not measured RSS or host-wide RAM"
+        },
+        "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. No independent kernel implementation or natural-language equivalence check.",
+        "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+        "inspector_sha256": "7023e0c16c5f00e794ebb007856ecc8bbe1c49befd70239a15059f098ef6d2b9",
+        "objects": [
+          {
+            "path": "SunBeta.olean",
+            "size": 570766176,
+            "sha256": "024eabc725c7170867cf17e7f652a17144fa0fdd5b60a7e44b209a9a5cde37ff"
+          }
+        ],
+        "artifact": "verification/formal/42f471b6b8f76c0b78c3f1414a7e39c02a3375dcc3718892aa820903d4199f4a/receipt.json"
+      }
+    }
+  ]
+}

@@ -1,0 +1,537 @@
+{
+  "candidate_id": "candidate-record-002",
+  "candidate_sha256": "693a09a4ede1e970f3060e6491480231492b2b0e62ea7e8d8d3a49e3341c88be",
+  "claim": "令 F_n(q)=sum_{k=0}^n binom(n,k)^3 q^k。对所有整数 n>=9、d>=0，有 [q^d](F_{n-1}(q)F_{n+1}(q)-F_n(q)^2)>=0；更强地，当 1<=d<=2n-1 时该系数严格为正，在 d=0、d=2n 或 d>2n 时为零。因此原题从 F_8 开始的尾序列逐系数 q-log-convex。",
+  "assumptions": [
+    "n、d 为整数，n>=9、d>=0；q 为形式变量。",
+    "F_n(q)=sum_{k=0}^n binom(n,k)^3 q^k；二项式系数越界取零。",
+    "没有附加猜想、渐近假设或依赖有限 n 实验外推的条件。"
+  ],
+  "scope": "COMPLETE",
+  "level": "SELF_CHECKED",
+  "remaining_obligations": [],
+  "reviews": [
+    {
+      "verdict": "NO_ISSUES_FOUND",
+      "truth_assessment": "独立数学检查支持候选的完整全称结论及内部严格正性：对每个整数n≥9，1≤d≤2n-1时c_{n,d}>0，d=0、2n或d>2n时为0。这个判断依据完整代数证书和有限和推导，而非有限n的测试。未发现反例或阻塞性的未证义务。",
+      "proof_assessment": "所提交文字证明是自包含的完整代数证明。已独立推导换下标消去、卷积归一化、正性与范围衔接，并直接从提交正文提取四张大次数表和十五张低次数表，以两种精确多项式实现核对全部恒等式；没有读取求解历史，也没有依赖候选自报的检查程序。全部数学关键步骤通过，奇数d的半整数参数和d=n的边界均包含。所附Lean仅定义猜想和做有限求值；本地重编译因缺Mathlib失败，故没有形式证明或编译成功回执。NO_ISSUES_FOUND仅代表此次LLM审查，不能代替外部专家或内核验证。",
+      "issues": [],
+      "evidence": [
+        "formal-probes/review.md",
+        "formal-probes/check_algebra.py",
+        "formal-probes/algebra_results.json",
+        "formal-probes/test_connections.py",
+        "formal-probes/pytest.log",
+        "formal-probes/ruff.log",
+        "formal-probes/source_downloads.json",
+        "formal-probes/search_queries.json",
+        "formal-probes/lean_compile.log"
+      ],
+      "novelty": "UNKNOWN",
+      "novelty_notes": "原非负性主命题已由Sun在2024年公开提出，并在2026-02-10的论文v4中明确列为猜想；这些出处不构成已知证明。此次20项实际检索及原始文献比较未发现覆盖该完整立方尾序列结论的已证定理。最接近的平方Narayana、加权超几何多项式、q=1数值Franel以及rising-binomial反例均不等价。候选还加强了内部严格正性，因此暂评POTENTIALLY_NEW，但检索未命中不能证明全球首创。所有具体引用来源均已取得，没有未解决的特定文献比较；一般检索局限另列。",
+      "novelty_references": [],
+      "original_problem_coverage": "FULL",
+      "coverage_explanation": "原题精确要求F_n(q)=Σ C(n,k)^3q^k的尾序列n≥8为q-log-convex，等价于中心n≥9、每个整数d≥0的c_{n,d}≥0。候选使用完全相同的对象和量词，并证明更强的内部严格正性及全部零系数位置。独立审查确认回文约化后的1≤d≤n被d≤15和d≥16两段完全覆盖；不存在仅处理固定d、有限n或q=1的范围缩减。",
+      "remaining_obligations": [],
+      "checks": [
+        {
+          "id": "",
+          "claim": "原题尾序列从 F_8 开始，要求且仅要求中心 n≥9；候选使用相同形式多项式并覆盖这些量词。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "令 P_j=F_{j+8}。q-log-convex 的定义要求 j≥1 的 P_{j-1}P_{j+1}-P_j² 逐系数非负，正好对应 n=j+8≥9。候选仍使用 F_n(q)=Σ_{k=0}^n C(n,k)^3q^k、形式变量 q 和所有整数 d≥0；严格正性的附加结论加强原题而不缩小其域。",
+          "evidence": [
+            "https://arxiv.org/html/2505.02767v4#S1.Thmconjecture1",
+            "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk#comment1247286_479301",
+            "formal-probes/review.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "越界二项式系数取零时，原差多项式的系数等于正文使用的有限卷积。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "多项式乘法直接给出 c_{n,d}=Σ_{k=0}^d(C(n-1,k)^3 C(n+1,d-k)^3-C(n,k)^3 C(n,d-k)^3)。各 n≥9 保证 n-1≥0；越界项为零，故该式对 d≥0 包含所有端点。后续推导只在 1≤d≤n 使用权重比值，不对零二项式系数作非法除法。",
+          "evidence": [
+            "formal-probes/review.md",
+            "formal-probes/check_algebra.py"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "回文约化、两个零端点及支撑外零系数均正确。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "C(j,k)=C(j,j-k) 给出 q^jF_j(q^{-1})=F_j(q)。两乘积关于长度 2n 回文，所以 c_{n,d}=c_{n,2n-d}。d=0 和 d=2n 时两项均为1，相减为0；d>2n 因两乘积的次数上界为2n而为0。内部次数映射为 min(d,2n-d)∈[1,n]。这里长度2n不声称差多项式有非零的最高2n次项。",
+          "evidence": [
+            "formal-probes/review.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "大次数域 n≥d≥16 中的全部参数限制、权重正性及半整数情形成立。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "N=n+1≥d+1，h=d/2≥8，z=N-d≥1，m=h+z=N-h>0，故 H=h-8≥0、Z=z-1≥0。所有0≤k≤d都满足0≤k,d-k≤N，因而 W_k=C(N,k)^3C(N,d-k)^3>0。奇数d仅使h和x_k成为半整数，多项式恒等式及偶次幂正性仍适用；d=n时z=1允许Z=0。",
+          "evidence": [
+            "formal-probes/review.md",
+            "formal-probes/test_connections.py"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "有限和消去式 (1) 没有遗漏边界项，也不使用待证不等式。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "A(x_k)=(N-k)^3(d-k)^3，B(x_k)=(N-d+k)^3k^3。相邻项比值给出W_kA(x_k)=W_{k+1}B(x_{k+1})，0≤k<d。又A(x_d)=B(x_0)=0、2x_{k+1}-1=2x_k+1。因此对r=1,3分别把ΣW_kB(x_k)(2x_k-1)^r换下标为k=1..d，恰与Σ_{k=0}^{d-1}W_kA(x_k)(2x_k+1)^r相消。此式完全来自二项式关系，无循环论证。",
+          "evidence": [
+            "formal-probes/review.md",
+            "formal-probes/test_connections.py",
+            "formal-probes/pytest.log"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "式 (2) 的 P(x)、对称平均及分母 2n³N⁶ 正确。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "C(N-2,k)^3 C(N,d-k)^3=W_k(m-x_k)^3(m-x_k-1)^3/(N³n³)，C(N-1,k)^3 C(N-1,d-k)^3=W_k(m²-x_k²)^3/N⁶。由于W_{d-k}=W_k、x_{d-k}=-x_k，对第一项平均即可得到 c=ΣW_kP(x_k)/(2n³N⁶)。n=d,k=d 时 m-x_k-1=0，准确处理C(n-1,d)=0。所有用于除法的N,n均严格正。",
+          "evidence": [
+            "formal-probes/review.md",
+            "formal-probes/test_connections.py",
+            "formal-probes/pytest.log"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "附录 A 的完整四张系数表确实满足多项式恒等式 (4)。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "直接从提交正文解析四张表，用独立编写的标准库稀疏有理多项式运算和SymPy 1.14.0的ZZ[H,Z,x]展开，分别计算4h²UP+4ℓUS0-NV(S1-S0)-24N(hm³Cx²+Dx⁶+(2N-1)Vx⁸)。所有系数均为零；约简后原左右两侧各有210个非零单项式。另用T=hm,N=h+m展开A=(T+x²-Nx)³及B=(T+x²+Nx)³：若t2=[x⁴](S1-S0)，则U=-t2/8=N³+3(2N-3)T²-3N(3N-2)T，且h²[x⁴]P+ℓ[x⁴]S0=-2NV；x²,x⁶的两条剩余恒等式也独立展开验证。常数项自动抵消，x⁸项自动吻合，奇次项为零。完整系数推导保存在review.md。这是对整个多项式的系数比较，不是对有限参数点的测试。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json",
+            "formal-probes/algebra_check.log",
+            "formal-probes/test_connections.py",
+            "formal-probes/review.md"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "由式 (1)、(2)、(4) 得到式 (5)，并对所有 n≥d≥16 严格为正。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "加权求和后4h²UΣWP=24NΣW(hm³Cx²+Dx⁶+(2N-1)Vx⁸)，再除以2n³N⁶得到前因子3/(n³N⁵h²U)。附录A每个列出整数均严格正且各常数项严格正，所以H,Z≥0时U,V,C,D>0。其余标量h,m,N,n,2N-1均正。k=0时x_0=-h≠0、W_0=C(N,d)³>0，给出 c_{n,d}≥3 C(N,d)³ h m³ C/(n³N⁵U)>0。偶数d的中心x=0不影响该严格下界。",
+          "evidence": [
+            "formal-probes/review.md",
+            "formal-probes/algebra_results.json",
+            "formal-probes/test_connections.py"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "附录 B 的十五个式 (6) 均是无界 n 的精确多项式恒等式。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "对每个d=1..15，从C(t,k)=(t)下阶乘_k/k!及d!/(k!(d-k)!)=C(d,k)重新形成式(7)，与(d!)³a_dB_d(s_d+y)R_d(y)比较。标准库有理多项式运算及SymPy QQ[y]分别得到全部十五个零剩余；左侧次数为3d-2，即1,4,...,43。表中s_d=max(9,d)、a_d及每个R_d系数均逐项纳入计算。由于比较的是y的全部系数，它对所有y恒成立，绝非检查有限n后外推。",
+          "evidence": [
+            "formal-probes/check_algebra.py",
+            "formal-probes/algebra_results.json",
+            "formal-probes/algebra_check.log"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "式 (6) 在全部 1≤d≤15、n≥max(9,d) 上严格为正。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "y=n-s_d≥0。每个a_d是正有理数，R_d的所有列出系数及常数项都严格正，所以R_d(y)>0。奇数d=2r+1时B_d=nΠ_{j=1}^r(n-j)³，各因子正；偶数d=2r时B_d=n(n-r)Π_{j=1}^{r-1}(n-j)³，各因子仍正，因为n≥d。d=1时r=0，空积为1、B_1=n，得到c_{n,1}=6n>0。",
+          "evidence": [
+            "formal-probes/review.md",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "两段证明、回文约化及零端点共同覆盖候选的所有 n,d，且不依赖额外假设。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "对固定n≥9和任意内部d∈[1,2n-1]，令e=min(d,2n-d)。e∈[1,n]。若e≤15则n≥max(9,e)，由低次数证书得到c_{n,e}>0；若e≥16则n≥e≥16，由大次数证书得到c_{n,e}>0。回文性给出c_{n,d}>0。其余d由零端点和次数上界处理。证明依赖的只有二项式定义、有限和换下标、精确多项式等式和实数正性；没有未经证明的外部定理或猜想，也没有从q=1推广到形式系数。",
+          "evidence": [
+            "formal-probes/review.md",
+            "formal-probes/algebra_results.json"
+          ],
+          "blocking": true,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "阈值说明 c_{n,2}=3n(n-1)(n²-9n+6)/4 及 c_{8,2}=-84、c_{9,2}=324 正确。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "直接计算d=2卷积为C(n-1,2)³+C(n+1,2)³+(n-1)³(n+1)³-2C(n,2)³-n⁶，代入C(t,2)=t(t-1)/2即化简为所给公式。n=8、9分别得-84、324，故从F_7开始的更长尾序列失败，与从F_8开始的原题一致。这不代替其他次数的证明。",
+          "evidence": [
+            "formal-probes/test_connections.py",
+            "formal-probes/pytest.log"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "辅助整数卷积实验与完整结论一致。",
+          "method": "FINITE_TEST",
+          "result": "SUPPORTED",
+          "reasoning": "独立精确整数卷积检验n=9..100的全部d=0..2n，共10120个支撑内系数，并另验每个n的d=2n+1。全部内部系数严格正、两端及支撑外为零且满足回文性。另以五组包含d=n、奇数d的参数核对相邻项关系、式(1)、式(2)与式(5)归一化。实验仅用于检测实现或转录错误；一般定理依据前述恒等式和推导。",
+          "evidence": [
+            "formal-probes/algebra_results.json",
+            "formal-probes/test_connections.py",
+            "formal-probes/pytest.log"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "所附 Lean 文件的证据范围是命题定义与有限求值，不是本候选的形式证明。",
+          "method": "DERIVATION",
+          "result": "SUPPORTED",
+          "reasoning": "逐行检查所附不可变文件并核对SHA-256为8a00d28b653669be3158f996cbd0164614491887a7a101851af0a67b21f10a4a。FindProbes.FranelConjecture定义为CoeffwiseLogConvexFrom franel 8，条件为8<n；没有任何证明该Prop的theorem。deltaCoeff只是可执行有限和，没有与Polynomial.coeff的等价定理。候选没有声称附有全定理Lean证明，本审查也不将该定义提交为已证定理。",
+          "evidence": [
+            "submitted-evidence/manifest.json",
+            "submitted-evidence/discovery-context/workspace/research/StatementProbes.lean",
+            "formal-probes/review.md"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "本地重新编译所附 Lean 源码。",
+          "method": "FORMAL",
+          "result": "UNRESOLVED",
+          "reasoning": "实际使用Lean 4.35.0尝试编译所附原始字节，报unknown module prefix 'Mathlib'，本地模块搜索路径缺依赖。因此不能声称重新编译成功，也没有形式检查回执。源码本来就没有待审定理的证明，故不请求把其Prop定义当作theorem检查；这个非必需形式化步骤的限制不改变自包含文字证明的上述检查。",
+          "evidence": [
+            "formal-probes/lean_compile.log"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        },
+        {
+          "id": "",
+          "claim": "已核对的最接近既有结果不构成本候选的已知证明；公开反例也不反驳它。",
+          "method": "REFERENCE",
+          "result": "SUPPORTED",
+          "reasoning": "Sun 2024评论和2026 Conjecture1.1(i)是相同非负性主命题的猜想出处，不能归类为已证PRIOR_RESULT。Chen等的Theorem1.1处理C(n,k)²权重；其关于幂≥3整个序列失败的说明允许尾序列最终成立，例如c_{2,2}=-12在本题域外。Zhu–Sun Corollary2.9处理C(n,k)²C(2k,k)权重，P_2=1+8q+6q²不同于F_2=1+8q+q²，保持性条件的固定输入权重不能任意依赖行号n。Došlić Corollary3处理F_n(1)的数值log-balancedness，未证明逐系数结论。Zhou的反例处理C(n+k,k)^5及n=7，其-499140已独立重算。以上均为DIFFERENT，不能标为候选已经被覆盖的SPECIAL_CASE。",
+          "evidence": [
+            "https://arxiv.org/html/2505.02767v4",
+            "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+            "https://emis.de/ft/31765",
+            "https://arxiv.org/html/math/0603403v1",
+            "formal-probes/source_downloads.json",
+            "formal-probes/test_connections.py",
+            "formal-probes/review.md"
+          ],
+          "blocking": false,
+          "formal_declarations": []
+        }
+      ],
+      "proof_steps": [],
+      "statement_alignment": [],
+      "citations": [
+        {
+          "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+          "role": "ORIGINAL_STATEMENT",
+          "locator": "Zhi-Wei Sun，comment-1247286，2024-09-21 06:18:37 UTC；在题目定义之后",
+          "excerpt": "I also conjecture that the polynomial sequence $(f_n(q))_{n\\ge8}$ is $q$-log-convex.",
+          "explanation": "该评论先定义f_n(q)=Σ C(n,k)^3q^k，再明确提出从n=8开始的尾序列猜想。候选的非负性主命题与该猜想等价，但完整候选另外要求所有内部系数严格为正，故对完整候选记DIFFERENT（加强），而原问题覆盖仍为FULL。这是猜想出处，不是既有证明。此次独立浏览和公开HTML下载均取得完整评论及时间。",
+          "source_date": "2024-09-21",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "ORIGINAL_STATEMENT",
+          "locator": "§1，Conjecture 1.1(i) 第一分句，HTML #S1.Thmconjecture1；仅取Franel部分",
+          "excerpt": "(\\sum_{k=0}^{n}\\binom{n}{k}^{3}q^{k})_{n\\geq 8}\nis\nq\nq\n-log-convex.",
+          "explanation": "逐字复制所取得原始HTML的文本层片段；重复q来自MathML及TeX注释的并列文本。这是与2024年原评论相同的非负性尾序列猜想，按前段定义中心为n≥9。完整候选还给出严格正性，所以相对于完整候选记DIFFERENT（非负性部分等价）。同条第二句的rising-binomial多项式不是本题。",
+          "source_date": "2026-02-10",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "EXPLICIT_OPEN",
+          "locator": "§1，#S1.p6，紧邻Conjecture 1.1之前的引导句及随后的猜想标题",
+          "excerpt": "Based on our computation, we formulate the following conjecture.",
+          "explanation": "原作者在2026-02-10的v4将本题明确作为Conjecture1.1(i)提出，而非定理。没有把前一段仅指beta序列的remains open移用于Franel。此为该版本的猜想状态证据；不据此自动断言截至本次审查仍无人证明。候选含比原猜想更强的内部严格正性。",
+          "source_date": "2026-02-10",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+          "role": "PRIOR_RESULT",
+          "locator": "作者稿第1页式(1.1)定义W_n；第3页Theorem1.1",
+          "excerpt": "Theorem 1.1 The polynomials Wn(q) form a q-log-convex sequence.",
+          "explanation": "W_n(q)=Σ C(n,k)^2q^k，定理证明完整n≥0平方权重序列的q-log-convexity。候选是立方权重且只要求从n=8起的尾序列，并加强为内部严格正性。不能把平方权重定理当作立方权重的特例或等价表述。出版年份2010由Sun论文的参考文献及正文一致确认。",
+          "source_date": "2010",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+          "role": "PRIOR_RESULT",
+          "locator": "作者稿第3页，Theorem1.1后紧接的完整幂次序列说明",
+          "excerpt": "are not q-log-convex for m ≥ 3.",
+          "explanation": "完整说明的对象为Σ C(n,k)^m q^k、n≥0。它只否定整个序列，对从F_8开始的尾序列没有否定力；例如立方情形在中心n=2的q²系数为-12，已经足以否定完整序列，但不满足候选n≥9的假设。",
+          "source_date": "2010",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://emis.de/ft/31765",
+          "role": "PRIOR_RESULT",
+          "locator": "第9页（PDF页索引8），Corollary2.9及其前面的P_n定义",
+          "excerpt": "Corollary 2.9. The hypergeometric polynomials Pn(q) form a strongly q-log-convex se-\nquence.",
+          "explanation": "逐字保留PDF文本断行。该定理处理P_n(q)=Σ C(n,k)^2 C(2k,k)q^k、n≥0，结论是强q-log-convexity。候选的C(n,k)^3不同，例如P_2=1+8q+6q²而F_2=1+8q+q²。其保持性定理的固定输入权重不能随n变化为C(n,k)，故没有得到候选被该定理涵盖的SPECIAL_CASE关系。",
+          "source_date": "2015-08-28",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://arxiv.org/html/math/0603403v1",
+          "role": "PRIOR_RESULT",
+          "locator": "§4 Examples，Corollary3；同节前一显示式定义F_n^(r)；§2定义log-balanced",
+          "excerpt": "The sequences of Franel numbers of order\n3\n3\nand\n4\n4\nare\nlog-balanced.",
+          "explanation": "Corollary3证明r=3,4的数值序列F_n^(r)=Σ C(n,k)^r为log-balanced，因而r=3时得到F_n(1)的数值对数凸性。它不控制任意形式次数d的系数，也不产生候选的严格逐系数结论，故DIFFERENT而非候选已被覆盖的SPECIAL_CASE。source_date采用arXiv公开提交记录2006-03-16；论文的期刊记录为2005，页面自动生成的日期不用于判断优先权。采用原始HTML避免PDF对log-balanced的断词损失。 摘录保留原始HTML文本层中MathML与注释产生的重复数字3、4，没有把公式或措辞自行改写为引文。",
+          "source_date": "2006-03-16",
+          "relation": "DIFFERENT"
+        },
+        {
+          "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+          "role": "SOLUTION",
+          "locator": "Qiping Zhou，answer-513542，2026-07-24 06:10:26 UTC；其S_n^(m)定义及q²反例",
+          "excerpt": "The conjecture is false.",
+          "explanation": "这里被反驳的是R_n^(m)(q)=Σ C(n+k,k)^m q^k在所有m≥2上的猜想，不是Franel立方尾序列。回答取m=5、中心n=7。独立重算28^5+9^5·7^5+45^5-2·36^5-8^10=-499140，与原文一致。权重及适用范围均与候选不同；不能将其标为本候选的解决或反例。此次已取得完整原网页，不依赖先前不可取得的API回执。",
+          "source_date": "2026-07-24",
+          "relation": "DIFFERENT"
+        }
+      ],
+      "literature_search": {
+        "queries": [
+          "\"Franel\" \"q-log-convex\" proof",
+          "\"2505.02767\" \"conjecture\" proof",
+          "\"Franel\" \"q-log-convex\" -site:emergentmind.com -site:mathdb.com -site:alphaxiv.org",
+          "\"Franel\" \"log-convexity\" \"polynomials\" proof",
+          "\"binomial\" \"q-log-convex\" \"8\" Sun",
+          "\"Franel\" \"tail\" \"log-convex\"",
+          "\"Franel\" \"q-log-convexity\" \"2026\"",
+          "\"Sun\" \"Conjecture 1.1\" \"log-convexity\" proof -site:emergentmind.com -site:mathdb.com",
+          "\"Franel polynomials\" \"log-convex\" \"proof\" -site:emergentmind.com -site:mathdb.com",
+          "\"cubic Franel\" \"convex\"",
+          "\"Franel\" \"q-log\" \"2025\" \"2026\"",
+          "\"2505.02767\" proof Franel",
+          "\"Log-balanced combinatorial sequences\" \"arxiv\"",
+          "\"Franel\" \"coefficientwise\" \"convex\"",
+          "\"Franel\" \"逐系数\" \"对数凸\"",
+          "\"Franel polynomials\" \"Sun\" conjecture proof",
+          "\"Franel\" \"q-log-convexity\" proof counterexample",
+          "\"binomial cubes\" \"log-convexity\"",
+          "\"q-log-convexity\" \"Franel\" \"tail sequence\"",
+          "\"q-log-convex\" \"binomial coefficients\" \"third\""
+        ],
+        "conclusion": "独立检索和取得的原始资料包括Sun的2024年MathOverflow评论、2026年arXiv v4全文及版本日期、Chen–Tang–Wang–Yang平方Narayana定理、Zhu–Sun强q-log-convexity保持性及Corollary2.9、Došlić的数值Franel结果，以及Zhou的rising-binomial反例。候选非负性部分与公开猜想相同，严格正性为加强；已比较的先前证明均不覆盖该完整候选。未检索到该精确尾序列的既有证明，故只能称可能新颖。题目资料中此前的MathOverflow获取障碍此次已通过独立原网页浏览和公开下载解决，无需沿用旧API阻塞说明。",
+        "unresolved": [],
+        "limitations": [
+          "20个实际查询主要覆盖英文网页索引、少量中文关键词、arXiv、原作者公开问题页及所列论文；未穷尽所有语言、数据库、引用网络或未索引成果。",
+          "明确将Franel尾序列列为猜想的最新所读原作者论文版本为2026-02-10；没有取得更晚的专门开放状态重申，不能自动把该历史状态更新为当前全球状态。",
+          "POTENTIALLY_NEW不是首证或优先权认证。没有检索命中不证明新颖性；未知等价表述、未公开成果或未索引证明仍可能存在。",
+          "此次审查没有外部专家评价，也没有一般定理的Lean证明。附带源码的本地编译依赖缺失属于形式化工具限制，已单列非阻塞FORMAL检查，未伪装成文献结论或形式回执。"
+        ],
+        "obstacles": [],
+        "comparisons": []
+      },
+      "formal_check": null,
+      "evidence_assessment": {
+        "policy_version": "evidence-v2",
+        "assessed_at": "2026-10-23T15:02:00.202869+00:00",
+        "supported": false,
+        "reasons": [
+          "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk: Unable to verify robots policy for https://mathoverflow.net",
+          "https://emis.de/ft/31765: Unable to verify robots policy for https://emis.de",
+          "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk: Unable to verify robots policy for https://mathoverflow.net"
+        ],
+        "checked_citations": [
+          {
+            "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "role": "ORIGINAL_STATEMENT",
+            "relation": "DIFFERENT",
+            "resolved_url": null,
+            "locator": "Zhi-Wei Sun，comment-1247286，2024-09-21 06:18:37 UTC；在题目定义之后",
+            "source_date": "2024-09-21",
+            "verified_excerpt": false,
+            "reason": "Unable to verify robots policy for https://mathoverflow.net",
+            "artifact": null,
+            "sha256": null,
+            "retrieved_at": null
+          },
+          {
+            "url": "https://arxiv.org/html/2505.02767v4",
+            "role": "ORIGINAL_STATEMENT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2505.02767v4",
+            "locator": "§1，Conjecture 1.1(i) 第一分句，HTML #S1.Thmconjecture1；仅取Franel部分",
+            "source_date": "2026-02-10",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+            "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+            "retrieved_at": "2026-10-23T15:01:50.088875+00:00"
+          },
+          {
+            "url": "https://arxiv.org/html/2505.02767v4",
+            "role": "EXPLICIT_OPEN",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/2505.02767v4",
+            "locator": "§1，#S1.p6，紧邻Conjecture 1.1之前的引导句及随后的猜想标题",
+            "source_date": "2026-02-10",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+            "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+            "retrieved_at": "2026-10-23T15:01:50.088875+00:00"
+          },
+          {
+            "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+            "locator": "作者稿第1页式(1.1)定义W_n；第3页Theorem1.1",
+            "source_date": "2010",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7.pdf",
+            "sha256": "391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7",
+            "retrieved_at": "2026-10-23T15:01:54.540527+00:00"
+          },
+          {
+            "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+            "locator": "作者稿第3页，Theorem1.1后紧接的完整幂次序列说明",
+            "source_date": "2010",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7.pdf",
+            "sha256": "391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7",
+            "retrieved_at": "2026-10-23T15:01:54.540527+00:00"
+          },
+          {
+            "url": "https://emis.de/ft/31765",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": null,
+            "locator": "第9页（PDF页索引8），Corollary2.9及其前面的P_n定义",
+            "source_date": "2015-08-28",
+            "verified_excerpt": false,
+            "reason": "Unable to verify robots policy for https://emis.de",
+            "artifact": null,
+            "sha256": null,
+            "retrieved_at": null
+          },
+          {
+            "url": "https://arxiv.org/html/math/0603403v1",
+            "role": "PRIOR_RESULT",
+            "relation": "DIFFERENT",
+            "resolved_url": "https://arxiv.org/html/math/0603403v1",
+            "locator": "§4 Examples，Corollary3；同节前一显示式定义F_n^(r)；§2定义log-balanced",
+            "source_date": "2006-03-16",
+            "verified_excerpt": true,
+            "reason": "",
+            "artifact": "literature/snapshots/fb44ccac54da544928f4dba84a4579dfa804289e9592744908be74efa131b674.txt",
+            "sha256": "fb44ccac54da544928f4dba84a4579dfa804289e9592744908be74efa131b674",
+            "retrieved_at": "2026-10-23T15:02:00.198603+00:00"
+          },
+          {
+            "url": "https://mathoverflow.net/questions/479301/on-the-polynomials-sum-k-0n-binomnkkm-qk",
+            "role": "SOLUTION",
+            "relation": "DIFFERENT",
+            "resolved_url": null,
+            "locator": "Qiping Zhou，answer-513542，2026-07-24 06:10:26 UTC；其S_n^(m)定义及q²反例",
+            "source_date": "2026-07-24",
+            "verified_excerpt": false,
+            "reason": "Unable to verify robots policy for https://mathoverflow.net",
+            "artifact": null,
+            "sha256": null,
+            "retrieved_at": null
+          }
+        ],
+        "observed_queries": [
+          "\"2505.02767\" \"conjecture\" proof",
+          "\"2505.02767\" proof Franel",
+          "\"Franel polynomials\" \"Sun\" conjecture proof",
+          "\"Franel polynomials\" \"log-convex\" \"proof\" -site:emergentmind.com -site:mathdb.com",
+          "\"Franel\" \"coefficientwise\" \"convex\"",
+          "\"Franel\" \"log-convexity\" \"polynomials\" proof",
+          "\"Franel\" \"q-log\" \"2025\" \"2026\"",
+          "\"Franel\" \"q-log-convex\" -site:emergentmind.com -site:mathdb.com -site:alphaxiv.org",
+          "\"Franel\" \"q-log-convex\" proof",
+          "\"Franel\" \"q-log-convexity\" \"2026\"",
+          "\"Franel\" \"q-log-convexity\" proof counterexample",
+          "\"Franel\" \"tail\" \"log-convex\"",
+          "\"Franel\" \"逐系数\" \"对数凸\"",
+          "\"Log-balanced combinatorial sequences\" \"arxiv\"",
+          "\"Sun\" \"Conjecture 1.1\" \"log-convexity\" proof -site:emergentmind.com -site:mathdb.com",
+          "\"binomial cubes\" \"log-convexity\"",
+          "\"binomial\" \"q-log-convex\" \"8\" Sun",
+          "\"cubic Franel\" \"convex\"",
+          "\"q-log-convex\" \"binomial coefficients\" \"third\"",
+          "\"q-log-convexity\" \"Franel\" \"tail sequence\""
+        ],
+        "limitations": [
+          "20个实际查询主要覆盖英文网页索引、少量中文关键词、arXiv、原作者公开问题页及所列论文；未穷尽所有语言、数据库、引用网络或未索引成果。",
+          "明确将Franel尾序列列为猜想的最新所读原作者论文版本为2026-02-10；没有取得更晚的专门开放状态重申，不能自动把该历史状态更新为当前全球状态。",
+          "POTENTIALLY_NEW不是首证或优先权认证。没有检索命中不证明新颖性；未知等价表述、未公开成果或未索引证明仍可能存在。",
+          "此次审查没有外部专家评价，也没有一般定理的Lean证明。附带源码的本地编译依赖缺失属于形式化工具限制，已单列非阻塞FORMAL检查，未伪装成文献结论或形式回执。"
+        ],
+        "obstacles": [],
+        "unresolved_obstacle_ids": [],
+        "comparisons": [],
+        "obstacle_changes": []
+      },
+      "proof_coverage": {
+        "policy_version": null,
+        "assessed_at": null,
+        "proof_complete": false,
+        "statement_aligned": false,
+        "total_steps": 0,
+        "essential_steps": 0,
+        "supported_steps": [],
+        "unresolved_steps": [],
+        "reasons": [],
+        "formal_alignment_certified": false
+      },
+      "validation_notes": [],
+      "reported_verdict": "NO_ISSUES_FOUND",
+      "reported_novelty": "POTENTIALLY_NEW",
+      "formal_receipt": null
+    }
+  ]
+}

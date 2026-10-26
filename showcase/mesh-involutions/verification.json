@@ -26,7 +26,7 @@
   "candidate_content_sha256": "74183c541d86feb6ecc57151b1cfc661663afb1d50b985c806defec3bf0c4e6f",
   "reviewed_proof_sha256": "8c6844e8b904f446524ec16aea6baf94343d317ba3b6b089fca5305b66e1a01b",
   "original_review_report_sha256": "08956a0884958da8013ac18e1d264a804e72df0fdec1f5e15e2fed64669c68e9",
-  "presentation_edits": "Replaced archive-only references with public citations and local showcase links. The preceding presentation corrected three typographical issues. Mathematical proof body unchanged; no new review claimed. Presentation documentation now has English and Chinese editions; written proofs, Lean sources, certificates, checkers, and historical verification evidence are unchanged. Documentation hashes cover the current language editions; translation is not a new proof review. Added complete Chinese and English Organize reports in Markdown and PDF on 2026-10-24, with a curated material index. Publication copies redact private runtime details and use portable links; their manifest distinguishes original-source hashes from public-file hashes. Original proof, formal sources, certificate and checker bytes are unchanged. Editorial organization is not a new proof review, formal verification or novelty assessment.",
+  "presentation_edits": "Replaced archive-only references with public citations and local showcase links. The preceding presentation corrected three typographical issues. Mathematical proof body unchanged; no new review claimed. Presentation documentation now has English and Chinese editions; written proofs, Lean sources, certificates, checkers, and historical verification evidence are unchanged. Documentation hashes cover the current language editions; translation is not a new proof review. Added complete Chinese and English Organize reports in Markdown and PDF on 2026-10-24, with a curated material index. Publication copies redact private runtime details and use portable links; their manifest distinguishes original-source hashes from public-file hashes. Original proof, formal sources, certificate and checker bytes are unchanged. Editorial organization is not a new proof review, formal verification or novelty assessment. On 2026-10-26 the case introduction gained an ai4math manuscript-development note. Proof, formal sources, historical review and organized report bytes remain unchanged; no new verification claimed.",
   "lean": {
     "full_conjecture_verified": false,
     "proof_modules": 12,
@@ -113,8 +113,8 @@
     "ordinary_verify": "COMPLETED"
   },
   "files_sha256": {
-    "README.cn.md": "332fa71719ec858018e5f0ba40253d3126f8c45f0c6890cace34a464e807a100",
-    "README.md": "68c9edb6a2ca73853d4cbefd18fe512b8cb51ffa1aa1670fb2bedb6f9bfc5c65",
+    "README.cn.md": "cb28a4682c7e7de0061a80ee5a262b3ad98ef6537ebad55973ee89ccd149f7d9",
+    "README.md": "76e71cc29248397327643ee94117a946a1043ac2ced3b7d32e8ba702d409b5f6",
     "formal/MeshCompatibility.lean": "ff83da03043b8d8ed8fb3030a69da09cd63355efe2f7e74b2fdb392f71c02d9d",
     "formal/MeshComponents.lean": "3882654f5bf911ae8b5efc37140cfad3b2d8208252776495ffe7fbbb48f412a2",
     "formal/MeshDefinitions.lean": "9bac2a293d768004d0a8507ad5c71167e7db67fe517d6e99f3ebd535a8ac0a4e",

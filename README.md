@@ -84,7 +84,7 @@ Contributions to the harness are welcome: improve problem selection, reduce repe
 
 ## Result showcase
 
-[Explore three experimental case studies](showcase/README.md): an equidistribution proof for four mesh patterns on involutions, a medial-triangle inequality proof involving a moving point, and a counterexample to a conjecture on stepwise irregular graphs. The samples include complete written proofs, review summaries, compact verification records, and the available Lean source files or counterexample checkers. Large dependencies and runtime caches are excluded.
+[Explore the three publication candidates on `ai4math`](showcase/README.md): coefficientwise log-convexity of Sun's beta polynomials, the cubic Franel tail, and equidistribution of four mesh patterns on involutions. Each case includes complete bilingual expert reports, a submitted proof, historical review evidence and a list of remaining manuscript work; available Lean sources and certificates are included. These are candidates for expert review and manuscript development, not three certified new solutions. Large dependencies and runtime caches are excluded.
 
 Each case states its formal verification scope and novelty status. The mesh-pattern proof has partial Lean verification, the triangle inequality has full formal verification, and the graph counterexample includes an executable certificate. Novelty remains “potentially new” or “unknown”; an independent AI review is not expert certification. Each case's review summary and verification records explain the evidence behind these assessments.
 

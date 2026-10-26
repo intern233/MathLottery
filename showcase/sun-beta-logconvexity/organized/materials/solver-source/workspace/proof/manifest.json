@@ -1,0 +1,49 @@
+{
+  "purpose": "Local integrity manifest, not an independent verification receipt.",
+  "source_files": [
+    "proof/SunBeta.lean"
+  ],
+  "main_declaration": "SunBeta.beta_coeffwise_logconvex",
+  "lean_version": "4.35.0",
+  "compile_command": "conda run -n mathlottery python proof/check.py",
+  "independent_verify": "NOT_RUN",
+  "files": {
+    "SunBeta.lean": {
+      "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3",
+      "bytes": 39574
+    },
+    "Proof.md": {
+      "sha256": "fef24f0b9fe9c2dc23be3d5c04340fac4c9a90f80000d25305462927f4465c32",
+      "bytes": 15573
+    },
+    "CertificateTable.md": {
+      "sha256": "3a93b039920a5a925751ecd1dd2480d2b54bca1856c071d863133c378c6f7d4f",
+      "bytes": 8360
+    },
+    "certificates.json": {
+      "sha256": "22751f8ffc9b10b0d77df817525ef5311a8b4d31f7f9eebe45f0cd242b89b84c",
+      "bytes": 89298
+    },
+    "check.py": {
+      "sha256": "aa3f75d44a32c47ca76937dc34a1862c10d515af59cb869f6e978b40154c8197",
+      "bytes": 1691
+    },
+    "README.md": {
+      "sha256": "bcfc088a919f711fac520497fba63aa14446633886f446bdbc6e39c8922cdfc2",
+      "bytes": 1889
+    }
+  },
+  "local_compilation": {
+    "status": "COMPILED",
+    "exit_code": 0,
+    "source_sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3",
+    "main_declaration": "SunBeta.beta_coeffwise_logconvex",
+    "axioms": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "scope": "Full original statement: every n >= 1 and d >= 0.",
+    "note": "Local compilation only; independent Verify has not run."
+  }
+}

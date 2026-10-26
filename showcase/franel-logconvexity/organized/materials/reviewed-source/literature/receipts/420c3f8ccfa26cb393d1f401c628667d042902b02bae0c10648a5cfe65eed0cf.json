@@ -1,0 +1,14 @@
+{
+  "status": "OK",
+  "record_kind": "source_snapshot",
+  "requested_url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+  "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+  "retrieved_at": "2026-10-23T15:01:54.540527+00:00",
+  "sha256": "391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7",
+  "artifact": "literature/snapshots/391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7.pdf",
+  "excerpt_hashes": [
+    "570a66d84423d8cb7f1bbfcbf9d5f171af956f81b45835f275e9cd4c37d8c2bb",
+    "09ffc3bf8f57aeeb0b3b56bdea7ead21eef10d7ee4134dbad423bfe7a3f74cdc"
+  ],
+  "scope": "Text matches only; source interpretation and search completeness are not certified"
+}

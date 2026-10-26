@@ -1,0 +1,6 @@
+{
+  "status": "UNAVAILABLE",
+  "reason": "Unable to verify robots policy for https://emis.de",
+  "record_kind": "source_snapshot",
+  "requested_url": "https://emis.de/ft/31765"
+}

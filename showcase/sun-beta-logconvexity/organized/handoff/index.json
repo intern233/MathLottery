@@ -1,0 +1,791 @@
+{
+  "version": "expert-delivery-v3",
+  "source_run_id": "reviewed-source",
+  "source_sha256": "5794400e6e7df74d99b84c863dd5c5fa03e68180addbef0f3acd706c465e8cdf",
+  "problem_sha256": "3d0e93e3a159b0da83e8bee6bce4416f9a6e2aa84a953c5abea9bc3fda99c1b4",
+  "problem": {
+    "id": "sun_beta_q_logconvex_c47",
+    "title": "Sun 的 beta 多项式逐系数对数凸猜想（Conjecture 4.7 第一项）",
+    "statement": "对每个整数 n>=0，令 beta_n(q)=sum_{k=0}^n binom(n,k)^2 binom(n+k,k) q^k ∈ Z[q]。证明：对所有整数 n>=1 和 d>=0，[q^d](beta_{n-1}(q) beta_{n+1}(q)-beta_n(q)^2)>=0。等价地，(beta_n(q))_{n>=0} 是 q-log-convex。q 是形式变量；不能将目标弱化为仅对每个实数 q>=0 的点值不等式。",
+    "source_url": "https://arxiv.org/html/1104.3856v8",
+    "field": "组合数学；二项式多项式不等式",
+    "status": "OPEN",
+    "status_checked_at": "2026-10-23T05:28:55.828585+00:00",
+    "status_evidence": [
+      "https://arxiv.org/html/1104.3856v8",
+      "https://arxiv.org/html/2505.02767v4",
+      "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+      "https://arxiv.org/html/1308.2736v2",
+      "https://arxiv.org/pdf/1308.2961"
+    ],
+    "difficulty_estimate": "中高。目标短且全为有限整数和，但 n,d 两个指标无界，卷积项有抵消，额外权重同时依赖 n,k；至少2014年已提出。若找到显式非负分解，适合单会话尝试；现有证据不能支持单会话可完成的承诺。",
+    "verification_feasibility": "较高（以获得有限和恒等式/非负证书为条件）。可用独立代数核查证书与边界；精确整数实验已覆盖 n=1..80 的全部系数，未发现负值。该实验不证明任意 n，也不能用于认证开放状态。",
+    "lean_feasibility": "中等、条件性较好。已用现有 Lean4.35/mathlib 缓存成功 elaboration FindProbes.BetaConjecture，无构建。Nat.choose、Finset.sum、Polynomial.monomial、Polynomial.coeff_mul 已可用。缺目标卷积非负证书及相应引理；若路线依赖 Schur/Pieri 理论，形式化负担显著增加。声明通过不是定理被证明，尚无自然语言与形式化语句的外部等价认证。",
+    "prerequisites": [
+      "二项式系数和有限卷积",
+      "逐系数序与 q-log-convexity 的区别",
+      "可选：超几何求和、保持对数凸的线性变换"
+    ],
+    "known_obstacles": [
+      "不能由 q=1 或所有 q>=0 的点值不等式推出逐系数非负。",
+      "Zhu–Sun 的已知额外权重 C(2k,k) 不等于本题的 C(n+k,k)，保持性不能直接套用。",
+      "同一原猜想的另外两项 S_n、D_n 已被解决，不能将其证明当成本题证明。",
+      "尚未找到对所有 n,d 成立的非负分解；有限检查不能排除大指标反例。"
+    ],
+    "initial_approach": "先展开固定 d 的二项式卷积并将 k 与 d-k 配对，寻找有明确非负因子的有限和证书或递推。对照2010 Narayana及2013 Dou–Ren证明中的单次变号条件，逐项核实是否适用于精确 beta 数组。已有精确计算、来源及 Lean 声明在 research/solver_handoff.md 和 research/experiments.py。",
+    "selection_reason": "排第1：原作者2026年对这个精确多项式直接写 remains open，来源状态最强；目标不需高级背景，结果若能写成有限代数证书，较利于独立验真和 Lean。排名不是成功概率，开放时间长是实质风险。",
+    "references": [
+      {
+        "url": "https://arxiv.org/html/1104.3856v8",
+        "title": "Some new series for 1/pi and related congruences",
+        "authors": [
+          "Zhi-Wei Sun"
+        ],
+        "published_at": "2014",
+        "retrieved_at": "2026-10-23T05:28:09.285453+00:00",
+        "summary": "2014作者原论文的完整官方HTML，与已保存v8 PDF同一版本。Conjecture4.7第一项；保留原出处及2014日期，未把2011初投日期当该命题首次提出日期。",
+        "source": "primary_public_source",
+        "artifact": "literature/snapshots/0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7.txt",
+        "sha256": "0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7"
+      },
+      {
+        "url": "https://arxiv.org/html/2505.02767v4",
+        "title": "A family of polynomials and related congruences and series",
+        "authors": [
+          "Zhi-Wei Sun"
+        ],
+        "published_at": "2026-02-10",
+        "retrieved_at": "2026-10-23T05:28:12.562520+00:00",
+        "summary": "2026-02-10 v4完整官方HTML。#S1.p5.2重述beta精确定义并明确remains open，保留可提取MathML与原生TeX annotation。",
+        "source": "primary_public_source",
+        "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+        "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf"
+      },
+      {
+        "url": "https://arxiv.org/pdf/1104.3856v8",
+        "title": "Some new series for 1/pi and related congruences",
+        "authors": [
+          "Zhi-Wei Sun"
+        ],
+        "published_at": "2014",
+        "retrieved_at": null,
+        "summary": "Nanjing Univ. J. Math. Biquarterly31(2014),150–164；实读 arXiv v8 (2014-12-24) p.15 Conjecture4.7第一种形式，并核对v9。v1/v7无该 q-logconvex 猜想，不把2011初投日期冒充该命题提出日期。",
+        "source": "primary_public_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://arxiv.org/pdf/2505.02767v4",
+        "title": "A family of polynomials and related congruences and series",
+        "authors": [
+          "Zhi-Wei Sun"
+        ],
+        "published_at": "2026-02-10",
+        "retrieved_at": null,
+        "summary": "arXiv v4，全文23页；对应 FCNT 2 (2026),1–22，DOI 10.3934/fcnt.2026009。p.3 明言 beta 猜想 remains open，并在 Conjecture 1.1(i) 第一句重述三次 Franel 尾序列猜想。该条第二句为另一多项式，已有后续反例。",
+        "source": "primary_public_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+        "title": "The q-Log-convexity of the Narayana Polynomials of Type B",
+        "authors": [
+          "William Y. C. Chen",
+          "Robert L. Tang",
+          "Larry X. W. Wang",
+          "Arthur L. B. Yang"
+        ],
+        "published_at": "2010",
+        "retrieved_at": "2026-10-23T05:28:18.591273+00:00",
+        "summary": "Adv. Appl. Math.44(2),85–110。完整作者稿：式(1.1)定义平方二项式多项式，Theorem 1.1 (p.3)证明其逐系数对数凸；同页指出完整三次幂序列不满足该性质，不能据此否定从 F_8 开始的尾序列。",
+        "source": "primary_public_source",
+        "artifact": "literature/snapshots/391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7.pdf",
+        "sha256": "391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7"
+      },
+      {
+        "url": "https://emis.de/ft/31765",
+        "title": "Linear transformations preserving the strong q-log-convexity of polynomials",
+        "authors": [
+          "Bao-Xuan Zhu",
+          "Hua Sun"
+        ],
+        "published_at": "2015-08-28",
+        "retrieved_at": null,
+        "summary": "EJC22(3),P3.26，完整11页。Theorem2.1给保持性条件；Corollary2.9处理 C(n,k)^2 C(2k,k) 权重，非 beta 或三次 Franel。",
+        "source": "primary_public_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://arxiv.org/pdf/1308.2736",
+        "title": "On the q-log-convexity conjecture of Sun",
+        "authors": [
+          "Donna Q. J. Dou",
+          "Anne X. Y. Ren"
+        ],
+        "published_at": "2013-08-15",
+        "retrieved_at": null,
+        "summary": "Theorem3.1 (p.6)证明原Conjecture4.7第二种S_n；与beta不同。",
+        "source": "primary_public_source",
+        "artifact": null,
+        "sha256": null
+      },
+      {
+        "url": "https://arxiv.org/pdf/1308.2961",
+        "title": "The q-log-convexity of Domb’s polynomials",
+        "authors": [
+          "Donna Q. J. Dou",
+          "Anne X. Y. Ren"
+        ],
+        "published_at": "2013-08-13",
+        "retrieved_at": "2026-10-23T05:28:23.438281+00:00",
+        "summary": "Theorem3.1 (p.6)证明Domb多项式，是原Conjecture4.7第三项；与beta不同。",
+        "source": "primary_public_source",
+        "artifact": "literature/snapshots/e50b889c06ea259c2e05c07767d35c71808f090f163a3b9422d40b4956eec5a8.pdf",
+        "sha256": "e50b889c06ea259c2e05c07767d35c71808f090f163a3b9422d40b4956eec5a8"
+      },
+      {
+        "url": "https://arxiv.org/html/1308.2736v2",
+        "title": "On the q-log-convexity conjecture of Sun",
+        "authors": [
+          "Donna Q. J. Dou",
+          "Anne X. Y. Ren"
+        ],
+        "published_at": "2013-08-15",
+        "retrieved_at": "2026-10-23T05:28:20.751421+00:00",
+        "summary": "Dou–Ren 2013 v2官方完整HTML，替代独立下载ConnectError的未定版本PDF载体；定义和Theorem3.1均已核对。",
+        "source": "primary_public_source",
+        "artifact": "literature/snapshots/610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd.txt",
+        "sha256": "610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd"
+      }
+    ],
+    "formal_target": null,
+    "educational": false,
+    "citations": [
+      {
+        "url": "https://arxiv.org/html/1104.3856v8",
+        "role": "ORIGINAL_STATEMENT",
+        "locator": "§4, Conjecture 4.7, HTML #Thmconjecture7；第一种形式的原生TeX annotation（对应PDF p.15）",
+        "excerpt": "\\sum_{k=0}^{n}\\binom{n}{k}^{2}\\binom{n+k}{k}q^{k}",
+        "explanation": "逐字截取官方HTML内的原生annotation，没有将PDF公式重新转写。该式是Conjecture4.7的第一种形式；完整段落要求其n>=0序列q-logconvex，紧前定义要求所有中心n>=1差多项式系数非负。原始2014作者论文的归属不变。",
+        "source_date": "2014-12-24",
+        "relation": "EQUIVALENT"
+      },
+      {
+        "url": "https://arxiv.org/html/1104.3856v8",
+        "role": "ORIGINAL_STATEMENT",
+        "locator": "§4, Conjecture 4.7, HTML #Thmconjecture7，紧随标题的序列及性质",
+        "excerpt": "\\{P_{n}(q)\\}_{n\\geqslant 0}\nis\nq\nq\n-logconvex if",
+        "explanation": "实际可提取文本同时含MathML展示字符和原生annotation，故出现q的重复；保留原样。与上一摘录共同定位完整原猜想的第一项，条件和索引不变。",
+        "source_date": "2014-12-24",
+        "relation": "EQUIVALENT"
+      },
+      {
+        "url": "https://arxiv.org/html/2505.02767v4",
+        "role": "EXPLICIT_OPEN",
+        "locator": "§1, HTML #S1.p5.2 最后一句（PDF p.3首段），beta定义同段",
+        "excerpt": "(\\beta_{n}(q))_{n\\geq 0}\nremains open.",
+        "explanation": "从作者官方HTML逐字截取。该句回指[17,Conjecture4.7]；同段beta定义为C(n,k)^2 C(n+k,k)，没有把Apéry平方权重或另一S族混入。只支持截至该2026版本的明确开放声明。",
+        "source_date": "2026-02-10",
+        "relation": "EQUIVALENT"
+      },
+      {
+        "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+        "role": "PRIOR_RESULT",
+        "locator": "作者稿p.3, Theorem1.1；其Wn在p.1式(1.1)定义",
+        "excerpt": "The polynomials Wn(q) form a q-log-convex sequence.",
+        "explanation": "逐字复制既有独立提取文本中的Wn，而非添加下划线。已核对Wn=sum C(n,k)^2 q^k，缺beta中的C(n+k,k)因子，结论不同。",
+        "source_date": "2010",
+        "relation": "DIFFERENT"
+      },
+      {
+        "url": "https://arxiv.org/html/1308.2736v2",
+        "role": "SOLUTION",
+        "locator": "§3, HTML #S3.Thmtheo1, Theorem3.1；式(1.1)定义Sn",
+        "excerpt": "S_{n}(q)\ngiven by (\n1.1\n) form a\nq\nq\n-log-convex sequence.",
+        "explanation": "原PDF上次ConnectError，现改为同一作者、同一v2论文的官方完整HTML。Sn权重为C(n,k)C(2k,k)C(2n-2k,n-k)，解决原并列猜想第二项，非beta第一项。",
+        "source_date": "2013-08-15",
+        "relation": "DIFFERENT"
+      },
+      {
+        "url": "https://arxiv.org/pdf/1308.2961",
+        "role": "SOLUTION",
+        "locator": "PDF p.6, Theorem3.1；p.1式(1.1)定义Dn",
+        "excerpt": "The sequence {Dn(q)}n≥0 is q-log-convex.",
+        "explanation": "逐字复制独立下载器已保存的提取文本，未添加下划线。Dn含C(n,k)^2 C(2k,k) C(2n-2k,n-k)，为第三项，非beta。",
+        "source_date": "2013-08-13",
+        "relation": "DIFFERENT"
+      }
+    ],
+    "literature_search": {
+      "queries": [
+        "Sun beta polynomials q-log-convex conjecture \"4.7\"",
+        "\"Conjecture 4.7\" \"Sun\" \"polynomials\"",
+        "\"1104.3856\" \"log-convex\"",
+        "\"Sun\" \"q-log-convex\" \"beta\" proof 2026",
+        "\"Apéry polynomials\" \"q-log-convexity\" proof",
+        "\"q-log-convexity\" \"Sun\" \"correction\"",
+        "\"2505.02767\" \"counterexample\"",
+        "\"Zhi-Wei Sun\" publications 2026 q-log-convexity"
+      ],
+      "conclusion": "沿用此前实际检索，不重新广泛找题。先读取独立selection、9份回执及5份extracted.txt，确认主要失败是人为改写公式、一个PDF连接错误和缺口分类。现改引2014及2026官方HTML，原生annotation直接截取；Narayana、Domb摘录直接复制独立提取文本；Dou–Ren第二项改引同版本官方HTML。进一步核对Zhu–Sun Theorem2.1：其C1先要求输入行生成多项式强q-logconvex；把a(n,k)直接设为beta数组不会自动满足该条件，Corollary2.9的C(2k,k)也非C(n+k,k)。没有已识别但未读的、声称解决精确beta目标的后续论文。OPEN作为有日期的文献判断报送，依靠作者2026明确声明；本地匹配测试不是控制器重新下载或新颖性认证。",
+      "unresolved": [],
+      "limitations": [
+        "检索截至2026-10-23；主要覆盖英文索引、arXiv、作者公开网页和所列原论文，不保证覆盖全部数据库、语言、未索引或未公开作品。",
+        "最新明确开放声明的来源日期是2026-02-10；10月下载日期不会更新该声明，后续未索引解答仍可能存在。",
+        "旧作者个人主页无法取得完整书目，只限制作者后续作品的覆盖；未识别到其中某一篇可能解决本题而尚未读取的具体论文。",
+        "原始2014v8及2017v9已核对，2011v1/v7未含该项；未主张2014是全球首次提出日期，也未穷尽2011至2014所有公开载体。",
+        "没有宣称排除文献中所有非显然推导。已具体核对的Narayanа、Sn、Domb、Zhu–Sun权重/条件不同；剩余泛指“可能存在未知等价证明”属于检索覆盖边界。"
+      ],
+      "obstacles": [],
+      "comparisons": []
+    },
+    "evidence_assessment": {
+      "policy_version": "evidence-v2",
+      "assessed_at": "2026-10-23T05:28:55.828585+00:00",
+      "supported": true,
+      "reasons": [],
+      "checked_citations": [
+        {
+          "url": "https://arxiv.org/html/1104.3856v8",
+          "role": "ORIGINAL_STATEMENT",
+          "relation": "EQUIVALENT",
+          "resolved_url": "https://arxiv.org/html/1104.3856v8",
+          "locator": "§4, Conjecture 4.7, HTML #Thmconjecture7；第一种形式的原生TeX annotation（对应PDF p.15）",
+          "source_date": "2014-12-24",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7.txt",
+          "sha256": "0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7",
+          "retrieved_at": "2026-10-23T05:28:09.285453+00:00"
+        },
+        {
+          "url": "https://arxiv.org/html/1104.3856v8",
+          "role": "ORIGINAL_STATEMENT",
+          "relation": "EQUIVALENT",
+          "resolved_url": "https://arxiv.org/html/1104.3856v8",
+          "locator": "§4, Conjecture 4.7, HTML #Thmconjecture7，紧随标题的序列及性质",
+          "source_date": "2014-12-24",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7.txt",
+          "sha256": "0718a89ddff17d637b87a18664c6a92757d747c344c1ffd3105a950103e22dd7",
+          "retrieved_at": "2026-10-23T05:28:09.285453+00:00"
+        },
+        {
+          "url": "https://arxiv.org/html/2505.02767v4",
+          "role": "EXPLICIT_OPEN",
+          "relation": "EQUIVALENT",
+          "resolved_url": "https://arxiv.org/html/2505.02767v4",
+          "locator": "§1, HTML #S1.p5.2 最后一句（PDF p.3首段），beta定义同段",
+          "source_date": "2026-02-10",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf.txt",
+          "sha256": "7aedf8187c5f09f3555260b27b27ff4472cfb27b5f65a5cfd44760ba0277f6cf",
+          "retrieved_at": "2026-10-23T05:28:12.562520+00:00"
+        },
+        {
+          "url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+          "role": "PRIOR_RESULT",
+          "relation": "DIFFERENT",
+          "resolved_url": "https://cfc.nankai.edu.cn/_upload/article/files/d2/e7/02ad99784f4bbe19008160bb92ce/session-record-001.pdf",
+          "locator": "作者稿p.3, Theorem1.1；其Wn在p.1式(1.1)定义",
+          "source_date": "2010",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7.pdf",
+          "sha256": "391d4bdded9be2803f84d982636f1eea3ea404d3ace79af110e51379d6a92cd7",
+          "retrieved_at": "2026-10-23T05:28:18.591273+00:00"
+        },
+        {
+          "url": "https://arxiv.org/html/1308.2736v2",
+          "role": "SOLUTION",
+          "relation": "DIFFERENT",
+          "resolved_url": "https://arxiv.org/html/1308.2736v2",
+          "locator": "§3, HTML #S3.Thmtheo1, Theorem3.1；式(1.1)定义Sn",
+          "source_date": "2013-08-15",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd.txt",
+          "sha256": "610fd4ecad6e2763c27f239093ee34e5208bd8315528bda9a22d01b510a964dd",
+          "retrieved_at": "2026-10-23T05:28:20.751421+00:00"
+        },
+        {
+          "url": "https://arxiv.org/pdf/1308.2961",
+          "role": "SOLUTION",
+          "relation": "DIFFERENT",
+          "resolved_url": "https://arxiv.org/pdf/1308.2961",
+          "locator": "PDF p.6, Theorem3.1；p.1式(1.1)定义Dn",
+          "source_date": "2013-08-13",
+          "verified_excerpt": true,
+          "reason": "",
+          "artifact": "literature/snapshots/e50b889c06ea259c2e05c07767d35c71808f090f163a3b9422d40b4956eec5a8.pdf",
+          "sha256": "e50b889c06ea259c2e05c07767d35c71808f090f163a3b9422d40b4956eec5a8",
+          "retrieved_at": "2026-10-23T05:28:23.438281+00:00"
+        }
+      ],
+      "observed_queries": [
+        "\"1104.3856\" \"log-convex\"",
+        "\"2/ln 2\" \"conjecture\" \"Hassani\"",
+        "\"2505.02767\" \"counterexample\"",
+        "\"A family of polynomials and related congruences and series\" \"conjecture\" proof -site:emergentmind.com -site:mathdb.com",
+        "\"Apéry polynomials\" \"q-log-convexity\" proof",
+        "\"Apéry\" \"beta\" \"q-log-convexity\" \"Sun\" proof",
+        "\"Calbet\" \"Conjecture 3.2\"",
+        "\"Calbet\" \"Two Families\" conjecture \"2025\"",
+        "\"Calbet\" \"Two Families\" conjecture proof",
+        "\"Calbet\" \"two families\" \"2026\"",
+        "\"Cirtoaje\" \"3+2\" inequality",
+        "\"Cirtoaje\" \"conjecture\" \"2024\"",
+        "\"Cirtoaje\" \"conjecture\" \"2025\"",
+        "\"Conjecture 4.7\" \"Sun\" \"polynomials\"",
+        "\"Conjecture 8.4\" \"hypercube\"",
+        "\"Cîrtoaje\" \"3+2\" \"open problem\"",
+        "\"Extending the Scope of the Nesbitt Inequality\" conjecture",
+        "\"Franel polynomials\" \"Sun\" conjecture",
+        "\"Franel polynomials\" \"log-convex\"",
+        "\"Franel polynomials\" proof conjecture Sun log convexity -site:researchgate.net -site:scirate.com",
+        "\"Franel\" \"q-log\" \"conjecture\" proof",
+        "\"Franel\" \"q-log-convex\" \"proof\" \"2026\"",
+        "\"Franel\" \"q-log-convex\" proof 2026 correction",
+        "\"Guggenheimer\" \"Conjecture\" \"2026\"",
+        "\"Guggenheimer\" \"inequalities E and F\"",
+        "\"Hassani\" \"2/ln\" inequality",
+        "\"Hassani\" \"Nishizawa\" \"2.88539\" proof",
+        "\"Hassani\" \"Nishizawa\" \"2024\" inequality",
+        "\"Hassani\" \"Nishizawa\" \"2025\" conjecture",
+        "\"Hassani\" \"Nishizawa\" \"237\" \"242\" power exponential",
+        "\"Hassani\" \"Nishizawa\" \"Conjecture 1\" \"power\"",
+        "\"Hassani\" \"Nishizawa\" \"Some inequalities\" correction solution",
+        "\"Hassani\" \"Nishizawa\" \"conjecture 1\"",
+        "\"Hassani\" \"Nishizawa\" \"conjecture 2\"",
+        "\"Hassani\" \"Nishizawa\" \"conjecture\" \"2026\" -site:researchgate.net -site:scribd.com",
+        "\"Hassani\" \"Nishizawa\" \"conjecture\" proof counterexample -site:reddit.com -site:eurekamag.com",
+        "\"Hassani\" \"Nishizawa\" \"conjectures\" power exponential",
+        "\"Hassani\" \"Nishizawa\" conjecture correction erratum",
+        "\"Hlawka type inequality\" \"conjecture\" matrices 2025 2026",
+        "\"Linear transformations preserving the strong q-log-convexity\" Zhu Sun arxiv",
+        "\"New three proofs of Cîrtoaje inequality\"",
+        "\"Nishizawa\" \"Hassani\" \"2023\" \"2026\" conjecture proof",
+        "\"Nishizawa\" \"Yasuda\" \"Boundness\"",
+        "\"On a Cyclic Inequality Related to Chebyshev Polynomials\"",
+        "\"On a Norm Inequality\" \"László\" solution",
+        "\"Proof of László\" \"Casimir\"",
+        "\"Some Inequalities Related To The Power Exponential Function\" pdf",
+        "\"Some Inequalities Related To The Power Exponential Function\" proof conjecture",
+        "\"Some new series for 1\" \"Sun\" arxiv \"2011\"",
+        "\"Some new series for\" \"4.7\" \"q-logconvex\"",
+        "\"Some new series for\" \"related congruences\" \"Sun\" \"2014\"",
+        "\"Sun\" \"2505.02767\" conjecture proof",
+        "\"Sun\" \"2505.02767\" proof conjectures congruences",
+        "\"Sun\" \"Conjecture 1.1\" \"2505.02767\"",
+        "\"Sun\" \"S_n\" \"q-log-convexity\" \"2026\"",
+        "\"Sun\" \"beta_n\" \"log\" convex",
+        "\"Sun\" \"binomial\" \"q-log-convex\" \"8\"",
+        "\"Sun\" \"conjectures\" \"binomial\" \"2026\" -site:reddit.com -site:arxiv-troller.com",
+        "\"Sun\" \"log-convexity\" \"2026\"",
+        "\"Sun\" \"q-log-convex\" \"beta\" proof 2026",
+        "\"Sun\" \"q-log-convexity\" \"conjecture\" proof beta",
+        "\"The q-log-convexity of the Narayana polynomials of type B\" arxiv",
+        "\"Variants of the Damascus inequality\" conjecture proof",
+        "\"Zhi-Wei Sun\" publications 2026 q-log-convexity",
+        "\"a^{rb}\" \"b^{ra}\" \"conjecture\" \"2024\"",
+        "\"b^2+k\" \"conjecture\" inequality",
+        "\"beta\" \"polynomials\" \"Sun\" \"log-convexity\"",
+        "\"beta\" \"polynomials\" \"q-log-convexity\" \"Sun\" \"2026\"",
+        "\"beta\" \"q-log-convexity\" Sun",
+        "\"beta\" \"q-logconvex\" \"Sun\"",
+        "\"beta_n\" \"Sun\" \"polynomials\" conjecture proof",
+        "\"binomial\" \"beta\" \"q-log-convex\"",
+        "\"binom{n}{k}\" \"binom{n+k}{k}\" \"q-log-convex\"",
+        "\"conjecture\" \"2025\" site:tmcs.tjacademic.org",
+        "\"conjecture\" \"2026\" \"elementary\" \"inequality\" -site:reddit.com -site:scribd.com",
+        "\"conjecture\" \"2026\" site:files.ele-math.com/articles/jmi",
+        "\"conjecture\" \"László\" \"three\" matrices",
+        "\"conjecture\" \"cyclic inequality\" \"2025\" -site:scribd.com",
+        "\"conjecture\" \"elementary inequality\" \"2025\"",
+        "\"conjecture\" \"elementary inequality\" \"2026\"",
+        "\"conjecture\" \"finite sums\" \"2025\" \"binomial\" -site:scribd.com",
+        "\"conjecture\" \"four-variable\" inequality",
+        "\"conjecture\" \"inequalities\" \"2023\" \"positive real numbers\" -site:reddit.com",
+        "\"conjecture\" \"inequalities\" \"2024\" \"positive real numbers\" -site:reddit.com",
+        "\"conjecture\" \"inequalities\" \"2025\" \"Cauchy\"",
+        "\"conjecture\" \"inequality\" \"2025\" \"three\"",
+        "\"conjecture\" \"inequality\" \"2026\" \"positive numbers\"",
+        "\"conjecture\" \"inequality\" \"four nonnegative\" -site:reddit.com",
+        "\"conjecture\" \"inequality\" \"four variables\"",
+        "\"conjecture\" \"inequality\" \"three positive\" -\"Riemann\" -site:reddit.com -site:arxiv-troller.com",
+        "\"conjecture\" \"inequality\" site:arxiv.org/abs/ \"positive real\" \"2025\"",
+        "\"conjecture\" \"inequality\" site:files.ele-math.com \"2024\"",
+        "\"conjecture\" \"inequality\" site:tjinequality.com/articles/ \"2025\"",
+        "\"conjecture\" \"positive real\" \"2025\" site:files.ele-math.com/articles/jmi",
+        "\"conjecture\" \"remains open\" \"2025\" \"binomial coefficients\"",
+        "\"conjecture\" \"three-variable\" inequality",
+        "\"cubic binomial\" \"log-convex\" proof",
+        "\"cyclic inequalities\" \"conjectures\" \"2025\"",
+        "\"cyclic inequality\" \"conjecture\" \"2024\"",
+        "\"finite\" \"conjecture\" \"inequality\" \"2024\" \"symmetric\" \"positive\" -site:scribd.com -site:reddit.com",
+        "\"inequalities\" \"open problems\" \"2025\" conjectures elementary",
+        "\"inequality\" \"Conjecture 1\" \"2025\" \"a, b, c\" symmetric",
+        "\"inequality\" \"Conjecture 3\" \"2026\" -site:reddit.com -site:arxiv-troller.com",
+        "\"inequality\" \"Conjecture\" \"2024\" \"positive real numbers\" cyclic",
+        "\"inequality\" \"Conjecture\" \"2025\" site:files.ele-math.com",
+        "\"inequality\" \"Conjecture\" site:rgmia.org/papers/v27",
+        "\"inequality\" \"We conjecture\" site:rgmia.org/papers/v28",
+        "\"inequality\" \"conjecture\" \"2024\" \"Schur\"",
+        "\"inequality\" \"conjecture\" \"2025\" \"Nesbitt\"",
+        "\"inequality\" \"conjecture\" \"2025\" \"radicals\"",
+        "\"inequality\" \"conjecture\" \"2025\" \"three variables\"",
+        "\"inequality\" \"conjecture\" \"2026\" \"Schur\"",
+        "\"inequality\" \"conjecture\" \"2026\" \"positive real numbers\"",
+        "\"inequality\" \"open problem\" site:rgmia.org",
+        "\"new conjectures\" \"inequalities\" \"2024\"",
+        "\"new conjectures\" \"inequalities\" \"2025\"",
+        "\"norm inequality\" \"Casimir\" \"László\"",
+        "\"open problem\" \"cyclic\" inequality polynomial",
+        "\"power exponential\" \"2.88539\"",
+        "\"power exponential\" \"conjectures\" \"2026\"",
+        "\"q-log-convex\" \"n >= 8\"",
+        "\"q-log-convex\" \"n≥8\"",
+        "\"q-log-convexity\" \"Apéry\" \"polynomials\"",
+        "\"q-log-convexity\" \"Sun\" \"correction\"",
+        "\"q-log-convexity\" \"beta\" Sun -site:researchgate.net -site:dblp.org",
+        "\"β\" \"Sun\" \"q-log-convex\" conjecture",
+        "Sun beta polynomials q-log-convex conjecture \"4.7\"",
+        "Zhi-Wei Sun personal homepage publications Nanjing",
+        "site.aimath.org \"open problems\" inequalities polynomial",
+        "site.erdosproblems.com \"OPEN\" \"inequality\"",
+        "site:aimpl.org \"Problem\" \"permutations\"",
+        "site:arxiv.org \"inequalities\" \"conjectures\" \"Sun\" \"2025\"",
+        "site:erdosproblems.com \"OPEN\" \"tractable\" -\"None\" -site:erdosproblems.ai",
+        "site:files.ele-math.com/articles \"CONJECTURE\" \"nonnegative real numbers\" \"2024\"",
+        "site:files.ele-math.com/articles \"CONJECTURE\" \"positive real numbers\" \"2025\"",
+        "site:files.ele-math.com/articles/ \"conjecture\" \"a,b,c\"",
+        "site:tjinequality.com \"conjecture\" \"2024\"",
+        "site:tjinequality.com/articles/ conjecture"
+      ],
+      "limitations": [
+        "检索截至2026-10-23；主要覆盖英文索引、arXiv、作者公开网页和所列原论文，不保证覆盖全部数据库、语言、未索引或未公开作品。",
+        "最新明确开放声明的来源日期是2026-02-10；10月下载日期不会更新该声明，后续未索引解答仍可能存在。",
+        "旧作者个人主页无法取得完整书目，只限制作者后续作品的覆盖；未识别到其中某一篇可能解决本题而尚未读取的具体论文。",
+        "原始2014v8及2017v9已核对，2011v1/v7未含该项；未主张2014是全球首次提出日期，也未穷尽2011至2014所有公开载体。",
+        "没有宣称排除文献中所有非显然推导。已具体核对的Narayanа、Sn、Domb、Zhu–Sun权重/条件不同；剩余泛指“可能存在未知等价证明”属于检索覆盖边界。"
+      ],
+      "obstacles": [],
+      "unresolved_obstacle_ids": [],
+      "comparisons": [],
+      "obstacle_changes": []
+    },
+    "source_statement": "",
+    "scope_relation": "UNKNOWN",
+    "scope_description": "",
+    "prior_work_summary": "",
+    "statement_risks": []
+  },
+  "candidates": [
+    {
+      "id": "candidate-record-002",
+      "sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+      "claim": "对每个整数 n≥0，令 beta_n(q)=Σ_{k=0}^n binom(n,k)^2 binom(n+k,k)q^k∈Z[q]。对所有整数 n≥1 和 d≥0，都有 [q^d](beta_{n-1}(q)beta_{n+1}(q)-beta_n(q)^2)≥0。完整 Lean 主定理为 SunBeta.beta_coeffwise_logconvex，单一源文件 proof/SunBeta.lean。本主张是覆盖原题全部量词的候选证明，不是独立 Verify 的结论。",
+      "proof": "handoff/candidate-1.proof.md",
+      "review": "handoff/candidate-1.review.json",
+      "level": "PARTIALLY_VERIFIED",
+      "scope": "COMPLETE",
+      "verdict": "NO_ISSUES_FOUND",
+      "coverage": "FULL",
+      "novelty": "UNKNOWN",
+      "proof_step_count": 0,
+      "unresolved_steps": [],
+      "remaining_obligations": []
+    }
+  ],
+  "formal_checks": [
+    {
+      "candidate_id": "candidate-record-002",
+      "review_number": 1,
+      "status": "ERROR",
+      "recorded_status": "ERROR",
+      "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+      "candidate_hash_matches": true,
+      "applicability": "CANDIDATE_HASH_MATCHES",
+      "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. No independent kernel implementation or natural-language equivalence check.",
+      "statement_alignment": "NOT_CERTIFIED",
+      "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+      "request": {
+        "files": [
+          "workspace/proof/SunBeta.lean"
+        ],
+        "declarations": [
+          "SunBeta.beta_coeffwise_logconvex"
+        ],
+        "module_root": "proof"
+      },
+      "sources": [
+        {
+          "path": "workspace/proof/SunBeta.lean",
+          "module": "SunBeta",
+          "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3",
+          "captured_paths_with_same_sha256": [
+            "reviewed-source/submitted-evidence/workspace/proof/SunBeta.lean",
+            "reviewed-source/review-workspaces/candidate-record-002/formal-probes/SunBeta.lean",
+            "solver-source/workspace/proof/SunBeta.lean"
+          ],
+          "source_bytes_available": true
+        }
+      ],
+      "declarations": [],
+      "recorded_steps": [
+        {
+          "status": "ERROR",
+          "returncode": 1,
+          "elapsed_seconds": 207.363,
+          "log": "compile-0.log",
+          "log_sha256": "d6ef11d7e06f5239d6c56ecc6654f5aeedfc32e51a66e3096fe1e7880d130bc6",
+          "argv": [
+            "/lean/bin/lean",
+            "-j",
+            "1",
+            "-s",
+            "65536",
+            "-M",
+            "8192",
+            "-o",
+            "/out/SunBeta.olean",
+            "SunBeta.lean"
+          ]
+        }
+      ],
+      "receipt_path": "reviewed-source/verification/formal/e11be54ba8bbfef1085efff0262fe51fa8ed6bf150af193adf433a74e64febe1/receipt.json",
+      "limitations": [
+        "Recorded argv use the original isolated runner filesystem; they are evidence, not a portable shell script.",
+        "Only listed declarations are covered. Other conclusions require handwritten review unless separately evidenced.",
+        "Natural-language/formal equivalence needs external evidence. This export performs no new check."
+      ]
+    },
+    {
+      "candidate_id": "candidate-record-002",
+      "review_number": 2,
+      "status": "KERNEL_REPLAYED",
+      "recorded_status": "KERNEL_REPLAYED",
+      "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+      "candidate_hash_matches": true,
+      "applicability": "CANDIDATE_HASH_MATCHES",
+      "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. No independent kernel implementation or natural-language equivalence check.",
+      "statement_alignment": "NOT_CERTIFIED",
+      "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+      "request": {
+        "files": [
+          "workspace/proof/SunBeta.lean"
+        ],
+        "declarations": [
+          "SunBeta.beta_coeffwise_logconvex"
+        ],
+        "module_root": "proof"
+      },
+      "sources": [
+        {
+          "path": "workspace/proof/SunBeta.lean",
+          "module": "SunBeta",
+          "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3",
+          "captured_paths_with_same_sha256": [
+            "reviewed-source/submitted-evidence/workspace/proof/SunBeta.lean",
+            "reviewed-source/review-workspaces/candidate-record-002/formal-probes/SunBeta.lean",
+            "solver-source/workspace/proof/SunBeta.lean"
+          ],
+          "source_bytes_available": true
+        }
+      ],
+      "declarations": [
+        {
+          "axioms": [
+            "propext",
+            "Classical.choice",
+            "Quot.sound"
+          ],
+          "module": "SunBeta",
+          "name": "SunBeta.beta_coeffwise_logconvex",
+          "type": "forall (n : Nat), (LE.le.{0} Nat instLENat (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)) n) -> (forall (d : Nat), LE.le.{0} Int Int.instLEInt (OfNat.ofNat.{0} Int 0 (instOfNat 0)) (DFunLike.coe.{1, 1, 1} (Finsupp.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) Nat (fun (x._@.Mathlib.Basic.FunLike.Basic.2582841819._hygCtx._hyg.11 : Nat) => Int) (Finsupp.instFunLike.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) (Polynomial.coeff.{0} Int Int.instSemiring (HSub.hSub.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHSub.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instSub.{0} Int Int.instRing)) (HMul.hMul.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHMul.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instMul.{0} Int Int.instSemiring)) (SunBeta.beta (HSub.hSub.{0, 0, 0} Nat Nat Nat (instHSub.{0} Nat instSubNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)))) (SunBeta.beta (HAdd.hAdd.{0, 0, 0} Nat Nat Nat (instHAdd.{0} Nat instAddNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1))))) (HPow.hPow.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (Polynomial.{0} Int Int.instSemiring) (instHPow.{0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (NPow.toPow.{0} (Polynomial.{0} Int Int.instSemiring) (Monoid.toNPow.{0} (Polynomial.{0} Int Int.instSemiring) (Semiring.toMonoid.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.semiring.{0} Int Int.instSemiring))))) (SunBeta.beta n) (OfNat.ofNat.{0} Nat 2 (instOfNatNat 2))))) d))"
+        }
+      ],
+      "recorded_steps": [
+        {
+          "status": "OK",
+          "returncode": 0,
+          "elapsed_seconds": 534.384,
+          "log": "compile-0.log",
+          "log_sha256": "09500412efbf1f696c383ed7db4d7f782966d7d0fb7333f00f95a1d1997a37fd",
+          "argv": [
+            "/lean/bin/lean",
+            "-j",
+            "1",
+            "-s",
+            "65536",
+            "-M",
+            "16384",
+            "-o",
+            "/out/SunBeta.olean",
+            "SunBeta.lean"
+          ]
+        },
+        {
+          "status": "OK",
+          "returncode": 0,
+          "elapsed_seconds": 100.352,
+          "log": "replay-0.log",
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "argv": [
+            "/lean/bin/leanchecker",
+            "SunBeta"
+          ]
+        },
+        {
+          "status": "OK",
+          "returncode": 0,
+          "elapsed_seconds": 41.802,
+          "log": "inspect.log",
+          "log_sha256": "7531bec008d433d5f83a49b83da364f3f4a75d1334765238fa66420aee47988f",
+          "argv": [
+            "/lean/bin/lean",
+            "-j",
+            "1",
+            "-s",
+            "65536",
+            "-M",
+            "16384",
+            "--run",
+            "MathLotteryInspector.lean",
+            "SunBeta",
+            "--",
+            "SunBeta.beta_coeffwise_logconvex"
+          ]
+        }
+      ],
+      "receipt_path": "reviewed-source/verification/formal/42f471b6b8f76c0b78c3f1414a7e39c02a3375dcc3718892aa820903d4199f4a/receipt.json",
+      "limitations": [
+        "Recorded argv use the original isolated runner filesystem; they are evidence, not a portable shell script.",
+        "Only listed declarations are covered. Other conclusions require handwritten review unless separately evidenced.",
+        "Natural-language/formal equivalence needs external evidence. This export performs no new check."
+      ]
+    },
+    {
+      "candidate_id": "candidate-record-002",
+      "review_number": 3,
+      "status": "KERNEL_REPLAYED",
+      "recorded_status": "KERNEL_REPLAYED",
+      "candidate_sha256": "87fe6633c0cb96ba88f5883d98ecef69a16abec88035d296e2f4f9f25b15fbf9",
+      "candidate_hash_matches": true,
+      "applicability": "CANDIDATE_HASH_MATCHES",
+      "scope": "Requested theorem declarations only; imported libraries and the Lean kernel are trusted. No independent kernel implementation or natural-language equivalence check.",
+      "statement_alignment": "NOT_CERTIFIED",
+      "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+      "request": {
+        "files": [
+          "workspace/proof/SunBeta.lean"
+        ],
+        "declarations": [
+          "SunBeta.beta_coeffwise_logconvex"
+        ],
+        "module_root": "proof"
+      },
+      "sources": [
+        {
+          "path": "workspace/proof/SunBeta.lean",
+          "module": "SunBeta",
+          "sha256": "5664f90350aa84b61f78d8bcc10741591852bc1572f5dbc3f1fb9c0675170aa3",
+          "captured_paths_with_same_sha256": [
+            "reviewed-source/submitted-evidence/workspace/proof/SunBeta.lean",
+            "reviewed-source/review-workspaces/candidate-record-002/formal-probes/SunBeta.lean",
+            "solver-source/workspace/proof/SunBeta.lean"
+          ],
+          "source_bytes_available": true
+        }
+      ],
+      "declarations": [
+        {
+          "axioms": [
+            "propext",
+            "Classical.choice",
+            "Quot.sound"
+          ],
+          "module": "SunBeta",
+          "name": "SunBeta.beta_coeffwise_logconvex",
+          "type": "forall (n : Nat), (LE.le.{0} Nat instLENat (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)) n) -> (forall (d : Nat), LE.le.{0} Int Int.instLEInt (OfNat.ofNat.{0} Int 0 (instOfNat 0)) (DFunLike.coe.{1, 1, 1} (Finsupp.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) Nat (fun (x._@.Mathlib.Basic.FunLike.Basic.2582841819._hygCtx._hyg.11 : Nat) => Int) (Finsupp.instFunLike.{0, 0} Nat Int (MulZeroClass.toZero.{0} Int (instMulZeroClassOfSemiring.{0} Int Int.instSemiring))) (Polynomial.coeff.{0} Int Int.instSemiring (HSub.hSub.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHSub.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instSub.{0} Int Int.instRing)) (HMul.hMul.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (Polynomial.{0} Int Int.instSemiring) (instHMul.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.instMul.{0} Int Int.instSemiring)) (SunBeta.beta (HSub.hSub.{0, 0, 0} Nat Nat Nat (instHSub.{0} Nat instSubNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1)))) (SunBeta.beta (HAdd.hAdd.{0, 0, 0} Nat Nat Nat (instHAdd.{0} Nat instAddNat) n (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1))))) (HPow.hPow.{0, 0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (Polynomial.{0} Int Int.instSemiring) (instHPow.{0, 0} (Polynomial.{0} Int Int.instSemiring) Nat (NPow.toPow.{0} (Polynomial.{0} Int Int.instSemiring) (Monoid.toNPow.{0} (Polynomial.{0} Int Int.instSemiring) (Semiring.toMonoid.{0} (Polynomial.{0} Int Int.instSemiring) (Polynomial.semiring.{0} Int Int.instSemiring))))) (SunBeta.beta n) (OfNat.ofNat.{0} Nat 2 (instOfNatNat 2))))) d))"
+        }
+      ],
+      "recorded_steps": [
+        {
+          "status": "OK",
+          "returncode": 0,
+          "elapsed_seconds": 534.384,
+          "log": "compile-0.log",
+          "log_sha256": "09500412efbf1f696c383ed7db4d7f782966d7d0fb7333f00f95a1d1997a37fd",
+          "argv": [
+            "/lean/bin/lean",
+            "-j",
+            "1",
+            "-s",
+            "65536",
+            "-M",
+            "16384",
+            "-o",
+            "/out/SunBeta.olean",
+            "SunBeta.lean"
+          ]
+        },
+        {
+          "status": "OK",
+          "returncode": 0,
+          "elapsed_seconds": 100.352,
+          "log": "replay-0.log",
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "argv": [
+            "/lean/bin/leanchecker",
+            "SunBeta"
+          ]
+        },
+        {
+          "status": "OK",
+          "returncode": 0,
+          "elapsed_seconds": 41.802,
+          "log": "inspect.log",
+          "log_sha256": "7531bec008d433d5f83a49b83da364f3f4a75d1334765238fa66420aee47988f",
+          "argv": [
+            "/lean/bin/lean",
+            "-j",
+            "1",
+            "-s",
+            "65536",
+            "-M",
+            "16384",
+            "--run",
+            "MathLotteryInspector.lean",
+            "SunBeta",
+            "--",
+            "SunBeta.beta_coeffwise_logconvex"
+          ]
+        }
+      ],
+      "receipt_path": "reviewed-source/verification/formal/42f471b6b8f76c0b78c3f1414a7e39c02a3375dcc3718892aa820903d4199f4a/receipt.json",
+      "limitations": [
+        "Recorded argv use the original isolated runner filesystem; they are evidence, not a portable shell script.",
+        "Only listed declarations are covered. Other conclusions require handwritten review unless separately evidenced.",
+        "Natural-language/formal equivalence needs external evidence. This export performs no new check."
+      ]
+    }
+  ],
+  "dependency_files": [],
+  "dependency_binding": "NOT_CERTIFIED",
+  "reproduction_gaps": [
+    "No lean-toolchain file was captured; consult the receipt's recorded Lean version.",
+    "No lake-manifest.json was captured; imported library revisions are not pinned by this handoff."
+  ],
+  "automatic_replay_available": false,
+  "limitations": [
+    "Deterministic navigation of frozen evidence, not a new review or proof.",
+    "Dependency files and code are untrusted. No Lake hooks or download scripts are executed by this export.",
+    "Captured project dependency files are not automatically proven identical to the libraries used by the recorded runner.",
+    "File hashes authenticate captured bytes; a successful hash check does not verify mathematics."
+  ]
+}

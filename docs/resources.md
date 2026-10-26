@@ -26,7 +26,7 @@ More cores do not automatically make a build feasible. Concurrent compiler proce
 
 ### A measured example
 
-A single check of the showcase's [MedialAlgebra.lean](../showcase/medial-triangle-inequality/formal/MedialAlgebra.lean), on Linux x86-64 under WSL 2 with Lean 4.35.0 and the showcase's pinned mathlib revision, completed with:
+A historical check of `MedialAlgebra.lean` from the former medial-triangle showcase, on Linux x86-64 under WSL 2 with Lean 4.35.0 and that case's pinned mathlib revision, completed with the following measurements. That case is retained in `main` and Git history; these measurements are not benchmarks of the beta, Franel or mesh results selected on `ai4math`.
 
 | Measurement | Observation |
 | --- | --- |
@@ -60,7 +60,7 @@ If dependencies, Chromium or rendering fail, the saved Markdown remains availabl
 
 ## Prepare Lean without rebuilding everything
 
-Install Lean through [the official installation guide](https://lean-lang.org/install/). Use the project's `lean-toolchain` and pinned mathlib revision together. The [showcase formalization](../showcase/medial-triangle-inequality/formal/README.md) provides a complete example. MathLottery's environment setup and `doctor` do not install mathlib or benchmark its memory requirements.
+Install Lean through [the official installation guide](https://lean-lang.org/install/). Use the project's `lean-toolchain` and pinned mathlib revision together. The [mesh formalization](../showcase/mesh-involutions/formal/README.md) includes a pinned project, but proves only part of its conjecture. The [beta source](../showcase/sun-beta-logconvexity/formal/README.md) has a historical main-theorem replay but lacks captured dependency pins; do not substitute another case's pins as evidence of its historical environment. MathLottery's environment setup and `doctor` do not install mathlib or benchmark its memory requirements.
 
 Inside a Lean project that already declares mathlib as a dependency, retrieve compatible compiled artifacts before compiling proofs:
 
@@ -80,7 +80,7 @@ env LEAN_NUM_THREADS=1 lake env lean -j 1 -M 2048 Proof.lean
 
 When a build is necessary, start with `env LEAN_NUM_THREADS=1 lake build <target>` and a specific target. `LEAN_NUM_THREADS` controls Lean runtime concurrency; it is not a global RAM quota or a substitute for monitoring subprocesses. Do not assume `lake -j 1 build` is supported: Lake and Lean have different options. [Lake maintainer's concurrency guidance](https://leanprover-community.github.io/archive/stream/270676-lean4/topic/Lake.20parallel.20builds.html)
 
-Kernel replay is a separate workload. For an already built showcase project, use `env LEAN_NUM_THREADS=1 lake env leanchecker --verbose Conjecture5` initially. `--fresh` additionally rechecks imported dependencies and can take substantially more resources. Parallel module checks load multiple import environments, so measure before increasing threads. [Official lean-action guidance](https://github.com/leanprover/lean-action#run-leanchecker-on-a-project-with-a-mathlib-dependency)
+Kernel replay is a separate workload. For the already built mesh showcase project, use `env LEAN_NUM_THREADS=1 lake env leanchecker --verbose MeshPartial` initially; the module's mathematical scope remains partial. `--fresh` additionally rechecks imported dependencies and can take substantially more resources. Parallel module checks load multiple import environments, so measure before increasing threads. [Official lean-action guidance](https://github.com/leanprover/lean-action#run-leanchecker-on-a-project-with-a-mathlib-dependency)
 
 For agent-driven work, put the desired toolchain, cache location and concurrency policy in **Task instructions**. For example: “Reuse the pinned Lean/mathlib environment; run one compiler at a time with `-j 1 -M 2048`; record peak RSS, exit status and any limit failure before attempting a larger build.” These instructions do not impose OS resource limits on native agent commands. The independent attached-source checker has the separate limits below.
 

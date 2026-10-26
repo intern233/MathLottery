@@ -131,4 +131,4 @@ Use `audits/codex_audits/<timestamp>/` at the project root as the working direct
 
 The [result showcase](../showcase/README.md) links to each case's written proof, review summary, verification metadata, and reproduction instructions. These records distinguish public sources, open status, mathematical correctness, and novelty.
 
-The mesh-pattern case has partial Lean verification, the medial-triangle case has a checked full formal statement, and the graph case has an executable finite certificate supporting its written counterexample proof. Read each case's stated scope before interpreting a successful check.
+On `ai4math`, the beta case includes a matching historical kernel-replay receipt for its main declaration but lacks captured dependency pins; the Franel case has a complete written candidate without a formal receipt; and the mesh case has partial Lean verification. All three retain their distinct novelty and external-review limits. Read each case's stated scope before interpreting a successful check. The public export's file-hash checks verify byte integrity only.

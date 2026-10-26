@@ -1,27 +1,41 @@
-# Result showcase
+# Publication candidates
 
 English | [简体中文](README.cn.md)
 
-[Project overview](../README.md) · [Installation and usage](../docs/usage.md)
+[Project overview](../README.md) · [Usage](../docs/usage.md) · [Evidence policy](../docs/evidence.md)
 
-This directory presents three complete candidate solutions from local MathLottery experiments: two proofs and one counterexample. Each case includes complete Chinese and English expert reports in Markdown and PDF, alongside the original written proof, review summary, and compact verification records. Cases suited to formal verification also include Lean source files.
+The `ai4math` branch selects three mathematical results for manuscript development. Selection favors a substantive argument, an exact unbounded statement, and useful supporting evidence. It does not certify novelty, expert approval or journal acceptance. The previous general demonstration collection remains in `main` and Git history.
 
-Each case documents its public sources, correctness checks, and review limits. Claims about current open status and priority remain limited by the evidence available for each case.
-
-| Case | Mathematical result | Lean verification | Novelty assessment |
+| Result | Potential mathematical contribution | Saved verification | Manuscript role |
 | --- | --- | --- | --- |
-| [Four mesh patterns on involutions](mesh-involutions/README.md) | Written proof for all n and k | Partial: 107 theorems passed; the global bijection construction is missing | POTENTIALLY_NEW |
-| [Medial-triangle moving-point inequality](medial-triangle-inequality/README.md) | Complete proof of Conjecture 5, including the boundary | Full formal statement compiled and passed kernel replay | UNKNOWN |
-| [Degree sequences of stepwise irregular graphs](stepwise-irregular-graphs/README.md) | Complete counterexample to Conjecture 1 | Not formalized; includes a finite certificate checker | UNKNOWN |
+| [Sun beta polynomials](sun-beta-logconvexity/README.md) | Coefficientwise log-convexity for every row index; explicit positive certificates for weighted convolutions | Complete candidate; final AI review `NO_ISSUES_FOUND`, coverage `FULL`; main Lean declaration replayed; novelty `UNKNOWN` | First priority; main result of a certificate-method paper |
+| [Cubic Franel tail](franel-logconvexity/README.md) | Coefficientwise log-convexity from $F_8$, with strict positivity of interior coefficients at central index $n\ge9$ | Complete candidate; AI review `NO_ISSUES_FOUND`, coverage `FULL`; no full Lean proof; novelty `UNKNOWN` | Potential companion application to beta |
+| [Mesh patterns on involutions](mesh-involutions/README.md) | Inversion-compatible marked-occurrence transport and orbit weights for four-pattern equidistribution, all $n,k$ | Complete written candidate; AI review `NO_ISSUES_FOUND`; partial Lean only; novelty `POTENTIALLY_NEW` | Separate combinatorics manuscript candidate |
 
-All three candidates previously received `NO_ISSUES_FOUND` in separate AI reviews. This means those reviews found no substantive gaps; it is not certification by mathematics experts. `POTENTIALLY_NEW` means no complete prior solution was found in the literature checked, so the result may be new. `UNKNOWN` means the available material is insufficient to assess novelty. Literature status reflects checks through 2026-10-21. This collection does not claim three confirmed first solutions to open problems.
+**The initial plan is two possible manuscripts, not three confirmed publications.** Beta and Franel share a proof strategy, but a general theorem covering both still needs to be established. If their commonality is only superficial, reconsider the manuscript structure. The mesh result has a separate combinatorial argument and literature context.
 
-Start with each case's README and its linked expert report in `organized/`. The reports explain the full argument, distinguish historical verification from later supplemental evidence, and preserve unresolved limitations. Organize is editorial work, not another proof review or a new novelty assessment. The original `proof.md`, review summary and `verification.json` remain available; the latter records source hashes and historical checks. Each `formal/README.md` describes formalization scope and reproduction commands. The Erdős #885 experiment produced only a partial construction and is not included among these three complete results.
+## Start with the reports
 
-These experiments used native Codex sessions with model `gpt-6-astra` and reasoning effort `max`. The controller helped prepare the environment and some proof approaches; native research and separate review sessions then performed their respective work. These were not entirely unprompted autonomous discoveries. Native solving in the mesh-pattern case stopped because of a usage limit; the controller subsequently extended the Lean work, and that full pipeline did not finish normally.
+| Case | English | 中文 | Source and review |
+| --- | --- | --- | --- |
+| Beta | [Markdown](sun-beta-logconvexity/organized/report.en.md) · [PDF](sun-beta-logconvexity/organized/report.en.pdf) | [Markdown](sun-beta-logconvexity/organized/report.zh.md) · [PDF](sun-beta-logconvexity/organized/report.zh.pdf) | [Proof](sun-beta-logconvexity/proof.md) · [Review](sun-beta-logconvexity/review.md) · [Lean scope](sun-beta-logconvexity/formal/README.md) |
+| Franel | [Markdown](franel-logconvexity/organized/report.en.md) · [PDF](franel-logconvexity/organized/report.en.pdf) | [Markdown](franel-logconvexity/organized/report.zh.md) · [PDF](franel-logconvexity/organized/report.zh.pdf) | [Proof](franel-logconvexity/proof.md) · [Review](franel-logconvexity/review.md) |
+| Mesh | [Markdown](mesh-involutions/organized/report.en.md) · [PDF](mesh-involutions/organized/report.en.pdf) | [Markdown](mesh-involutions/organized/report.zh.md) · [PDF](mesh-involutions/organized/report.zh.pdf) | [Proof](mesh-involutions/proof.md) · [Review](mesh-involutions/review.md) · [Lean scope](mesh-involutions/formal/README.md) |
 
-The collection contains small text files, compact report PDFs, necessary source code, and counterexample certificates. Each report's `organized/manifest.json` describes the curated export, distinguishes original-source hashes from exported-file hashes, and records omissions. Local paths and private task identifiers are removed from these publication copies. Toolchains, mathlib, build caches, databases, raw sessions, downloaded papers, and full run logs remain in local experiment archives. Original candidates are unchanged, and each verification summary describes presentation edits.
+Each case's README gives the exact statement, possible contribution, evidence limits and work needed before submission. Organize reports explain the saved argument; they do not add a new proof review. Historical submission-time statements in proof files are retained alongside subsequent review findings.
 
-Guides, case introductions, review summaries and full expert reports have English and Chinese editions. The original proof artifacts retain their original language: English for mesh patterns, Chinese for the triangle inequality and graph counterexample.
+## What still separates these results from papers
 
-Git can track this directory. Its `.gitignore` excludes generated Lean dependencies and build products. Running the Lean reproduction commands downloads toolchains and dependencies separately and may require several GiB; those dependencies are not part of the samples. Before reproducing a Lean case, read [resource requirements](../docs/resources.md) for memory and disk planning, cache reuse and concurrency controls.
+- **Beta:** independent human examination of the proof and formal statement, recovery of dependency pins, and updated comparison with prior results. A main theorem has a successful historical replay, but statement-equivalence certification remains `NOT_CERTIFIED`.
+- **Franel:** recover or reconstruct the missing certificate checkers and record fresh checks; examine the complete tables and boundary arguments. No full formal proof is present.
+- **Mesh:** distinguish the involution-specific contribution from the known all-permutations method, resolve the unread related-source gap, and obtain expert review. The 107 checked Lean theorems do not supply the missing global bijection.
+
+The legacy beta and Franel records do not contain assessed structured key-step roadmaps, despite their favorable written AI reviews. A run marked complete, an AI review, finite computation and formal compilation answer different questions. None alone certifies an original mathematical contribution.
+
+Literature judgments are historical: 2026-10-23 for beta/Franel and 2026-10-21 for mesh. This editorial selection on 2026-10-26 performs no new Solve, Verify or priority search. All cases require human responsibility for a manuscript and an accurate account of AI assistance.
+
+## Files and provenance
+
+The collection contains full bilingual Markdown/PDF reports, complete submitted proofs, review summaries, compact evidence records, certificate data and available Lean sources. The beta and Franel publication manifests distinguish original-source hashes from exported-file hashes, record stable identifier aliases and document omitted downloaded article full texts. Their PDFs are regenerated from public Markdown. Mesh retains its previously curated evidence and partial formal project.
+
+Credentials, subscription details, personal paths, runtime sessions, databases, downloaded papers and build caches do not belong in this directory. Original local experiments remain unchanged. Integrity checks authenticate listed file bytes, not mathematics or novelty. See [resource requirements](../docs/resources.md) before reproducing Lean checks; source file size is not a measure of compilation memory.
