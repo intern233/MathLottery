@@ -76,6 +76,10 @@ History groups Solve, Verify and Organize attempts by the exact problem statemen
 
 Read **run status** separately from **research outcomes**. “Run completed” means execution ended. Solve shows the researcher's claim of a complete or partial solution, or no solution; Verify separately shows its verdict, original-problem coverage and novelty assessment. A positive review of partial work does not settle the full problem. Organize inherits those findings. Explicit wording used to display a legacy candidate's scope is labeled; its saved scope and hashes remain unchanged. See [how to interpret evidence](evidence.md) and the [result showcase](../showcase/README.md).
 
+Native Solve saves partial or unresolved results and continues in the same session within the remaining cumulative budget. By default, it can finish early when the solver explicitly claims a complete solution or counterexample with no remaining mathematical obligations; this is still awaiting Verify. Enable **Use full Solve time budget** in **Budget & agent settings** to continue research and self-checking even after that claim. The same option is available when resuming a native Solve task. Other limits, quota or errors can interrupt it earlier, and you can stop it yourself. [Solve completion and budget rules](configuration.md#budgets)
+
+At the research time limit, native Solve shows **Wrapping up** and uses the same session for one final call: by default, up to **five extra minutes** to save the result and remaining work. **Wrapped up** does not mean solved; check the solver's claimed scope. If this call fails, a local checkpoint summary is saved and identified as such. Set `budget.finalize_minutes` in `config.yaml` before creating a task (`0` disables wrap-up).
+
 Closing the page or UI server does **not** stop background research. Use **Stop task** or `mathlottery stop <run-id>`. Starting the server again reconnects to saved state without automatically restarting stopped tasks.
 
 The **Activity** tab shows recent observable tool events, the last activity time and sampled local process-tree memory. A queued task shows its queue position. New tasks share the workspace resource limits; the default is one run and one independent formal check at a time. Queue waiting before a run starts does not consume research time. [Resource controls](resources.md)
@@ -170,7 +174,7 @@ Older single-language reports remain readable and are labeled accordingly. PDF e
 mathlottery run
 ```
 
-Without a supplied problem, `run` starts by finding one and proceeds automatically. Use `run --problem <problem-id>` or `run --prompt 'Your problem statement'` to start directly with solving. Review feedback can return to the original researcher. Budget exhaustion, errors or failure to find a proof can end the attempt; more time does not guarantee a solution.
+Without a supplied problem, `run` starts by finding one and proceeds automatically. Use `run --problem <problem-id>` or `run --prompt 'Your problem statement'` to start directly with solving. Review feedback returns to the original researcher when further work is needed. Native `run` may review partial candidates, then continue solving within the remaining budget. If time runs out in Solve, the same bounded wrap-up applies and execution ends without automatically reviewing its final candidate. Other limits or errors can interrupt the attempt; more time does not guarantee a solution.
 
 `run` does not automatically start Organize. Request it explicitly after reviewing the result.
 

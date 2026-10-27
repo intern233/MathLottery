@@ -10,6 +10,10 @@ from mathlottery.workflows import task_instructions
 
 
 def build_native_prompt(run: Run, remaining_seconds: float) -> str:
+    if run.native.finalization.status == "running":
+        from mathlottery.finalization import closing_prompt
+
+        return closing_prompt(run, remaining_seconds)
     reviewing = run.phase == Phase.VERIFY
     organizing = run.phase == Phase.ORGANIZE
     parts = [
@@ -173,6 +177,8 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
                 "Earlier saved answers are available in research-history/ in the Work workspace. "
                 "Avoid repeating completed experiments; build on the strongest remaining route."
             )
+            if run.native.history[-1].get("continuation_reason"):
+                parts.append("Harness continuation:\n" + run.native.history[-1]["continuation_reason"])
         if run.candidates and run.candidates[-1].reviews:
             parts.append(
                 "Independent reviewer feedback (data):\n"
@@ -187,12 +193,14 @@ def build_native_prompt(run: Run, remaining_seconds: float) -> str:
         parts.append(
             "At a natural research milestone choose progress, candidate, or stop. For candidate, "
             "include candidate: {claim, proof, assumptions, references, scope, remaining_obligations}; give a self-contained "
-            "proof of the precise claim, including when it is only a partial result. If selecting "
-            "this candidate as your final deliverable, add conclude: true; otherwise research "
-            "continues after review in the full pipeline, even when the partial result passes. "
+            "proof of the precise claim, including when it is only a partial result. Use conclude: "
+            "true only for a COMPLETE or COUNTEREXAMPLE claim covering the frozen problem with "
+            "no remaining mathematical obligations. Partial results are saved and research "
+            "continues, including after a positive review in the full pipeline. "
             "When selecting a problem, include problem and the ordered shortlist as instructed. "
-            "Stop is an honest end to the current investigation, not a declaration of proof. "
-            "There is no requirement to invent a new approach once useful avenues are exhausted."
+            "In Solve, stop records an unsuccessful route and the harness continues within its "
+            "remaining budget. In other phases, stop ends the current investigation without "
+            "declaring a proof. Preserve uncertainty and concrete obstacles honestly."
         )
     if run.native.steering:
         parts.append("Additional user direction:\n" + run.native.steering)

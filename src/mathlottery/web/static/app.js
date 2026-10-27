@@ -36,6 +36,7 @@ const words = {
     instructions: "Task instructions · optional", instructionsPlaceholder: "For example: provide Lean source files, record the compiler command and result, and check boundary cases.", instructionsHint: "Add requirements for this task, such as Lean verification. The original problem statement stays unchanged.",
     backend: "Backend", model: "Model", useConfig: "Use configuration", inherited: "Inherit backend default", effort: "Reasoning effort", chatMode: "Chat reasoning mode",
     timeBudget: "Time budget · minutes", roundBudget: "Maximum rounds", overrideHint: "Overrides apply to this task only. Credentials stay in your environment.",
+    fullSolveBudget: "Use full Solve time budget", fullSolveBudgetHint: "Continue research and self-checking until the total time limit, even after a complete claim. Other limits, errors or your stop request can still interrupt work. This does not replace Verify or guarantee a solution.",
     codexHint: "Uses this MathLottery workspace's Codex login and tools.", chatHint: "Uses the Chat API and its API billing. An API key must be configured in the server environment.",
     readinessChecking: "Checking the MathLottery account before starting Codex…", readinessSignIn: "Sign in with ChatGPT in the account panel above to start Codex research. Your draft stays here.", readinessPending: "Finish signing in on the official page, then return here. Your draft stays here.", readinessUnavailable: "Codex is unavailable. Install or configure it, then refresh the account status above.", readinessUnknown: "Account status could not be checked. Refresh the account status above before starting Codex.", readinessApiKey: "Use Switch account above to sign in with ChatGPT before starting subscription-backed Codex research.",
     backgroundHint: "Runs in the background. You can close this page and return later.", notebook: "YOUR NOTEBOOK", recentRuns: "Research history",
@@ -89,6 +90,7 @@ const words = {
     instructions: "本次任务要求 · 可选", instructionsPlaceholder: "例如：提供 Lean 源文件，记录编译命令及结果，并检查边界情况。", instructionsHint: "可补充 Lean 验证等本次任务要求，原始数学命题保持不变。",
     backend: "调用方式", model: "模型", useConfig: "使用配置文件", inherited: "继承后端默认值", effort: "推理强度", chatMode: "Chat 思考模式",
     timeBudget: "时间预算 · 分钟", roundBudget: "最大轮数", overrideHint: "这里的修改仅影响本次任务。密钥仍从服务环境读取。",
+    fullSolveBudget: "用满求解时间预算", fullSolveBudgetHint: "持续研究和自查至总时间上限，声称完整解决后也继续。其他限额、执行错误或你的停止请求仍可中断任务；此选项不替代 Verify，也不保证解出问题。",
     codexHint: "使用当前 MathLottery 工作区独立的 Codex 登录与工具配置。", chatHint: "使用 Chat API 及其 API 额度，需要在服务环境中配置 API Key。",
     readinessChecking: "正在检查 MathLottery 账号，完成后即可启动 Codex…", readinessSignIn: "请先在上方账号区域使用 ChatGPT 登录，再启动 Codex 研究。已填写的内容会保留。", readinessPending: "请在官方页面完成登录后回到这里，已填写的内容会保留。", readinessUnavailable: "Codex 当前不可用，请安装或完成配置，再刷新上方的账号状态。", readinessUnknown: "暂时无法确认账号状态，请刷新上方的账号状态后再启动 Codex。", readinessApiKey: "请通过上方「切换账号」登录 ChatGPT，再使用订阅额度启动 Codex 研究。",
     backgroundHint: "任务在后台运行，关闭页面后也可以随时回来查看。", notebook: "研究记录", recentRuns: "任务历史",
@@ -205,8 +207,37 @@ function badge(value) {
   return node("span", `badge ${style}`, t(value));
 }
 function executionBadge(run) {
+  if (!run.busy && run.worker_state === "interrupted") {
+    return node("span", "badge warning", state.language === "zh" ? "执行中断" : "Interrupted");
+  }
+  if (run.busy && run.finalization?.status === "running") {
+    return node("span", "badge active", state.language === "zh" ? "快速收尾中" : "Wrapping up");
+  }
+  if (!run.busy && run.finalization?.status === "completed" && run.state === "COMPLETED") {
+    return node("span", "badge execution-status", state.language === "zh" ? "已收尾" : "Wrapped up");
+  }
   return run.busy && (run.resources?.state === "queued" || run.worker_state === "queued")
     ? node("span", "badge warning", state.language === "zh" ? "排队中" : "Queued") : badge(run.state);
+}
+function finalizationBudgetHint(settings) {
+  const minutes = settings?.finalize_minutes ?? 5;
+  if (!minutes) return state.language === "zh" ? "当前配置关闭到时收尾。" : "End-of-budget wrap-up is disabled in this configuration.";
+  return state.language === "zh"
+    ? `研究时间用尽后，最多额外用 ${minutes} 分钟在原会话收尾，保存完成范围和剩余问题；收尾耗时也会记录。`
+    : `When research time runs out, allow up to ${minutes} extra minutes in the same session to summarize results and remaining work. Wrap-up time is recorded too.`;
+}
+function finalizationNotice(run) {
+  const status = run.finalization?.status;
+  if (status === "running") return run.busy
+    ? (state.language === "zh" ? "研究时间已到，正在快速收尾。" : "Research time has ended; the agent is wrapping up.") + " " + finalizationBudgetHint(run.settings)
+    : (state.language === "zh" ? "收尾执行已中断；保留已有检查点，尚未收到收尾结果。" : "Wrap-up was interrupted; existing checkpoints remain, but no wrap-up result has been received.");
+  if (status === "completed") return state.language === "zh"
+    ? "已保存 agent 的收尾结果。请查看求解声称的范围和剩余问题；收尾完成不代表原题已解决，也不替代 Verify。"
+    : "The agent's wrap-up result is saved. Check its claimed scope and remaining work; finishing wrap-up does not establish a solution or replace Verify.";
+  if (status === "incomplete") return state.language === "zh"
+    ? "未获得 agent 收尾总结，已保存本地检查点摘要。摘要保留已有进展，不补造最终结果或升级证明结论。"
+    : "No agent wrap-up summary was obtained. A local checkpoint summary preserves existing progress without inventing a final result or upgrading the proof claim.";
+  return "";
 }
 function options(selector, entries, emptyLabel) {
   const select = $(selector), previous = select.value;
@@ -552,6 +583,7 @@ function updateForm() {
   const organizeSource = state.runs.find((item) => item.id === $("#organize-from-run").value);
   text("#organize-source-note", organizeSource ? t("organizeSourceCount").replace("{n}", reviewedCandidateCount(organizeSource)) : t("organizeSourceHint"));
   $("#find-options").hidden = flow !== "find";
+  $("#solve-full-budget-field").hidden = flow !== "solve" || state.settings?.execution !== "native";
   $("#saved-review").hidden = !savedReview; $("#problem-fields").hidden = ["find", "organize"].includes(flow) || savedReview;
   $("#proof-fields").hidden = flow !== "verify" || savedReview;
   $("#new-problem").hidden = Boolean($("#problem-id").value);
@@ -648,6 +680,8 @@ function renderOverview() {
   if (state.settings) {
     renderModelPreview();
     for (const [id, value] of [["budget", state.settings.budget_minutes], ["iterations", state.settings.max_iterations]]) $("#" + id).placeholder = value ?? t("inherited");
+    if (!$("#solve-full-budget").dataset.touched) $("#solve-full-budget").checked = Boolean(state.settings.solve_until_budget_exhausted);
+    text("#solve-full-budget-hint", `${t("fullSolveBudgetHint")} ${finalizationBudgetHint(state.settings)}`);
   }
   const availableProblems = state.problems.map((problem) => [problem.id, state.discoveryChoice?.problem.id === problem.id ? state.discoveryChoice.problem.title : problem.title]);
   if (state.discoveryChoice && !availableProblems.some(([id]) => id === state.discoveryChoice.problem.id)) availableProblems.push([state.discoveryChoice.problem.id, state.discoveryChoice.problem.title]);
@@ -964,6 +998,12 @@ function renderResults(run) {
 }
 function renderDetail(run) {
   $("#run-detail").hidden = false;
+  $("#resume-full-budget-field").hidden = run.workflow !== "solve" || run.settings.execution !== "native";
+  if ($("#resume-full-budget").dataset.runId !== run.id) {
+    $("#resume-full-budget").checked = Boolean(run.settings.solve_until_budget_exhausted);
+    $("#resume-full-budget").dataset.runId = run.id;
+  }
+  text("#resume-full-budget-hint", `${t("fullSolveBudgetHint")} ${finalizationBudgetHint(run.settings)}`);
   text("#detail-id", `${run.workflow.toUpperCase()} / ${run.id}`); text("#detail-title", run.title);
   const status = executionBadge(run); $("#detail-state").className = status.className; text("#detail-state", status.textContent);
   $("#run-facts").replaceChildren(...[modelSummary(run.settings, run.mode), `${run.iteration} ${t("rounds")}`, `${Math.round(run.elapsed_seconds / 60 * 10) / 10} min ${t("elapsed")}`, `${compact(run.usage.input_tokens)} in / ${compact(run.usage.output_tokens)} out ${t("tokens")}`].map((fact) => node("span", "", fact)));
@@ -973,8 +1013,13 @@ function renderDetail(run) {
     $("#research-outcome").hidden = run.workflow === "find";
     renderDetail.outcomeKey = outcomeKey;
   }
-  const interrupted = !run.busy && ["queued", "running"].includes(run.worker?.state);
-  const message = [run.last_error, run.worker?.error, interrupted ? t("workerInterrupted") : null, run.stop_reason, run.metrics.usage_warning].filter(Boolean).join("\n"); notice("#run-message", message);
+  const interrupted = !run.busy && (["queued", "running", "interrupted"].includes(run.worker?.state) || run.worker_state === "interrupted");
+  const timingNote = run.elapsed_timing_basis === "last_resource_sample"
+    ? (state.language === "zh" ? "进程异常退出：耗时停在最后一次资源采样；停机期间不计入预算。恢复后接续原检查点。" : "Worker interrupted: elapsed time is bounded by the last resource sample; downtime is excluded. Resume continues the saved checkpoint.") : null;
+  // Old workers may retain the recovered attempt's error until their next checkpoint.
+  const currentError = run.busy && run.last_error === "Recovered an interrupted native attempt; its token usage is unknown"
+    ? (state.language === "zh" ? "已续接原研究会话；上一次中断调用的 token 用量未知。" : "The original research session has resumed; token usage for the interrupted call is unknown.") : run.last_error;
+  const message = [finalizationNotice(run), currentError, interrupted ? t("workerInterrupted") : run.worker?.error, timingNote, run.stop_reason, run.metrics.usage_warning].filter(Boolean).join("\n"); notice("#run-message", message);
   $("#run-message").classList.toggle("error", Boolean(run.last_error || run.worker?.error));
   $("#stop").hidden = !run.busy; $("#stop").disabled = run.stop_requested; text("#stop", t(run.stop_requested ? "stopping" : "stop"));
   $("#show-resume").hidden = run.busy || run.mode === "manual";
@@ -1002,6 +1047,7 @@ async function selectRun(id, scroll = false) {
   try {
     const run = await api(`/api/runs/${id}`);
     if (state.selected !== id) return;
+    delete $("#resume-full-budget").dataset.runId;
     state.detail = run; renderOverview(); renderDetail(run);
     $("#resume-budget").value = ""; $("#resume-rounds").value = ""; $("#direction").value = "";
     $("#resume-budget").placeholder = run.settings.budget_minutes; $("#resume-rounds").placeholder = run.settings.max_iterations;
@@ -1038,8 +1084,10 @@ function overrides() {
   for (const [id, key] of [["multi-agent", "native_multi_agent"], ["memories", "native_memories"]]) {
     const input = $("#" + id); if (input.value && !input.disabled) values[key] = input.value === "inherit" ? null : input.value === "true";
   }
+  if (!$("#solve-full-budget-field").hidden && !$("#solve-full-budget").disabled) values.solve_until_budget_exhausted = $("#solve-full-budget").checked;
   return values;
 }
+$("#solve-full-budget").addEventListener("change", () => { $("#solve-full-budget").dataset.touched = "true"; });
 $$("[data-workflow]").forEach((button) => button.addEventListener("click", () => setWorkflow(button.dataset.workflow, button.classList.contains("nav-item"))));
 $("#verify-mode").addEventListener("change", updateForm);
 $("#backend").addEventListener("change", () => {
@@ -1125,6 +1173,7 @@ $("#resume-form").addEventListener("submit", async (event) => {
   if ($("#direction").value.trim()) body.message = $("#direction").value.trim();
   if ($("#resume-budget").value) body.budget_minutes = Number($("#resume-budget").value);
   if ($("#resume-rounds").value) body.max_iterations = Number($("#resume-rounds").value);
+  if (!$("#resume-full-budget-field").hidden) body.solve_until_budget_exhausted = $("#resume-full-budget").checked;
   if (!$("#resume-lean-limits").hidden) {
     for (const [field, selector] of Object.entries({formal_memory_mb: "#resume-lean-memory", formal_address_space_mb: "#resume-lean-address", formal_timeout_seconds: "#resume-lean-timeout"})) {
       if ($(selector).value) body[field] = Number($(selector).value);

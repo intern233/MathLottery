@@ -52,6 +52,9 @@ resources:
   sample_interval_seconds: 2
 budget:
   max_wall_time_minutes: 180
+  finalize_minutes: 5  # Extra bounded native Solve closing time; 0 disables the agent closing turn.
+  # Native standalone Solve: keep checking/improving even after a complete claim.
+  solve_until_budget_exhausted: false
   max_iterations: 50
   max_input_tokens: null
   max_output_tokens: null

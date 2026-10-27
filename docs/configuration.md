@@ -183,6 +183,8 @@ See the [troubleshooting checklist](usage.md#troubleshooting) for other startup 
 budget:
   max_wall_time_minutes: 180
   max_iterations: 50
+  solve_until_budget_exhausted: false
+  finalize_minutes: 5
   max_input_tokens: null
   max_output_tokens: null
   max_external_cost_usd: null
@@ -194,10 +196,24 @@ backend:
 | --- | --- |
 | Active-time budget | Includes research and independent evidence checks; excludes paused time. Resume values replace the total limit, not add more time. |
 | `max_iterations` | Research handoffs, not each native tool call or an entire attempt to solve the problem. |
+| `solve_until_budget_exhausted` | Native standalone Solve only. When `true`, save every candidate and continue research and self-checking until the active-time limit, including after a complete claim. Defaults to `false`. |
+| `finalize_minutes` | At the time limit, native Solve gets one final call in the same research session, with up to this many extra minutes. Defaults to `5`; `0` disables it. Also applies when native `run` reaches its time limit in the Solve phase. |
 | Input/output token limits | Use actual backend reports, checked between calls. A call can exceed the threshold; unreported usage remains unknown. |
 | `native_turn_timeout_seconds: null` | A native call may use the remaining overall time budget. |
 | `chat.request_timeout_seconds` | Timeout for one HTTP request, not the total time the remote model may think. |
 | `max_external_cost_usd` | Only `null` or legacy `0`; `0` blocks Chat API calls. `null` delegates spending controls to the provider account and does not mean free usage. |
+
+In native Solve, a `PARTIAL` or `UNKNOWN` candidate, or one with unresolved mathematical obligations, is a saved checkpoint: research continues in the same session while budget remains. By default, a candidate can finish standalone Solve early only with `conclude: true`, an explicit `COMPLETE` or `COUNTEREXAMPLE` scope, and an empty `remaining_obligations` list. This records the solver's claim; correctness, original-problem coverage and novelty still require Verify. In `run`, partial candidates can receive independent reviews, but even a positive review does not end research as a full solution.
+
+Enable **Use full Solve time budget** in the browser's budget settings or Resume form to keep standalone Solve researching and checking its own candidate after a complete claim. It reuses the saved research session and immutable candidate history; it does not launch Verify or Organize. Other limits and interruptions below still apply. Resume preserves this setting when omitted, and its time value remains a cumulative total: `360` minutes means six hours including previously recorded active time.
+
+For a new CLI Solve task, set `budget.solve_until_budget_exhausted: true` in `config.yaml`. CLI resume preserves the saved value; use the browser Resume form to change it for an existing task.
+
+When the research time expires, the browser shows **Wrapping up**. The agent must stop exploring and save its current result, supporting materials, remaining obligations and a clear scope such as partial or unresolved. This is one bounded call, not an open-ended extension: a `360`-minute research budget with `finalize_minutes: 5` permits at most five additional minutes for wrap-up. Its active time and reported usage are still recorded. A submitted wrap-up candidate ends execution without automatically starting Verify or Organize or upgrading correctness or novelty. **Wrapped up** means the result was saved, not that the original problem was solved.
+
+If the agent cannot submit a wrap-up result within that allowance, MathLottery saves a local checkpoint summary and explicitly reports that no agent wrap-up summary was obtained. This fallback does not invent a final proof or claim completion. User stop requests, provider failures and other hard limits can interrupt wrap-up too; it does not bypass them. Configure the allowance in `config.yaml` before creating a task; existing tasks retain their saved configuration.
+
+A model's `stop` milestone during regular Solve saves progress and continues. The user's **Stop task** or CLI stop request is still honored. Iteration or token limits, provider quota, timeouts and errors can interrupt work before the configured research time is used. More time does not guarantee a solution. These continuation and wrap-up rules apply to native execution; the legacy structured protocol retains its existing termination behavior.
 
 MathLottery does not estimate dollar costs, subscription balances or third-party tool fees. Configure API spending controls with the provider. Time/token budgets do not cap RAM, disk or all subprocesses. In particular, `tools.memory_mb: 512` applies to the legacy Python worker, not native Codex or Lean/Lake. Read [resource controls and measured Lean usage](resources.md) before increasing concurrency or compiler limits.
 
@@ -251,6 +267,7 @@ Use [stop, resume and report commands](usage.md#operations) to continue existing
 - Chat polls background responses and continues with `previous_response_id`. If a response ID was saved before a connection failure, recovery retrieves it instead of creating a second response. Failure before an ID arrives remains uncertain; inspect provider records before deciding to create a new run.
 - Stop/Ctrl+C request cancellation. Saved output survives, but stopping does not guarantee a complete candidate submission or immediate remote cancellation. Pending requests must be recovered before changing backend.
 - Browser workers continue when the page or UI server closes. Restarting the UI reconnects to saved state and does not automatically relaunch dead workers. Use an explicit stop request to stop research.
+- Shutting down or restarting the host/WSL stops local workers. Restart `mathlottery serve`, then resume the existing task. For an interrupted native Codex worker with a matching resource snapshot, elapsed time is bounded by the last saved sample, excluding subsequent downtime; the final unsampled interval is unknown. This does not freeze remote Chat responses that may still be running, or invent missing measurements for older runs.
 - Hosted responses/containers have retention limits; local checkpoints cannot recreate expired remote context. External tool side effects are not guaranteed exactly once; inspect recorded files and receipts during recovery.
 
 `resume --message` adds direction to the original workflow. CLI backend changes retain separate backend context IDs and pass recorded research answers forward; they do not create identical tool environments. Independent reviews start separate contexts without the solver's conversation. See [architecture and recovery](architecture.md) for implementation details.

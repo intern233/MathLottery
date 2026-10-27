@@ -1,0 +1,663 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=28mm,headheight=15pt]{geometry}
+\usepackage{microtype,booktabs,array,enumitem,fancyhdr}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,linkcolor=MidnightBlue,citecolor=MidnightBlue,urlcolor=MidnightBlue]{hyperref}
+\usepackage{bookmark}
+\hypersetup{pdftitle={A Hautus criterion for normal semigroups with sectorial spectrum},pdfauthor={Research manuscript prepared from the supplied draft}}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small Normal semigroups and the Hautus test}
+\fancyhead[R]{\small Research manuscript}
+\fancyfoot[L]{\footnotesize 27 October 2026 / Complete proposed proof draft}
+\fancyfoot[R]{\thepage}
+\setlength{\parskip}{4pt}\setlength{\parindent}{1.2em}
+\setlist{nosep,leftmargin=1.8em}
+\allowdisplaybreaks[2]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}\newtheorem{remark}[theorem]{Remark}
+\newcommand{\C}{\mathbb C}\newcommand{\R}{\mathbb R}\newcommand{\N}{\mathbb N}
+\newcommand{\E}{\mathcal E}\newcommand{\D}{\mathcal D}
+\newcommand{\F}{\mathcal F}\newcommand{\Prob}{\mathcal P}
+\newcommand{\dd}{\,\mathrm d}
+\DeclareMathOperator{\Rea}{Re}\DeclareMathOperator{\Ima}{Im}
+\DeclareMathOperator{\supp}{supp}\DeclareMathOperator{\sgn}{sgn}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\abs}[1]{\left\lvert #1\right\rvert}
+\newcommand{\ip}[2]{\left\langle #1,#2\right\rangle}
+\begin{document}
+\begin{center}
+{\small OPERATOR SEMIGROUPS / OBSERVABILITY / SPECTRAL GEOMETRY}\par\vspace{10pt}
+{\LARGE\bfseries A Hautus criterion for normal semigroups\\[3pt] with sectorial spectrum}\par\vspace{8pt}
+{\large Spectral escape, angular concentration, and quantitative certificates}\par\vspace{8pt}
+27 October 2026
+\end{center}
+\noindent\textbf{Status.} This manuscript develops the supplied horizontal-strip draft into a broader proposed theorem. All results labelled theorem, lemma, proposition, or corollary below have written proofs. The new sector argument and quantitative certificate argument have not been independently peer reviewed or formally verified. In particular, the words ``complete proposed proof'' do not certify correctness or priority. No author names or affiliations have been assigned.
+\begin{abstract}
+Let $A$ be an exponentially stable normal semigroup generator on a complex Hilbert space, and suppose that $\sigma(A)$ lies in a sector strictly inside the left half-plane. For a graph-norm bounded, $L^2$-admissible observation operator with arbitrary Hilbert output, we prove that the quantitative Hautus condition implies infinite-time exact observability. The argument reduces the problem to a probability measure on the compact interval of spectral slopes. Polynomial-exponential filters concentrate simultaneously in scale and at an extreme slope; finite differences realize the filters using only positive real semigroup times. This replaces the vanishing-angle step of the supplied horizontal-strip argument. We also prove a separate spectral escape theorem under a nonuniform pointwise separation hypothesis, derive finite computable certificates for observability constants, give an explicit narrow-sector estimate, and examine continuous-spectrum examples with nontrivial output cancellation. The general lower bound is certified through a finite scalar filter family, not through an optimal closed-form formula.
+\end{abstract}
+\noindent\textbf{Keywords.} Exact observability; Hautus test; normal generator; analytic semigroup; angular spectral measure; exponential-polynomial filter.\par
+\noindent\textbf{MSC 2020.} 93B07, 47D06, 93C25.
+\tableofcontents
+
+\section{Introduction and principal statements}
+The quantitative infinite-dimensional Hautus test is a resolvent-type necessary condition for exact observability, introduced by Russell and Weiss \cite{RW94}. Its sufficiency is sensitive to the class of generators. Counterexamples for general semigroups were developed by Jacob and Zwart \cite{JZ04}; their later work treats exponentially stable groups \cite{JZ09}. Related resolvent methods for parabolic control appear in Duyckaerts and Miller \cite{DM12}. We use the observation-operator framework of Tucsnak and Weiss \cite{TW09}.
+
+Daun and Jacob \cite{DJ26} prove sufficiency for self-adjoint generators and construct a counterexample for unrestricted normal generators. Their Section 6 asks about horizontal-strip spectra and, more generally, normal sectorial generators. Their real-time filtering method motivates the integrated estimate below. The supplied draft \cite{Draft26} proposes a horizontal-strip proof by local spectral escape and a filter centered on the negative real direction.
+
+Here the proposed extension has two distinct components. First, spectral escape survives in every fixed finite-slope sector even under a weaker, nonuniform pointwise separation condition. Second, a different filter family treats nonzero limiting spectral slopes and gives the full finite-slope sector conclusion. These components have separate proofs; the second does not depend on the first.
+
+Throughout, $X,Y$ are complex Hilbert spaces and $T(t)=e^{tA}$ is a strongly continuous semigroup. Put
+\begin{equation}\label{sector}
+ S_{a,K}=\{-h+ib:h\ge a,\ |b|\le Kh\},\qquad a>0,\quad 0\le K<\infty.
+\end{equation}
+The graph norm on $D(A)$ is $\norm{x}+\norm{Ax}$. For a graph-norm bounded $C:D(A)\to Y$, let
+\begin{equation}\label{energy}
+ \E(x)=\int_0^\infty\norm{CT(t)x}^2\dd t.
+\end{equation}
+The admissibility assumption is $\E(x)\le M\norm{x}^2$ for some $M>0$. The quantitative Hautus condition is
+\begin{equation}\label{H}\tag{$H_m$}
+ \norm{(\zeta-A)x}^2+|\Rea\zeta|\norm{Cx}^2
+ \ge m|\Rea\zeta|^2\norm{x}^2,
+ \qquad \zeta\in\C_-,\ x\in D(A),
+\end{equation}
+where $m>0$ and $\C_-=\{\zeta:\Rea\zeta<0\}$.
+
+\begin{theorem}[Sectorial Hautus criterion]\label{main}
+Let $A$ be normal, let $\sigma(A)\subset S_{a,K}$, and let $C:D(A)\to Y$ be graph-norm bounded and $L^2$-admissible. If \eqref{H} holds, then
+\begin{equation}\label{obs}
+ \E(x)\ge c(m,K)\norm{x}^2,\qquad x\in D(A),
+\end{equation}
+where a positive lower bound can be chosen using only $m$ and $K$. The same inequality holds for the admissible observation map on $X$. In particular, no finite-dimensionality of $Y$, compactness of the resolvent, or eigenvector-basis assumption is required.
+\end{theorem}
+The existence part is proved in Section~\ref{sec:sector-proof}. Section~\ref{sec:quant} proves the uniform dependence and supplies a finite certificate formula. The theorem is stated for normal generators, not for arbitrary nonnormal sectorial operators.
+
+\begin{corollary}[Horizontal strips and affine sectors]\label{affine}
+Suppose the other assumptions of Theorem~\ref{main} hold and
+\[
+ \Rea\lambda\le-a,\qquad
+ |\Ima\lambda-\omega|\le B+K_0(-\Rea\lambda)
+ \quad(\lambda\in\sigma(A)),
+\]
+where $B,K_0\ge0$ and $\omega\in\R$. Then \eqref{obs} holds with
+$c(m,K_0+B/a)$. In particular, the supplied horizontal-strip theorem is recovered by $K_0=0$.
+\end{corollary}
+\begin{proof}
+Set $\widetilde A=A-i\omega I$. The output is multiplied by $e^{-i\omega t}$, so its energy is unchanged. Replacing $\zeta$ by $\zeta+i\omega$ preserves \eqref{H}. The spectrum of $\widetilde A$ is contained in $S_{a,K_0+B/a}$.
+\end{proof}
+
+\begin{theorem}[A concrete quantitative case]\label{explicit-main}
+Under the assumptions of Theorem~\ref{main}, if $m\ge1/2$ and $K\le1/4$, then
+\begin{equation}\label{explicit}
+ \E(x)\ge\frac{1}{480(1+1/\sqrt2)^2}\norm{x}^2
+ \ge\frac1{1440}\norm{x}^2.
+\end{equation}
+This is a conservative bound, not an optimal constant.
+\end{theorem}
+The proof in Section~\ref{sec:explicit} uses only the filter $e^{-w}-e^{-2w}$ and elementary scalar estimates.
+
+\section{Preliminaries and the necessary direction}
+Let $E_A$ be the spectral measure of $A$. Write
+\[
+ \nu_x(\Omega)=\norm{E_A(\Omega)x}^2,
+ \qquad h(\lambda)=-\Rea\lambda,
+ \qquad q(\lambda)=\frac{\Ima\lambda}{-\Rea\lambda}.
+\]
+For nonzero $x$, the pushforward of $\nu_x/\norm{x}^2$ by $q$ is a probability measure on $[-K,K]$. We will use this angular measure without decomposing the output into spectral blocks.
+
+Normality and \eqref{sector} give $\norm{T(t)}\le e^{-at}$. Finite-time admissibility implies infinite-time admissibility: if the bound on $[0,t_0]$ is $M_0$, then
+\[
+ \E(x)\le\sum_{j\ge0}M_0\norm{T(jt_0)x}^2
+ \le\frac{M_0}{1-e^{-2at_0}}\norm{x}^2.
+\]
+The bounded observation map on $D(A)$ extends uniquely to $\Psi:X\to L^2(0,\infty;Y)$; all lower bounds pass to $X$ by density.
+
+\begin{proposition}[Necessity with a stated constant]\label{necessity}
+For any exponentially stable semigroup, suppose $c\norm{x}^2\le\E(x)\le M\norm{x}^2$. Then \eqref{H} holds with
+\[
+ m=\frac{c}{M+1/2}.
+\]
+Normality is not needed for this assertion.
+\end{proposition}
+\begin{proof}
+For $x\in D(A^2)$, variation of constants gives, with $r=-\Rea\zeta>0$,
+\[
+ CT(t)x=e^{\zeta t}Cx+
+ \int_0^t e^{\zeta(t-s)}CT(s)(A-\zeta)x\dd s.
+\]
+Young's convolution inequality and admissibility imply
+\[
+ \sqrt c\norm{x}\le\frac{\norm{Cx}}{\sqrt{2r}}
+ +\frac{\sqrt M}{r}\norm{(A-\zeta)x}.
+\]
+Multiplication by $r$ and Cauchy--Schwarz yield
+\[
+ c r^2\norm{x}^2\le (M+1/2)
+ \bigl(\norm{(A-\zeta)x}^2+r\norm{Cx}^2\bigr).
+\]
+The space $D(A^2)$ is graph-norm dense in $D(A)$, for example by resolvent approximation. Passing to that limit proves the assertion.
+\end{proof}
+Thus Theorem~\ref{main}, together with Proposition~\ref{necessity}, gives an equivalence under its stated spectral assumptions.
+
+\section{An independent spectral escape principle}\label{sec:escape}
+For this section replace the uniform condition \eqref{H} by
+\begin{equation}\label{P}\tag{P}
+ \text{for each }\zeta\in\C_-\text{ there exists }d_\zeta>0:\quad
+ \norm{(\zeta-A)x}^2+\norm{Cx}^2\ge d_\zeta\norm{x}^2
+ \quad(x\in D(A)).
+\end{equation}
+Condition \eqref{H} implies \eqref{P}, with
+$d_\zeta=m|\Rea\zeta|^2/\max\{1,|\Rea\zeta|\}$, but the reverse implication need not hold. This weaker hypothesis makes the escape result useful independently of Theorem~\ref{main}.
+
+\subsection{Small observation at complex times}
+Define the connected open cone
+\[
+ \D_K=\{w\in\C:\Rea w>K|\Ima w|\}.
+\]
+For $K=0$ this is the right half-plane. If $w=\delta+i\eta$ and $\lambda=-h+ib\in S_{a,K}$, then
+\[
+ |e^{w\lambda}|=e^{-\delta h-\eta b}
+ \le e^{-(\delta-K|\eta|)h}.
+\]
+Consequently, on compact subsets of $\D_K$, the spectral multipliers $\lambda^j e^{w\lambda}$ are uniformly bounded for each integer $j\ge0$. Hence $T(w):X\to D(A)$ is holomorphic in graph norm.
+
+\begin{lemma}[Complex-time vanishing]\label{complex}
+If $\norm{x_n}\le1$, $x_n\in D(A)$, and $\E(x_n)\to0$, then
+\[
+ \norm{CT(w)x_n}\longrightarrow0\qquad(w\in\D_K).
+\]
+Global admissibility is not required for this conclusion, provided the displayed energies are finite.
+\end{lemma}
+\begin{proof}
+The functions $F_n(w)=CT(w)x_n$ are $Y$-valued holomorphic and locally uniformly bounded. If vanishing fails at $w_0$, pass to a subsequence and choose norm-one complex-linear functionals $\ell_n\in Y^*$ so that $|\ell_n(F_n(w_0))|\ge\varepsilon>0$. Scalar Montel compactness gives a locally uniformly convergent subsequence $g_n=\ell_n\circ F_n\to g$. On each compact real interval $[r,s]\subset(0,\infty)$,
+\[
+ \int_r^s |g_n(t)|^2\dd t\le\E(x_n)\to0.
+\]
+Thus $g$ vanishes on that interval and, by the identity theorem, on $\D_K$. This contradicts the value at $w_0$. No vector-valued compactness of the unit ball of $Y$ is used.
+\end{proof}
+
+\begin{theorem}[Local spectral escape under pointwise separation]\label{escape}
+Assume $A$ is normal, $\sigma(A)\subset S_{a,K}$, $C$ is graph-norm bounded, and \eqref{P} holds. If $x_n\in D(A)$, $\norm{x_n}\le1$, and $\E(x_n)\to0$, then for every $\tau>0$ and every finite $R\ge a$,
+\begin{equation}\label{escape-concl}
+ \norm{T(\tau)x_n}\to0,
+ \qquad
+ \nu_{x_n}\{h\le R\}\to0.
+\end{equation}
+\end{theorem}
+\begin{proof}
+Suppose $\norm{T(\tau)x_n}\ge\eta>0$ along a subsequence. Define
+\[
+ \dd\mu_n(\lambda)=e^{-2\tau h(\lambda)}\dd\nu_{x_n}(\lambda).
+\]
+Then $\eta^2\le\mu_n(S_{a,K})\le1$ and
+$\mu_n\{h>R\}\le e^{-2\tau R}$. Since $\{\lambda\in S_{a,K}:h\le R\}$ is compact, this is a tight family. After normalizing the masses and applying weak compactness of tight probability measures, extract $\mu_n\Rightarrow\mu$, where $\mu(S_{a,K})\ge\eta^2$. Moreover,
+\[
+ \int |\lambda|^2\dd\mu_n\le
+ (1+K^2)\sup_{h\ge a}h^2e^{-2\tau h}<\infty.
+\]
+Testing the weak limit with $\min\{|\lambda|^2,L\}$ and then letting $L\to\infty$ proves $\int|\lambda|^2\dd\mu<\infty$.
+
+For fixed $w\in\D_K$ and $\zeta\in\C_-$, apply \eqref{P} to $T(\tau+w)x_n$. By Lemma~\ref{complex}, the observation term vanishes. The two remaining spectral integrands are bounded continuous functions on $S_{a,K}$, so weak convergence gives
+\begin{equation}\label{escape-weak}
+ \int |\zeta-\lambda|^2e^{2\Rea(w\lambda)}\dd\mu(\lambda)
+ \ge d_\zeta\int e^{2\Rea(w\lambda)}\dd\mu(\lambda).
+\end{equation}
+
+Let $F=\supp\mu$. On the interval $I=(-1/K,1/K)$, interpreted as $\R$ if $K=0$, put
+\[
+ H(p)=\sup_{u+iv\in F}(u+pv).
+\]
+This is a finite convex function: $u+pv\le-(1-K|p|)h$. Choose a differentiability point $p_0\in I$. The same coercive estimate ensures that the supremum is attained. If $u+iv$ maximizes it, then $v$ is a subgradient of $H$ at $p_0$; hence $v=H'(p_0)$, and $u=H(p_0)-p_0v$ is also fixed. There is a unique maximizer $\lambda_0\in F$.
+
+Set $\phi(\lambda)=\Rea\lambda+p_0\Ima\lambda$. In \eqref{escape-weak}, take $\zeta=\lambda_0$ and $w=t(1-ip_0)\in\D_K$. It follows that
+\begin{equation}\label{escape-ratio}
+ \frac{\int|\lambda-\lambda_0|^2e^{2t\phi(\lambda)}\dd\mu}
+ {\int e^{2t\phi(\lambda)}\dd\mu}\ge d_{\lambda_0}>0.
+\end{equation}
+The left side tends to zero. Indeed, for each $\varepsilon>0$, uniqueness of the maximum and coercivity give a gap $\gamma>0$ outside $B(\lambda_0,\varepsilon)$, unless that complement is empty. The set $U=\{\phi>\phi(\lambda_0)-\gamma/2\}$ has positive $\mu$-mass. The exterior contribution to the ratio is at most
+\[
+ \frac{\int|\lambda-\lambda_0|^2\dd\mu}{\mu(U)}e^{-t\gamma},
+\]
+and the interior contribution is at most $\varepsilon^2$. This contradicts \eqref{escape-ratio}. Finally,
+\[
+ \nu_{x_n}\{h\le R\}\le e^{2\tau R}\norm{T(\tau)x_n}^2\to0.
+\]
+All weak limits were taken at fixed complex time before the concentrating parameter $t$ was allowed to grow.
+\end{proof}
+
+\begin{corollary}[Observation estimates with a small remainder]\label{weak-est}
+Under the hypotheses of Theorem~\ref{escape}, for every $\tau>0$ and $\varepsilon>0$ there exists $L_{\tau,\varepsilon}<\infty$ such that
+\[
+ \norm{T(\tau)x}^2\le\varepsilon\norm{x}^2+L_{\tau,\varepsilon}\E(x).
+\]
+Similarly, for every finite $R\ge a$ and $\varepsilon>0$ there is $L_{R,\varepsilon}<\infty$ with
+\[
+ \norm{E_A(\{h\le R\})x}^2\le\varepsilon\norm{x}^2+L_{R,\varepsilon}\E(x).
+\]
+The statements first apply to $x\in D(A)$ of finite energy; under admissibility they hold on $X$.
+\end{corollary}
+\begin{proof}
+If either estimate failed, normalization would give unit vectors with energy tending to zero while its left-hand side stayed above $\varepsilon$. This contradicts \eqref{escape-concl}. Density gives the assertion on $X$ when the energy map is bounded.
+\end{proof}
+\begin{remark}
+The estimates concern the original vector's energy. They do not assert $\E(E_A(\Omega)x)\le\E(x)$, and they do not assume that $C$ commutes with any spectral projection.
+\end{remark}
+
+\section{Real-time filters and angular reduction}\label{sec:filters}
+\begin{definition}
+Let $\F$ consist of nonzero exponential polynomials
+\begin{equation}\label{filter-class}
+ f(w)=\sum_{j=1}^J a_j e^{-\beta_j w},\qquad
+ \beta_j>0,\quad a_j\in\C,\quad\sum_{j=1}^J a_j=0.
+\end{equation}
+For a specified representation put
+\[
+ \kappa_f=\left(\sum_{j=1}^J\frac{|a_j|}{\sqrt{\beta_j}}\right)^2.
+\]
+Equal exponents can be combined before this constant is evaluated.
+\end{definition}
+The cancellation in \eqref{filter-class} gives $f(w)=O(w)$ at zero. For bounded $q$, $f(s(1-iq))$ decays exponentially as $s\to\infty$. Thus the following integrals are finite and continuous in $q\in[-K,K]$:
+\begin{align}
+ A_f(q)&=\int_0^\infty |f(s(1-iq))|^2\frac{\dd s}{s},\label{Af}\\
+ B_f(q)&=\int_0^\infty |f(s(1-iq))|^2\dd s,\label{Bf}\\
+ C_f(q)&=\int_0^\infty s|f(s(1-iq))|^2\dd s.\label{Cf}
+\end{align}
+For $z\in\C_-$ and $r=-\Rea z$, define the real continuous function
+\begin{align}\label{Dkernel}
+ D_{f,z}^{(m)}(q)
+ &=\int_0^\infty\bigl(mr^2-|z+s(1-iq)|^2\bigr)
+ |f(s(1-iq))|^2\frac{\dd s}{s}\\
+ &=(mr^2-|z|^2)A_f(q)
+ -2\Rea\bigl(\bar z(1-iq)\bigr)B_f(q)
+ -(1+q^2)C_f(q).\notag
+\end{align}
+
+\begin{proposition}[Integrated Hautus estimate]\label{integrated}
+Under \eqref{H}, for every $f\in\F$, $z\in\C_-$, and $x\in D(A)$,
+\begin{equation}\label{integrated-eq}
+ \int_{\sigma(A)}D_{f,z}^{(m)}(q(\lambda))\dd\nu_x(\lambda)
+ \le r\kappa_f\E(x),\qquad r=-\Rea z.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Set $v_t=f(-tA)x=\sum_j a_jT(\beta_jt)x\in D(A)$. Apply \eqref{H} with $\zeta=z/t$ to $v_t$ and multiply by $t$:
+\[
+ \frac{mr^2}{t}\norm{v_t}^2
+ \le\frac1t\norm{(z-tA)v_t}^2+r\norm{Cv_t}^2.
+\]
+Integrate over $t>0$. The spectral theorem and Tonelli's theorem apply separately to both nonnegative spectral terms. For $\lambda=-h+ib$, substitute $s=th$, so $-t\lambda=s(1-iq(\lambda))$. Their finiteness follows from the continuity and boundedness on $[-K,K]$ of \eqref{Af}--\eqref{Cf}. Finally, the triangle inequality in $L^2(0,\infty;Y)$ gives
+\[
+ \left(\int_0^\infty\norm{Cf(-tA)x}^2\dd t\right)^{1/2}
+ \le\sum_j|a_j|\norm{CT(\beta_j\cdot)x}_{L^2}
+ =\sqrt{\kappa_f}\,\E(x)^{1/2}.
+\]
+Combining the estimates proves \eqref{integrated-eq}.
+\end{proof}
+
+\begin{lemma}[Extension of scalar tests by finite differences]\label{approx}
+Fix $n\ge1$ and $\gamma\in\R$. Put
+\begin{equation}\label{polyfilter}
+ p_{n,\gamma}(w)=w(w-i\gamma)^n e^{-nw}.
+\end{equation}
+If a finite positive measure $\mu$ on $[-K,K]$ satisfies
+$\int D_{f,z}^{(m)}\dd\mu\le0$ for all $f\in\F$ and $z\in\C_-$, then the same scalar inequality holds with $f=p_{n,\gamma}$.
+\end{lemma}
+\begin{proof}
+For $\delta>0$ let
+\[
+ u_\delta(w)=\frac{1-e^{-\delta w}}{\delta},\qquad
+ f_{n,\gamma,\delta}(w)=u_\delta(w)
+       (u_\delta(w)-i\gamma)^n e^{-nw}.
+\]
+This is a nonzero member of $\F$, with real positive exponents of the form $n+j\delta$ and value zero at $w=0$. Also $u_\delta(w)\to w$. Since
+\[
+ u_\delta(w)=w\int_0^1e^{-\delta tw}\dd t,
+\]
+we have $|u_\delta(w)|\le|w|$ for $\Rea w\ge0$. On $w=s(1-iq)$, $|q|\le K$, therefore
+\[
+ |f_{n,\gamma,\delta}(w)|
+ \le |w|(|w|+|\gamma|)^n e^{-ns}.
+\]
+After multiplication by the quadratic factor in \eqref{Dkernel}, the square of this bound is integrable with respect to $(\dd s/s)\dd\mu(q)$. Dominated convergence proves the assertion. This is a scalar limiting argument after the observation-energy term has vanished; it does not assert a uniform observation estimate for differentiated semigroup orbits.
+\end{proof}
+
+\section{Angular concentration and the sector proof}\label{sec:sector-proof}
+\begin{lemma}[An extreme-ray concentration principle]\label{peak}
+Let $\mu$ be a nonzero finite positive measure supported on $[-K,K]$. Choose $q_*\in\supp\mu$ with
+$Q=|q_*|=\max_{q\in\supp\mu}|q|$, and put
+\begin{equation}\label{sstar}
+ s_* =\frac{1+\sqrt{1+Q^2+Q^4}}{2(1+Q^2)},
+ \qquad w_*=s_*(1-iq_*).
+\end{equation}
+Define $p_n(w)=w(w-iq_*/2)^n e^{-nw}$. Then
+\begin{equation}\label{peak-ratio}
+ \frac{\displaystyle\int\!\int_0^\infty
+ |s(1-iq)-w_*|^2|p_n(s(1-iq))|^2\frac{\dd s}{s}\dd\mu(q)}
+ {\displaystyle\int\!\int_0^\infty
+ |p_n(s(1-iq))|^2\frac{\dd s}{s}\dd\mu(q)}\longrightarrow0.
+\end{equation}
+All denominators are finite and strictly positive.
+\end{lemma}
+\begin{proof}
+Write $w=s(1-iq)$ and
+\[
+ g(s,q)=|w-iq_*/2|e^{-s},\qquad
+ g(s,q)^2=\bigl((1+q^2)s^2+q q_*s+Q^2/4\bigr)e^{-2s}.
+\]
+For $q\in\supp\mu$ and $s>0$,
+\begin{equation}\label{angular-max}
+ e^{2s}\bigl(g(s,q_*)^2-g(s,q)^2\bigr)
+ =(Q^2-q^2)s^2+(Q^2-q q_*)s\ge0.
+\end{equation}
+If $Q>0$, equality is possible only for $q=q_*$. If $Q=0$, the support consists of $0$. On the chosen ray,
+\[
+ \frac12e^{2s}\frac{\partial}{\partial s}g(s,q_*)^2
+ =-(1+Q^2)s^2+s+Q^2/4.
+\]
+The positive root is exactly $s_*$, and the derivative changes from positive to negative there. For $Q=0$ the same assertion holds on $s>0$, with $s_*=1$. Thus $g$ has a unique global maximum $G=g(s_*,q_*)$ on $(0,\infty)\times\supp\mu$.
+
+At $s=0$, the continuous extension is $g(0,q)=Q/2$, strictly less than $G$. As $s\to\infty$, $g(s,q)\to0$ uniformly in $q$. Hence outside every neighborhood of $(s_*,q_*)$ there is a strict gap below $G$.
+
+For completeness, use the finite positive measure
+\[
+ \dd\omega(s,q)=|s(1-iq)|^2g(s,q)^2\frac{\dd s}{s}\dd\mu(q).
+\]
+It is finite, and $\int|s(1-iq)-w_*|^2\dd\omega<\infty$: near zero its density is $O(s)$ or better, and at infinity a fixed polynomial is multiplied by $e^{-2s}$. The squared filter density equals $g^{2n-2}\dd\omega$.
+
+Fix $\varepsilon>0$. On $|s(1-iq)-w_*|\ge\varepsilon$, let the supremum of $g$ be $R_\varepsilon<G$. Choose $P$ with $R_\varepsilon<P<G$ and a small product neighborhood $U$ of $(s_*,q_*)$ on which $g\ge P$. It has $\omega(U)>0$, because $q_*\in\supp\mu$ and $s_*>0$. The exterior contribution to \eqref{peak-ratio} is bounded by
+\[
+ \frac{\int|s(1-iq)-w_*|^2\dd\omega}{\omega(U)}
+ \left(\frac{R_\varepsilon}{P}\right)^{2n-2}\longrightarrow0.
+\]
+The interior contribution is at most $\varepsilon^2$. Let $n\to\infty$, then $\varepsilon\downarrow0$.
+\end{proof}
+
+\begin{proposition}[Separation of angular probability measures]\label{separation}
+For each probability measure $\mu$ on $[-K,K]$ and each $m>0$, there exist $f\in\F$ and $z\in\C_-$ such that
+\begin{equation}\label{strict-test}
+ \int_{-K}^K D_{f,z}^{(m)}(q)\dd\mu(q)>0.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Choose $w_*$ and $p_n$ as in Lemma~\ref{peak}, and take $z=-w_*$, so $r=s_*>0$. For sufficiently large but fixed $n$, \eqref{peak-ratio} is less than $m s_*^2$. Consequently the integral of $D_{p_n,-w_*}^{(m)}$ is strictly positive. The same is true for $f_{n,q_*/2,\delta}\in\F$ when $\delta>0$ is sufficiently small, by the dominated-convergence argument in Lemma~\ref{approx}.
+\end{proof}
+
+\begin{proof}[Proof of the existence assertion in Theorem~\ref{main}]
+If exact observability failed, there would be $x_n\in D(A)$ with $\norm{x_n}=1$ and $\E(x_n)\to0$. Let $\mu_n=q_\#\nu_{x_n}$ be their angular probability measures. Compactness of $[-K,K]$ gives a subsequence with $\mu_n\Rightarrow\mu$, a probability measure.
+
+For every fixed $f\in\F$ and $z\in\C_-$, Proposition~\ref{integrated} and continuity of $D_{f,z}^{(m)}$ imply
+\[
+ \int D_{f,z}^{(m)}\dd\mu
+ =\lim_n\int D_{f,z}^{(m)}\dd\mu_n\le0.
+\]
+This contradicts Proposition~\ref{separation}. Thus a positive lower bound exists on $D(A)$ and passes to $X$ by admissibility and density. Uniform dependence on $m,K$ is established next.
+\end{proof}
+
+\begin{remark}[The order of choices]\label{limits}
+In the contradiction proof the vector index is sent to infinity with a fixed finite real-time filter. The resulting angular measure is then used to select an extreme ray and a polynomial-exponential peak. Finally a fixed sufficiently accurate finite-difference filter is chosen. No estimate uniform in the finite-difference parameter is required. Equivalently, Proposition~\ref{separation} selects one finite filter before it is applied to the original sequence.
+\end{remark}
+
+\section{Quantitative observability certificates}\label{sec:quant}
+\subsection{A finite scalar certificate and its existence}
+\begin{theorem}[Finite filter certificate]\label{certificate}
+Suppose $f_1,\dots,f_J\in\F$, $z_1,\dots,z_J\in\C_-$, and $\theta_j\ge0$ satisfy
+\begin{equation}\label{certificate-condition}
+ \sum_{j=1}^J\theta_jD_{f_j,z_j}^{(m)}(q)\ge\delta>0
+ \quad\text{for all }q\in[-K,K].
+\end{equation}
+Then every system in Theorem~\ref{main} satisfies
+\begin{equation}\label{certificate-bound}
+ \E(x)\ge
+ \frac{\delta}{\sum_{j=1}^J\theta_j(-\Rea z_j)\kappa_{f_j}}\norm{x}^2.
+\end{equation}
+For every finite $K$ and every $m>0$, at least one such finite certificate exists.
+\end{theorem}
+\begin{proof}
+Integrate \eqref{certificate-condition} against $\nu_x$ and sum \eqref{integrated-eq} with the weights $\theta_j$. This proves \eqref{certificate-bound}.
+
+For existence, let $\Prob([-K,K])$ carry its compact weak topology. Proposition~\ref{separation} says the open sets
+\[
+ U_{f,z}=\left\{\mu:\int D_{f,z}^{(m)}\dd\mu>0\right\}
+\]
+cover this space. Extract a finite subcover indexed by $j=1,\dots,J$. The set
+\[
+ V=\left\{\left(\int D_{f_1,z_1}^{(m)}\dd\mu,\ldots,
+ \int D_{f_J,z_J}^{(m)}\dd\mu\right):\mu\in\Prob([-K,K])\right\}
+\]
+is compact and convex. It is disjoint from the closed negative orthant $\R_-^J$. Strong separation of a compact convex set from a disjoint closed convex set gives a nonzero vector $\theta$ and a strict positive margin. The separating vector must have $\theta_j\ge0$, since otherwise its supremum on $\R_-^J$ would be infinite. Therefore, after normalization,
+\[
+ \inf_{v\in V}\theta\cdot v=\delta>0.
+\]
+Applying this to the point masses $\mu=\delta_q$ proves \eqref{certificate-condition}.
+\end{proof}
+This proves that $c(m,K)>0$ can be chosen independently of $a$, $M$, $X$, $Y$, and the graph norm of $C$. It does not provide an efficient optimal expression for that function. For a supplied certificate, however, the lower bound is explicit and verifiable.
+
+\subsection{Closed scalar formulas}
+If $f=\sum_j a_je^{-\beta_jw}$, set
+\[
+ u_{jk}(q)=\beta_j+\beta_k+iq(\beta_k-\beta_j),
+ \qquad c_{jk}=a_j\overline{a_k}.
+\]
+The principal logarithm is unambiguous because $\Rea u_{jk}>0$. Direct integration gives
+\begin{align}
+ A_f(q)&=-\sum_{j,k}c_{jk}\log u_{jk}(q),\label{closed-A}\\
+ B_f(q)&=\sum_{j,k}\frac{c_{jk}}{u_{jk}(q)},\label{closed-B}\\
+ C_f(q)&=\sum_{j,k}\frac{c_{jk}}{u_{jk}(q)^2}.\label{closed-C}
+\end{align}
+All three sums are real. For \eqref{closed-A}, use $\sum_{j,k}c_{jk}=0$ and
+\[
+ \int_0^\infty\frac{e^{-us}-e^{-s}}s\dd s=-\log u,
+ \qquad\Rea u>0.
+\]
+The other identities follow from elementary Laplace integrals. They avoid numerical quadrature over an infinite interval.
+
+A rigorous finite-grid check is also available. Write $R_{jk}=\beta_j+\beta_k$, $\Delta_{jk}=\beta_k-\beta_j$, and $v_{jk}=|a_j a_k|$. Define
+\begin{align*}
+ L_A&=\sum_{j,k}\frac{v_{jk}|\Delta_{jk}|}{R_{jk}},&
+ L_B&=\sum_{j,k}\frac{v_{jk}|\Delta_{jk}|}{R_{jk}^2},&
+ L_C&=2\sum_{j,k}\frac{v_{jk}|\Delta_{jk}|}{R_{jk}^3},\\
+ U_B&=\sum_{j,k}\frac{v_{jk}}{R_{jk}},&
+ U_C&=\sum_{j,k}\frac{v_{jk}}{R_{jk}^2}.&&
+\end{align*}
+For $z=\alpha+i\beta$, $r=-\alpha$, differentiating \eqref{Dkernel} yields the valid Lipschitz constant
+\begin{equation}\label{Lip}
+ L_{f,z}=|mr^2-|z|^2|L_A+2|\beta|U_B
+ +2(|\alpha|+|\beta|K)L_B+2KU_C+(1+K^2)L_C.
+\end{equation}
+If a grid includes both endpoints and has maximum spacing $h$, then
+\begin{equation}\label{grid-bound}
+ \inf_{|q|\le K}\sum_j\theta_jD_{f_j,z_j}^{(m)}(q)
+ \ge\min_{q\text{ on grid}}\sum_j\theta_jD_{f_j,z_j}^{(m)}(q)
+ -\frac h2\sum_j\theta_jL_{f_j,z_j}.
+\end{equation}
+Certified enclosures of the grid values make this a rigorous certificate, unlike ordinary floating-point sampling.
+
+\begin{remark}[Computability versus efficiency]\label{algorithm}
+Strict positivity is preserved under sufficiently small perturbations of a finite certificate. Hence rational complex coefficients (with their sum constrained to zero), positive rational exponents, rational centers, and rational nonnegative weights suffice. Enumerating such families and refining certified grid checks therefore gives a terminating search in principle for rational $m>0$ and finite rational $K$. This is an existence/computability statement, not a practical complexity bound. The accompanying program verifies a given rational certificate; it does not implement the unrestricted exhaustive search.
+\end{remark}
+
+\subsection{An explicit narrow-sector estimate}\label{sec:explicit}
+\begin{proof}[Proof of Theorem~\ref{explicit-main}]
+It suffices to use $m=1/2$, $K=1/4$, $z=-3/2$, and
+$f(w)=e^{-w}-e^{-2w}$. Its constant is $\kappa_f=(1+1/\sqrt2)^2$. If $u=q^2\in[0,1/16]$, formulas \eqref{closed-A}--\eqref{closed-C} become
+\[
+ A_f(q)=\log\frac{9+u}{8},\qquad
+ B_f(q)=\frac34-\frac6{9+u},\qquad
+ C_f(q)=\frac5{16}-\frac{2(9-u)}{(9+u)^2}.
+\]
+The following elementary bounds hold:
+\[
+ A_f(q)\le\frac18,\qquad B_f(q)\ge\frac1{12},\qquad
+ C_f(q)\le\frac1{10}.
+\]
+For the first, $e^{1/8}>1+1/8+(1/8)^2/2=145/128\ge(9+u)/8$. The second is immediate. The third follows from monotonicity of $C_f$ on $[0,1/16]$ and
+$C_f(1/4)=31909/336400<1/10$. Therefore
+\[
+ D_{f,-3/2}^{(1/2)}(q)
+ =-\frac98 A_f(q)+3B_f(q)-(1+u)C_f(q)
+ \ge-\frac9{64}+\frac14-\frac{17}{160}=\frac1{320}.
+\]
+Theorem~\ref{certificate} gives the first bound in \eqref{explicit}. The second follows from $(1+1/\sqrt2)^2<3$.
+\end{proof}
+
+\subsection{A finite observation horizon}
+\begin{corollary}\label{finite-time}
+If $\E(x)\ge c\norm{x}^2$ is certified and the admissibility bound is $M$, then
+\[
+ \int_0^T\norm{CT(t)x}^2\dd t
+ \ge\bigl(c-Me^{-2aT}\bigr)\norm{x}^2.
+\]
+In particular, $T\ge(2a)^{-1}\log(2M/c)$ gives a finite-time lower bound $c/2$.
+\end{corollary}
+\begin{proof}
+The energy after time $T$ is $\E(T(T)x)\le M\norm{T(T)x}^2\le Me^{-2aT}\norm{x}^2$. Subtract it from the infinite-time bound. The identity first holds on $D(A)$ and extends by admissibility.
+\end{proof}
+
+\section{Additional spectral consequences}
+\begin{corollary}[Sublinear imaginary growth]\label{sublinear}
+Suppose $\Rea\lambda\le-a$ and
+\[
+ |\Ima\lambda-\omega|\le B+L(-\Rea\lambda)^\alpha,
+ \qquad 0\le\alpha<1,
+\]
+with $B,L\ge0$. Under the other hypotheses and \eqref{H}, exact observability holds with $c(m,B/a+La^{\alpha-1})$.
+\end{corollary}
+\begin{proof}
+For $h\ge a$, $(B+Lh^\alpha)/h\le B/a+La^{\alpha-1}$. Apply Corollary~\ref{affine} after the imaginary shift.
+\end{proof}
+\begin{corollary}[Commuting imaginary perturbations]\label{commuting}
+Let $H\ge aI$ be self-adjoint and let $b$ be a real measurable function with $|b(h)|\le Kh$ on $\sigma(H)$. Then $A=-H+ib(H)$, with domain $D(H)$, is normal and generates an exponentially stable semigroup. For any graph-norm bounded admissible $C$, condition \eqref{H} is sufficient for exact observability.
+\end{corollary}
+\begin{proof}
+The spectral theorem identifies $A$ with the multiplier $-h+ib(h)$. Its modulus lies between $h$ and $\sqrt{1+K^2}h$, so its domain is $D(H)$ and its spectrum is contained in $S_{a,K}$. Theorem~\ref{main} applies.
+\end{proof}
+These statements are consequences of the sector theorem, not additional assumptions needed by its proof. In particular, the imaginary growth need not be sublinear.
+
+\section{Examples and assumption boundaries}\label{sec:examples}
+\subsection{A continuous-spectrum strip with a noninjective observation}
+Let
+\[
+ X=L^2([1,\infty);\C^2),\qquad Y=L^2([1,\infty);\C),
+\]
+and, for a fixed $B>0$, set
+\[
+ (Ax)(h)=\begin{pmatrix}-h+iB\sin h&0\\0&-2h+iB\cos h\end{pmatrix}x(h),
+ \qquad (Cx)(h)=\sqrt h\,(x_1(h)+x_2(h)).
+\]
+The domain of $A$ is $\{x:hx\in L^2\}$. The operator is normal, nonself-adjoint, has continuous spectrum (no eigenvalues), and has spectrum in the horizontal strip $|\Ima\lambda|\le B$. The map $C$ is graph-norm bounded and has an infinite-dimensional kernel.
+
+Write $\Delta(h)=B(\sin h-\cos h)$ and $\rho(h)=h/(3h-i\Delta(h))$. Direct integration gives
+\begin{equation}\label{strip-energy}
+ \E(x)=\int_1^\infty\left(\frac{|x_1|^2}{2}+\frac{|x_2|^2}{4}
+ +2\Rea(\rho(h)x_1\overline{x_2})\right)\dd h.
+\end{equation}
+Since $|\rho(h)|\le1/3$, the eigenvalues of the corresponding Hermitian matrix lie between
+\[
+ c_0=\frac{9-\sqrt{73}}{24}>0,
+ \qquad M_0=\frac{9+\sqrt{73}}{24}.
+\]
+Thus $c_0\norm{x}^2\le\E(x)\le M_0\norm{x}^2$, and Proposition~\ref{necessity} verifies \eqref{H}, for instance with $m=c_0/(M_0+1/2)$. This example checks the hypotheses without reducing to a pointwise injective observation. It is an illustrative exactly computable model, not a separate claim of a previously unknown PDE application.
+
+\subsection{A genuine nonzero-angle sector}
+On the same spaces, let $\kappa>0$ and take
+\[
+ (Ax)(h)=\operatorname{diag}(-h+i\kappa h,-h-i\kappa h)x(h),
+ \qquad (Cx)(h)=\sqrt h\,(x_1(h)+x_2(h)).
+\]
+The spectrum lies on two nonreal rays, not in any horizontal strip. After $s=ht$, the energy matrix is independent of $h$; its diagonal entries are $1/2$ and its off-diagonal modulus is $1/(2\sqrt{1+\kappa^2})$. Therefore
+\[
+ \frac12\left(1-\frac1{\sqrt{1+\kappa^2}}\right)\norm{x}^2
+ \le\E(x)\le
+ \frac12\left(1+\frac1{\sqrt{1+\kappa^2}}\right)\norm{x}^2.
+\]
+Again Proposition~\ref{necessity} supplies a positive uniform Hautus constant. This is a continuous-spectrum example with infinite-dimensional output and genuine mixing of two spectral directions. The sector theorem allows arbitrary finite $\kappa$, subject to the other hypotheses.
+
+\subsection{Pointwise separation is strictly weaker than the uniform test}
+\begin{example}\label{pointwise-example}
+Let $X=Y=\ell^2(\N_{\ge1})$ and
+\[
+ Ae_n=-ne_n,\qquad Ce_n=\frac{\sqrt n}{\log(n+1)}e_n.
+\]
+Then $C$ is graph-norm bounded and admissible, and
+\[
+ \E(x)=\sum_{n\ge1}\frac{|x_n|^2}{2\log^2(n+1)}.
+\]
+For each fixed $\zeta\in\C_-$,
+\[
+ d_\zeta=\inf_{n\ge1}\left(|\zeta+n|^2+\frac{n}{\log^2(n+1)}\right)>0:
+\]
+the terms tend to infinity and every term is positive. Thus \eqref{P} holds. But $\E(e_n)\to0$, and \eqref{H} cannot hold uniformly: at $\zeta=-n$, its left side divided by $n^2$ is $1/\log^2(n+1)$. The escape theorem applies and $\norm{T(\tau)e_n}=e^{-n\tau}\to0$, while exact observability fails.
+\end{example}
+This shows why the escape principle is not merely a restatement of the sector criterion.
+
+\subsection{Why admissibility and bounded slope are not cosmetic}
+Without admissibility the output may have infinite energy on some vectors of $X$. For example, on $\ell^2$ with $Ae_n=-ne_n$ and $Ce_n=ne_n$, the observation is graph-norm bounded and
+\[
+ |\zeta+n|^2+(-\Rea\zeta)n^2\ge\frac34(-\Rea\zeta)^2
+ \qquad(n\ge1,\ \zeta\in\C_-).
+\]
+Indeed, writing $r=-\Rea\zeta$ and discarding the imaginary part reduces the ratio to
+$(1-n/r)^2+n^2/r$; its minimum over $r>0$ is $3/4$ for $n=1$ and at least $1$ for $n\ge2$. Nevertheless $\E(e_n)=n/2$, so there is no bounded admissible observation map on $X$.
+
+The finite-slope hypothesis ensures that angular measures live in a compact interval and that the filter integrals are uniformly controlled. The unrestricted normal counterexample in \cite{DJ26} has no such slope bound. Its existence is compatible with Theorem~\ref{main}. It also rules out a positive bound uniform over all $K$: otherwise apply such a bound to finite spectral restrictions of that example and pass to the limit using its admissibility.
+
+Bounded slope is a sufficient structural condition, not a necessary property of every observable pair. On $L^2([1,\infty))$, for example,
+\[
+ Af(h)=(-h+ih^2)f(h),\qquad Cf(h)=\sqrt{2h}\,f(h)
+\]
+gives $\E(f)=\norm{f}^2$ although $|\Ima\lambda|/(-\Rea\lambda)$ is unbounded. Here the multiplication domain is $\{f:h^2f\in L^2\}$, and $C$ is graph-norm bounded and admissible.
+
+\section{Scope, provenance, and remaining questions}\label{sec:scope}
+\paragraph{What is proved in this proposed manuscript.}
+The principal result is the finite-slope sector criterion, with the horizontal-strip statement as a corollary. The local escape theorem is separately proved under the weaker condition \eqref{P}. Quantitative results consist of a universal finite-certificate existence theorem, a formula for every verified certificate, a concrete narrow-sector bound, and a finite-horizon consequence. General continuous spectral measures and infinite-dimensional output spaces are retained.
+
+\paragraph{What is not claimed.}
+No result here removes normality, settles arbitrary nonnormal analytic generators, or gives an optimal closed-form $c(m,K)$. The scalar certificate verifier does not discover a practically efficient certificate for every input, and numerical checks do not constitute a formal verification of the main theorem. The literature search is not a proof of priority or an exhaustive novelty assessment.
+
+\paragraph{Relation to the supplied proof.}
+The complex-time scalarization and exponential tilting in Section~\ref{sec:escape} are extensions of the supplied strip argument. The estimate in Proposition~\ref{integrated} retains the real-time filtering principle of \cite{DJ26}. The proposed new step enabling nonzero angles is Lemma~\ref{peak}, together with finite-difference realization and compact angular measures. Thus the paper is no longer organized as one strip theorem with auxiliary details; it contains a stronger main result, an independent weaker-hypothesis principle, and a quantitative certification framework.
+
+\paragraph{Natural remaining questions.}
+A useful next objective is an effective, reasonably sized filter bank for general $(m,K)$, with a transparent asymptotic lower bound as $m\downarrow0$ or $K\to\infty$. Another is a precisely formulated extension beyond normality, where scalar positive spectral measures are unavailable. These are questions motivated by the proof, not asserted conjectures or claimed solutions.
+
+\appendix
+\section{A checklist for independent mathematical review}
+The following checks are particularly important because an error in any one would affect the sector conclusion.
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Domain and real-time realization.} For every $t>0$, a finite filter is a sum of $T(\beta_jt)$ with $\beta_j>0$. Thus $v_t\in D(A)$ and \eqref{H} applies without introducing $C$ on an undefined domain.
+\item \textbf{Scaling.} In Proposition~\ref{integrated}, the substitution is $\zeta=z/t$ and the inequality is multiplied by $t$. This produces the factor $r=-\Rea z$ on the observation side and $mr^2$ in the scalar kernel.
+\item \textbf{Weak convergence.} Only the angular variable is passed to a compact weak limit in the sector proof. Each test kernel is continuous and bounded on the entire interval $[-K,K]$.
+\item \textbf{Peak uniqueness.} Formula \eqref{angular-max} must select one extreme ray even when both $Q$ and $-Q$ belong to the support. The term $(Q^2-q q_*)s$ is the strict tie-breaker.
+\item \textbf{Boundary at scale zero.} The peak height is strictly larger than $Q/2$, the common limiting value at $s=0$. This prevents escape of the normalized filter mass to zero scale.
+\item \textbf{Finite-difference constants.} $\kappa_{f_{n,\gamma,\delta}}$ may diverge as $\delta\downarrow0$. The argument never multiplies such a divergent constant by an uncontrolled varying energy; a fixed finite filter is chosen before use on the vector sequence.
+\item \textbf{No output orthogonality.} Spectral projections are orthogonal in $X$, not necessarily after applying $C$. No sum of spectral-block observation lower bounds is used.
+\item \textbf{Certificate separation.} The convex set $V$ is disjoint from the whole closed negative orthant. Separation therefore gives nonnegative weights, allowing the integrated inequalities to be summed in the required direction.
+\item \textbf{Independent escape theorem.} The proof uses only pointwise $d_\zeta>0$ at a fixed exposed spectral point, not a hidden uniform lower bound on $d_\zeta$.
+\end{enumerate}
+
+\section{Reproducibility and disclosure}
+The accompanying \texttt{verify\_certificate.py} uses exact rational arithmetic and rigorous rational enclosures for logarithms and arctangents to check \eqref{grid-bound}. Its example input is the two-exponential filter in Theorem~\ref{explicit-main}. With 128 equal subintervals and 48-bit series tolerances, the supplied run certifies the stronger rational bound
+\[
+ \E(x)\ge\frac{897079549215}{281474976710656}\norm{x}^2
+ >0.0031870\norm{x}^2
+\]
+under the same assumptions $m\ge1/2$, $K\le1/4$. The entirely handwritten bound in Theorem~\ref{explicit-main} does not rely on this computation. The program validates that finite scalar certificate only; it is not a machine-checked proof of the entire manuscript. Floating-point integral comparisons were used solely as algebraic sanity checks and are not used in any proof.
+
+This expansion was generated with AI assistance from the supplied 26 October 2026 proof draft. New derivations, mathematical claims, and the distinction between qualitative and computable quantitative statements are recorded explicitly above. A prospective human author must independently validate the mathematics, establish attribution and novelty, and approve the manuscript before public submission. No external reviewer endorsement, journal acceptance, or completed formal proof is implied.
+
+\begin{thebibliography}{10}
+\bibitem{RW94} D. L. Russell and G. Weiss, \emph{A general necessary condition for exact observability}, SIAM J. Control Optim. \textbf{32} (1994), no. 1, 1--23. DOI: \href{https://doi.org/10.1137/S036301299119795X}{10.1137/S036301299119795X}.
+\bibitem{JZ04} B. Jacob and H. Zwart, \emph{Counterexamples concerning observation operators for $C_0$-semigroups}, SIAM J. Control Optim. \textbf{43} (2004), no. 1, 137--153. DOI: \href{https://doi.org/10.1137/S0363012903423235}{10.1137/S0363012903423235}.
+\bibitem{JZ09} B. Jacob and H. Zwart, \emph{On the Hautus test for exponentially stable $C_0$-groups}, SIAM J. Control Optim. \textbf{48} (2009), no. 3, 1275--1288. DOI: \href{https://doi.org/10.1137/080724733}{10.1137/080724733}.
+\bibitem{DM12} T. Duyckaerts and L. Miller, \emph{Resolvent conditions for the control of parabolic equations}, J. Funct. Anal. \textbf{263} (2012), no. 11, 3641--3673. DOI: \href{https://doi.org/10.1016/j.jfa.2012.09.003}{10.1016/j.jfa.2012.09.003}. Related context; no theorem from this reference is needed by the proofs above.
+\bibitem{TW09} M. Tucsnak and G. Weiss, \emph{Observation and Control for Operator Semigroups}, Birkh\"auser Advanced Texts, Birkh\"auser, Basel, 2009. DOI: \href{https://doi.org/10.1007/978-3-7643-8994-9}{10.1007/978-3-7643-8994-9}.
+\bibitem{DJ26} J. Daun and B. Jacob, \emph{On the Hautus test for exact observability of normal semigroups}, arXiv:2608.09407v2 (2026). \href{https://arxiv.org/abs/2608.09407v2}{arXiv:2608.09407v2}. Sections 4 and 6 are the relevant filtering and open-question sources; consulted 27 October 2026.
+\bibitem{Draft26} \emph{A complete proof draft of the Hautus criterion for normal generators with horizontal-strip spectrum}, supplied seven-page manuscript, dated 26 October 2026. Unpublished, unreviewed source document; no author identity is asserted here.
+\end{thebibliography}
+\end{document}

@@ -30,7 +30,10 @@ class NativeAttempts:
         directory = self.store.run_dir(run.id) / "tasks" / run.task_id / uid("attempt")
         run.native.active_attempt = str(directory.relative_to(self.store.run_dir(run.id)))
         self.store.save(run, "native_attempt_started", attempt=run.native.active_attempt)
-        atomic_write(directory / "turn.json", json_text({"steering": run.native.steering, "started_at": now()}))
+        atomic_write(directory / "turn.json", json_text({
+            "steering": run.native.steering, "started_at": now(),
+            "finalizing": run.native.finalization.status == "running",
+        }))
         timeout = budget.remaining(run, config)
         if config.backend.native_turn_timeout_seconds is not None:
             timeout = min(timeout, config.backend.native_turn_timeout_seconds)
@@ -67,6 +70,7 @@ class NativeAttempts:
             # Use original turn time, not recovery time, for search freshness.
             "source_observed_at": turn.get("started_at"),
             "directory": str(directory.relative_to(self.store.run_dir(run.id))),
+            "finalizing": turn.get("finalizing", False),
         }
 
     def session_field(self, run: Run):
@@ -123,6 +127,8 @@ class NativeAttempts:
             return
         # A killed runner may not have reached the post-call receipt. Keep its session and
         # logs, charge the unknown attempt, and let Codex inspect its own history on resume.
+        turn_path = directory / "turn.json"
+        turn = json.loads(turn_path.read_text()) if turn_path.is_file() else {}
         queue(
             run,
             {
@@ -137,5 +143,6 @@ class NativeAttempts:
                 "checkpoint_error": None,
                 "directory": run.native.active_attempt,
                 "recovered": True,
+                "finalizing": turn.get("finalizing", False),
             },
         )

@@ -21,13 +21,45 @@ def settle(run: Run) -> None:
     run.active_since = None
 
 
+def interrupted_elapsed(run: Run, resources: dict | None) -> float | None:
+    """Bound a dead local Codex worker's time by its last durable resource sample.
+
+    Callers must establish that the owning worker is gone. A sampled lower bound
+    is preferable to charging hours of downtime. Remote Chat responses may keep
+    running after their worker exits, so this correction does not apply to them.
+    """
+    if (not run.active_since or run.execution != "native" or run.mode not in {"codex", "work"}
+            or not resources or resources.get("state") != "interrupted"):
+        return None
+    try:
+        start = datetime.fromisoformat(run.active_since)
+        admitted = datetime.fromisoformat(resources["started_at"])
+        sampled = datetime.fromisoformat(resources["updated_at"])
+        current = datetime.fromisoformat(now())
+        if not admitted <= start <= sampled <= current:
+            return None  # A different execution, an invalid clock, or no usable sample.
+        return run.elapsed_seconds + (sampled - start).total_seconds()
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def remaining(run: Run, config: Config) -> float:
-    return max(0.0, config.budget.max_wall_time_minutes * 60 - elapsed(run))
+    limit = (run.native.finalization.deadline_elapsed_seconds
+             if run.native.finalization.status == "running"
+             else config.budget.max_wall_time_minutes * 60)
+    return max(0.0, limit - elapsed(run))
 
 
 def exhausted(run: Run, config: Config) -> str | None:
     if remaining(run, config) <= 0:
+        if run.native.finalization.status == "running":
+            return "Finalization time budget reached"
         return "Active wall-time budget reached"
+    return hard_limit_reason(run, config)
+
+
+def hard_limit_reason(run: Run, config: Config) -> str | None:
+    """Non-time limits remain binding during the extra closing turn."""
     if run.iteration >= config.budget.max_iterations:
         return "Iteration budget reached"
     for name in ("input_tokens", "output_tokens"):

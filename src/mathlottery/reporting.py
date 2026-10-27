@@ -137,6 +137,15 @@ def report(store: Store, run: Run):
     if not run.memory and run.execution != "native":
         sections.append("No research memory recorded yet.")
     if run.execution == "native":
+        final = run.native.finalization
+        if final.status != "idle":
+            sections += ["## Solve finalization / 求解收尾",
+                         f"Status: **{final.status}** · {final.reason or ''}",
+                         f"Research limit: {final.research_limit_seconds / 60:.2f} min · "
+                         f"Closing allowance: {(final.deadline_elapsed_seconds - final.started_elapsed_seconds) / 60:.2f} min",
+                         "Closing the run does not establish proof correctness or novelty."]
+            if final.summary_path:
+                sections.append(f"[Closing summary / 收尾摘要]({final.summary_path})")
         sections += [
             "## Workflow Measurements",
             "[Machine-readable metrics](metrics.json). Invocation seconds cover measured client "

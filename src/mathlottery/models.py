@@ -464,6 +464,17 @@ class NativeCheckpoint(Model):
         return self
 
 
+class NativeFinalization(Model):
+    status: Literal["idle", "running", "completed", "incomplete"] = "idle"
+    research_limit_seconds: float = Field(default=0, ge=0)
+    started_elapsed_seconds: float = Field(default=0, ge=0)
+    deadline_elapsed_seconds: float = Field(default=0, ge=0)
+    task_id: str | None = None
+    reason: str | None = None
+    summary_path: str | None = None
+    candidate_id: str | None = None
+
+
 class NativeSession(Model):
     solver_session_id: str | None = None
     reviewer_session_id: str | None = None
@@ -477,6 +488,7 @@ class NativeSession(Model):
     checkpoint_error: str | None = None
     review_only: bool = False
     candidate_conclude: bool = False
+    finalization: NativeFinalization = Field(default_factory=NativeFinalization)
 
 
 class ReviewSource(Model):

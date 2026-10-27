@@ -47,6 +47,7 @@ class Overrides(Model):
     reasoning_mode: Literal["standard", "pro"] | None = None
     budget_minutes: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     max_iterations: int | None = Field(default=None, gt=0)
+    solve_until_budget_exhausted: bool | None = None
     native_multi_agent: bool | None = None
     native_memories: bool | None = None
 
@@ -91,6 +92,8 @@ class Overrides(Model):
             config.budget.max_wall_time_minutes = self.budget_minutes
         if self.max_iterations is not None:
             config.budget.max_iterations = self.max_iterations
+        if self.solve_until_budget_exhausted is not None:
+            config.budget.solve_until_budget_exhausted = self.solve_until_budget_exhausted
         for field in ("native_multi_agent", "native_memories"):
             if field in self.model_fields_set:
                 if config.backend.mode != "codex":
@@ -173,6 +176,7 @@ class ResumeRequest(Model):
     message: str | None = Field(default=None, max_length=30000)
     budget_minutes: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     max_iterations: int | None = Field(default=None, gt=0)
+    solve_until_budget_exhausted: bool | None = None
     formal_memory_mb: int | None = Field(default=None, ge=256, le=32768)
     formal_address_space_mb: int | None = Field(default=None, ge=1024, le=32768)
     formal_timeout_seconds: float | None = Field(default=None, ge=1, le=1800, allow_inf_nan=False)
@@ -188,6 +192,8 @@ def config_summary(config):
         "execution": config.backend.execution,
         "budget_minutes": config.budget.max_wall_time_minutes,
         "max_iterations": config.budget.max_iterations,
+        "solve_until_budget_exhausted": config.budget.solve_until_budget_exhausted,
+        "finalize_minutes": config.budget.finalize_minutes,
         "native_multi_agent": config.backend.native_multi_agent,
         "native_memories": config.backend.native_memories,
         "native_web_search": config.backend.native_web_search,
@@ -221,6 +227,8 @@ class WebService:
                 title = title[:119].rstrip() + "…"
         resources = Coordinator(self.store).snapshot(run.id)
         worker = self.jobs.status(run.id)
+        busy = self.jobs.running(run.id)
+        observed = budget.interrupted_elapsed(run, resources) if not busy else None
         return {
             **run.model_dump(mode="json", include={
                 "id", "workflow", "mode", "state", "phase", "iteration", "created_at",
@@ -236,11 +244,13 @@ class WebService:
             "reviewed_candidate_count": sum(bool(c.reviews) for c in run.candidates)
             if run.workflow != Workflow.ORGANIZE else 0,
             "research_outcome": research_outcome(run),
+            "finalization": run.native.finalization.model_dump(mode="json"),
             "organized_report": organization_summary(self.store, run),
-            "busy": self.jobs.running(run.id),
+            "busy": busy,
             "resources": resources,
             "worker_state": resources["state"] if resources and resources["state"] in {"queued", "running"} else (worker or {}).get("state"),
-            "elapsed_seconds": round(budget.elapsed(run), 1),
+            "elapsed_seconds": round(observed if observed is not None else budget.elapsed(run), 1),
+            "elapsed_timing_basis": "last_resource_sample" if observed is not None else "wall_clock",
             "settings": config_summary(Config.model_validate(run.config)),
         }
 
@@ -369,6 +379,7 @@ class WebService:
             raise ValueError("Add new instructions to continue a completed task")
         config = Overrides(
             budget_minutes=request.budget_minutes, max_iterations=request.max_iterations,
+            solve_until_budget_exhausted=request.solve_until_budget_exhausted,
         ).apply(Config.model_validate(run.config))
         for field in ("formal_memory_mb", "formal_address_space_mb", "formal_timeout_seconds"):
             value = getattr(request, field)

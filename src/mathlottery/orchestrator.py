@@ -25,7 +25,7 @@ from mathlottery.models import (
     uid,
 )
 from mathlottery.reporting import report
-from mathlottery.resources import run_admission
+from mathlottery.resources import Coordinator, run_admission
 from mathlottery.storage import Store, atomic_write
 from mathlottery.workflows import ACTIVE
 
@@ -174,6 +174,11 @@ class Orchestrator:
         return self.store.run_dir(run.id) / "stop.requested"
 
     def _pause(self, run: Run, reason: str, state=State.PAUSED):
+        if (run.native.finalization.status == "running"
+                and not (run.native.active_attempt or run.native.pending_result)):
+            from mathlottery.finalization import SolveFinalizer
+
+            SolveFinalizer(self).fallback(run, Config.model_validate(run.config), reason)
         budget.settle(run)
         run.state, run.stop_reason = state, reason
         self.store.save(run, "paused", reason=reason)
@@ -211,8 +216,18 @@ class Orchestrator:
                     return run
                 # Settle a crashed worker before waiting; queue time is not research time.
                 if run.active_since:
-                    budget.settle(run)
-                    self.store.save(run, "resource_recovery_settled")
+                    resources = Coordinator(self.store).snapshot(run.id)
+                    observed = budget.interrupted_elapsed(run, resources)
+                    wall_elapsed = budget.elapsed(run)
+                    if observed is None:
+                        budget.settle(run)
+                    else:
+                        run.elapsed_seconds, run.active_since = observed, None
+                    self.store.save(
+                        run, "resource_recovery_settled",
+                        timing_basis="last_resource_sample" if observed is not None else "wall_clock",
+                        excluded_unobserved_seconds=max(0, wall_elapsed - run.elapsed_seconds),
+                    )
                 with run_admission(self.store, run, Config.model_validate(run.config)) as admitted:
                     if not admitted:
                         return self._pause(run, "Resource wait cancelled; resume to continue")
@@ -292,10 +307,16 @@ class Orchestrator:
             run = self.store.load(run_id)
             if run.state == State.COMPLETED and not (message and run.execution == "native"):
                 return run
+            if config:
+                from mathlottery.finalization import SolveFinalizer
+
+                SolveFinalizer(self).reset_for_extension(run, config)
             if message and run.execution == "native":
                 run.native.steering = message
                 if not (run.native.active_attempt or run.native.pending_result):
-                    run.task_id, run.prompt_path = None, None
+                    run.task_id = (run.native.finalization.task_id
+                                   if run.native.finalization.status == "running" else None)
+                    run.prompt_path = None
                 if run.phase == Phase.REPORT:
                     if run.workflow == Workflow.FIND:
                         run.phase = Phase.FIND
@@ -338,6 +359,11 @@ class Orchestrator:
         try:
             with self.store.lock(run_id):
                 run = self.store.load(run_id)
+                if run.native.finalization.status == "running":
+                    from mathlottery.finalization import SolveFinalizer
+
+                    SolveFinalizer(self).fallback(run, Config.model_validate(run.config),
+                                                 "Stopped by user during finalization")
                 if run.mode == "chat" and run.native.active_attempt:
                     from mathlottery.native import NativeRunner
 

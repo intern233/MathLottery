@@ -2,12 +2,27 @@
 
 from mathlottery.literature import collect_sources
 from mathlottery.literature_obstacles import carry_literature
-from mathlottery.models import NativeCheckpoint, Phase, Run, State, Workflow
+from mathlottery.models import CandidateInput, NativeCheckpoint, Phase, Run, State, Workflow
 from mathlottery.sources import conservative_status
 from mathlottery.storage import Store, atomic_write, json_text
 
 ACTIVE = {Phase.FIND: State.DISCOVERING, Phase.SOLVE: State.SOLVING, Phase.VERIFY: State.VERIFYING,
           Phase.ORGANIZE: State.ORGANIZING}
+
+
+def claims_complete(candidate: CandidateInput) -> bool:
+    """Explicit solver scope only; proof validity and novelty remain review questions."""
+    return (
+        candidate.scope in {"COMPLETE", "COUNTEREXAMPLE"}
+        and not candidate.remaining_obligations
+    )
+
+
+def full_solve_budget(run: Run) -> bool:
+    return (
+        run.execution == "native" and run.workflow == Workflow.SOLVE
+        and run.config.get("budget", {}).get("solve_until_budget_exhausted") is True
+    )
 
 
 def task_instructions(run: Run) -> str:
@@ -95,14 +110,39 @@ def task_instructions(run: Run) -> str:
         )
     if run.phase == Phase.SOLVE:
         ending = (
-            "This is the standalone SOLVE task: save partial candidates as needed, then submit "
-            "your final candidate with conclude: true. This finishes solving and leaves verification "
-            "to the separate verify command. Do not mark your own proof as verified."
+            "This standalone SOLVE uses the full active-time budget. All candidates, including "
+            "COMPLETE or COUNTEREXAMPLE with conclude: true, are saved as checkpoints; they "
+            "do not finish this task early. Use the remaining budget for useful mathematical "
+            "work: critically check the strongest proof, test counterexamples and boundary "
+            "cases, resolve missing justifications and improve reproducible evidence. Preserve "
+            "valid earlier results and explicitly correct any gaps you discover. Do not idle "
+            "or repeat identical work simply to spend time. Honest PARTIAL/UNKNOWN checkpoints "
+            "are welcome during research; the harness reports the final outcome at the time "
+            "limit. This is still Solve self-checking, not independent Verify. "
+            if full_solve_budget(run) else
+            "This is the standalone SOLVE task: save partial candidates as checkpoints and "
+            "continue the same research session within the remaining budget. A candidate with "
+            "scope COMPLETE or COUNTEREXAMPLE, no remaining mathematical obligations and "
+            "conclude: true finishes solving and leaves verification to the separate verify "
+            "command. Do not mark your own proof as verified."
             if run.workflow == Workflow.SOLVE
             else "This is the full pipeline: candidates go to a separate reviewer. After feedback, "
-            "continue in the same research session. Use conclude: true only for a final deliverable."
+            "continue in the same research session. A positive review of a partial result does "
+            "not end the pipeline. Use conclude: true only with scope COMPLETE or COUNTEREXAMPLE "
+            "and no remaining mathematical obligations."
         )
-        return "Task: SOLVE the supplied mathematical problem. " + ending
+        return (
+            "Task: SOLVE the supplied mathematical problem. " + ending
+            + " PARTIAL, UNKNOWN and candidates with unresolved mathematical obligations do not "
+            "finish Solve, even with conclude: true. A model stop milestone also saves progress "
+            "and continues Solve. A model stop is not a user stop request; explicit user "
+            "cancellation remains available. "
+            "The harness enforces time, iteration and token limits and handles provider failures. "
+            "When a route fails, record the obstacle and reconsider assumptions, references or "
+            "another approach. Do not repeat completed work merely to spend time or mislabel "
+            "partial work as complete to end the task. Completeness concerns the frozen problem, "
+            "not only a lemma or a restricted case; correctness and novelty belong to Verify."
+        )
     return (
         "Task: VERIFY the supplied candidate independently. Assess the precise claim, proof "
         "validity and novelty separately. Check assumptions, circular reasoning, edge cases, "

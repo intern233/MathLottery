@@ -10,6 +10,8 @@ from mathlottery import budget, organization
 from mathlottery.agent_backend import research_backend
 from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
+from mathlottery.finalization import SolveFinalizer
+from mathlottery.finalization import applicable as finalization_applicable
 from mathlottery.literature import collect_sources
 from mathlottery.milestones import answer_milestone, validate_milestone
 from mathlottery.models import Phase, Run, State, Workflow, now, uid
@@ -17,7 +19,7 @@ from mathlottery.native_attempts import NativeAttempts
 from mathlottery.native_workspace import NativeWorkspace
 from mathlottery.reporting import report
 from mathlottery.storage import atomic_write, json_text, safe_path
-from mathlottery.workflows import ACTIVE, record_selection
+from mathlottery.workflows import ACTIVE, claims_complete, full_solve_budget, record_selection
 
 if TYPE_CHECKING:
     from mathlottery.orchestrator import Orchestrator
@@ -28,6 +30,7 @@ class NativeRunner:
         self.engine, self.store = engine, engine.store
         self.workspaces = NativeWorkspace(self.store, engine.candidates)
         self.attempts = NativeAttempts(engine, self.workspaces)
+        self.finalizer = SolveFinalizer(engine)
 
     def workspace(self, run: Run) -> Path:
         return self.workspaces.path(run)
@@ -84,6 +87,7 @@ class NativeRunner:
                 "invocation_seconds": receipt.get("invocation_seconds"),
                 "checkpoint_error": receipt.get("checkpoint_error"),
                 "source_observed_at": receipt.get("source_observed_at"),
+                "finalizing": receipt.get("finalizing", False),
             }
         )
         run.native.pending_result = None
@@ -96,6 +100,13 @@ class NativeRunner:
             and result.session_id == getattr(run.native, self.attempts.session_field(run))
         ):
             self._record_tool_observations(run, result, receipt)
+        final = run.native.finalization
+        if run.task_id == final.task_id and (
+            final.status == "running" or (final.status == "incomplete" and receipt.get("finalizing"))
+        ):
+            return self.finalizer.consume(
+                run, Config.model_validate(run.config), result, milestone, receipt,
+            )
         if result.status != BackendStatus.COMPLETED:
             if result.pending:
                 run.native.active_attempt = receipt["directory"]
@@ -115,7 +126,17 @@ class NativeRunner:
             run.last_error = current_error
             self.store.save(run, "native_attempt_interrupted", error=result.error, reason=reason)
             if receipt.get("recovered"):
+                # The interruption is now historical, not a failure of the new
+                # invocation. Keep the event and unknown usage without a stale
+                # current-error banner throughout the resumed research turn.
+                run.last_error = None
+                self.store.save(run, "native_recovery_ready")
                 return False
+            if reason == "Active wall-time budget reached" and finalization_applicable(run):
+                config = Config.model_validate(run.config)
+                if self.finalizer.begin(run, config):
+                    return False
+                self.finalizer.fallback(run, config, budget.hard_limit_reason(run, config) or reason)
             self.engine._pause(run, reason, state)
             return True
         run.native.checkpoint_error = receipt.get("checkpoint_error")
@@ -132,13 +153,30 @@ class NativeRunner:
                     run.phase = Phase.SOLVE
             if milestone.kind == "candidate":
                 self.engine._candidate(run, milestone.candidate)
-                run.native.candidate_conclude = milestone.conclude
+                # Completion is only a solver claim, never independent verification.
+                # Preserve the submitted milestone verbatim but do not let conclude
+                # turn an explicitly incomplete candidate into a completed Solve.
+                complete_claim = claims_complete(milestone.candidate)
+                run.native.candidate_conclude = milestone.conclude and complete_claim
                 run.native.reviewer_session_id = None
                 run.native.reviewer_response_id = None
                 run.native.reviewer_candidate_id = None
                 if run.workflow == Workflow.SOLVE:
-                    if milestone.conclude:
+                    if run.native.candidate_conclude and not full_solve_budget(run):
                         finish = "Solving complete; candidate saved for independent verification"
+                    elif complete_claim and full_solve_budget(run):
+                        run.native.history[-1]["continuation_reason"] = (
+                            "Complete solution claim saved as a checkpoint. Full-budget Solve "
+                            "is enabled: use the remaining active time to critically check and "
+                            "improve this proof and its evidence. Preserve valid results; record "
+                            "any newly discovered gaps honestly. This is not independent Verify."
+                        )
+                    elif not complete_claim:
+                        run.native.history[-1]["continuation_reason"] = (
+                            "Candidate saved as a checkpoint: the original problem is not yet "
+                            "explicitly claimed complete without mathematical obligations. "
+                            "Continue from the saved work within the remaining budget."
+                        )
                 else:
                     run.phase = Phase.VERIFY
             elif milestone.kind == "review":
@@ -156,7 +194,8 @@ class NativeRunner:
                     prepared=True,
                 )
                 if run.native.review_only or (
-                    candidate.reviews[-1].verdict == "NO_ISSUES_FOUND" and run.native.candidate_conclude
+                    candidate.reviews[-1].verdict == "NO_ISSUES_FOUND"
+                    and run.native.candidate_conclude and claims_complete(candidate)
                 ):
                     finish = "Independent review recorded; see proof status and verification limits"
                 else:
@@ -165,7 +204,14 @@ class NativeRunner:
                 organization.accept(run, milestone.report_markdowns or milestone.report_markdown)
                 finish = "Expert reading report organized; original verification outcomes are unchanged"
             elif milestone.kind == "stop":
-                finish = milestone.summary or "Researcher ended the investigation"
+                if run.phase == Phase.SOLVE:
+                    run.native.history[-1]["continuation_reason"] = (
+                        "Researcher stop saved as progress, not a user stop request. "
+                        "Reassess the recorded obstacles and pursue another useful route "
+                        "within the remaining budget; do not invent a complete solution."
+                    )
+                else:
+                    finish = milestone.summary or "Researcher ended the investigation"
             run.native.history[-1]["milestone"] = milestone.model_dump(mode="json")
         run.task_id, run.prompt_path = None, None
         if finish and run.native.steering:
@@ -224,9 +270,18 @@ class NativeRunner:
             if run.native.pending_result and self.apply(run):
                 return run
             if self.engine._stop_file(run).exists():
+                if run.native.finalization.status == "running":
+                    self.finalizer.fallback(run, config, "Stopped by user during finalization")
                 return self.engine._pause(run, "Stopped by user", State.CANCELLED)
             reason = budget.exhausted(run, config)
             if reason:
+                if reason == "Active wall-time budget reached" and self.finalizer.begin(run, config):
+                    continue
+                if finalization_applicable(run) and (
+                    reason == "Active wall-time budget reached" or run.native.finalization.status == "running"
+                ):
+                    reason = budget.hard_limit_reason(run, config) or reason
+                    self.finalizer.fallback(run, config, reason)
                 return self.engine._pause(run, reason)
             run.state = ACTIVE[run.phase]
             prompt = self.prepare(run, config)

@@ -67,7 +67,7 @@ def milestone(prompt, verdict="NO_ISSUES_FOUND"):
         fields,
         kind="candidate",
         conclude=True,
-        candidate={"claim": "A precise test claim", "proof": "A scripted test proof"},
+        candidate={"claim": "A precise test claim", "proof": "A scripted test proof", "scope": "COMPLETE"},
     )
 
 

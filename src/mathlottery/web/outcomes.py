@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from mathlottery.models import Run
+from mathlottery.models import Run, Workflow
 
 
 def _conflicting_completion(claim: str) -> bool:
@@ -97,11 +97,27 @@ def _obligations(items: list[str]) -> dict:
 def research_outcome(run: Run) -> dict:
     """Keep candidate scope independent of verdict, proof level and workflow state."""
     candidate = run.candidates[-1] if run.candidates else None
+    final = run.native.finalization
+    no_final_candidate = (
+        run.execution == "native" and run.workflow in {Workflow.SOLVE, Workflow.PIPELINE}
+        and final.status == "completed" and final.candidate_id is None
+    )
     solve = {
         "status": "NO_CANDIDATE", "basis": "no_candidate", "candidate_id": None,
         "declared_scope": None, "legacy_basis": None, "claim": "", "claim_truncated": False,
         **_obligations([]),
     }
+    if no_final_candidate:
+        # A textual closing statement can retract an earlier complete checkpoint.
+        # Preserve that candidate and its reviews, but do not present its old claim
+        # as the final result or infer a mathematical scope from the closing prose.
+        solve.update(
+            status="UNKNOWN", basis="finalization_without_candidate",
+            claim=("No final mathematical candidate was submitted during closing. Earlier "
+                   "candidates remain historical checkpoints, not the final conclusion. "
+                   "收尾仅提供文字说明，未提交最终数学候选；此前候选仅作为历史检查点保留，"
+                   "不代表本次最终结论。"),
+        )
     verify = {
         "status": "NO_CANDIDATE", "basis": "no_candidate", "candidate_id": None,
         "verdict": None, "original_problem_coverage": None, "novelty": None,
@@ -110,16 +126,17 @@ def research_outcome(run: Run) -> dict:
     if candidate is None:
         return {"solve": solve, "verify": verify}
 
-    status = candidate.scope
-    basis = "candidate_scope" if status != "UNKNOWN" else "undeclared_scope"
-    if status == "UNKNOWN" and (legacy_scope := _explicit_legacy_scope(candidate.claim)):
-        status, basis = legacy_scope, "explicit_claim_text"
-    solve.update(
-        status=status, basis=basis, candidate_id=candidate.id,
-        declared_scope=candidate.scope, claim=candidate.claim[:600],
-        legacy_basis="explicit_claim_text" if basis == "explicit_claim_text" else None,
-        claim_truncated=len(candidate.claim) > 600, **_obligations(candidate.remaining_obligations),
-    )
+    if not no_final_candidate:
+        status = candidate.scope
+        basis = "candidate_scope" if status != "UNKNOWN" else "undeclared_scope"
+        if status == "UNKNOWN" and (legacy_scope := _explicit_legacy_scope(candidate.claim)):
+            status, basis = legacy_scope, "explicit_claim_text"
+        solve.update(
+            status=status, basis=basis, candidate_id=candidate.id,
+            declared_scope=candidate.scope, claim=candidate.claim[:600],
+            legacy_basis="explicit_claim_text" if basis == "explicit_claim_text" else None,
+            claim_truncated=len(candidate.claim) > 600, **_obligations(candidate.remaining_obligations),
+        )
     verify.update(status="UNREVIEWED", basis="no_review", candidate_id=candidate.id)
     if candidate.reviews:
         review = candidate.reviews[-1]

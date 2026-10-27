@@ -40,7 +40,8 @@ the final shortlist and do not prescribe the agent's intermediate methods or too
 and remaining_obligations: [...]. COMPLETE means the full original statement, with its quantifiers
 and assumptions; a reduction or a proved subcase is PARTIAL until all remaining obligations are
 discharged. A counterexample must satisfy every original hypothesis and negate the actual claim.
-conclude means this research task ends, never that the original problem has been solved.""",
+Scope records the solver's claim only; independent Verify assesses correctness, original-problem
+coverage and novelty. Finishing a research task never certifies that the problem has been solved.""",
     Phase.VERIFY: """The review verdict assesses the candidate's mathematical claim and proof.
 Assess novelty independently. Novelty UNKNOWN or an unavailable source used only for a novelty
 comparison does not by itself require INCONCLUSIVE or invalidate established original-problem

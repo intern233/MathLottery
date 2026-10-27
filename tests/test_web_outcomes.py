@@ -238,3 +238,68 @@ def test_summary_and_detail_share_read_only_outcomes(tmp_path):
     assert summary["research_outcome"] == detail["research_outcome"]
     assert summary["research_outcome"]["solve"]["status"] == "PARTIAL"
     assert service.store.load(run.id).model_dump() == before
+
+
+@pytest.mark.parametrize("workflow", [Workflow.SOLVE, Workflow.PIPELINE])
+@pytest.mark.parametrize("kind", ["stop", "progress"])
+@pytest.mark.parametrize("scope", ["COMPLETE", "COUNTEREXAMPLE"])
+def test_text_only_closing_does_not_reuse_a_previous_complete_claim(workflow, kind, scope):
+    item = candidate(scope, reviews=[review(original_problem_coverage="FULL")])
+    run = run_with(item, workflow=workflow, execution="native", state=State.COMPLETED)
+    previous_review = research_outcome(run)["verify"]
+    run.native.finalization.status = "completed"
+    run.native.history.append({"finalizing": True, "milestone": {
+        "kind": kind, "summary": "The general case remains unresolved; the prior conclusion has a gap.",
+    }})
+    before = run.model_dump()
+
+    shown = research_outcome(run)
+
+    assert shown["solve"]["status"] == "UNKNOWN"
+    assert shown["solve"]["basis"] == "finalization_without_candidate"
+    assert shown["solve"]["candidate_id"] is None
+    assert shown["solve"]["declared_scope"] is None
+    assert shown["solve"]["remaining_obligations"] == []
+    assert "No final mathematical candidate" in shown["solve"]["claim"]
+    assert "未提交最终数学候选" in shown["solve"]["claim"]
+    assert shown["verify"] == previous_review
+    assert run.model_dump() == before
+    assert run.candidates[-1].scope == scope
+
+
+def test_text_only_closing_without_any_candidate_has_an_explicit_unknown_result():
+    run = run_with(workflow=Workflow.SOLVE, execution="native", state=State.COMPLETED)
+    run.native.finalization.status = "completed"
+    shown = research_outcome(run)
+    assert shown["solve"]["status"] == "UNKNOWN"
+    assert shown["solve"]["basis"] == "finalization_without_candidate"
+    assert shown["verify"]["status"] == "NO_CANDIDATE"
+
+
+@pytest.mark.parametrize("workflow", [Workflow.VERIFY, Workflow.ORGANIZE])
+def test_text_only_finalization_does_not_change_review_or_organization_source_claims(workflow):
+    run = run_with(candidate("COMPLETE", reviews=[review()]), workflow=workflow,
+                   execution="native", state=State.COMPLETED)
+    expected = research_outcome(run)
+    run.native.finalization.status = "completed"
+    assert research_outcome(run) == expected
+
+
+@pytest.mark.parametrize("status", ["idle", "running", "incomplete"])
+def test_only_a_completed_closing_result_supersedes_the_registered_candidate(status):
+    run = run_with(candidate("PARTIAL"), workflow=Workflow.SOLVE, execution="native")
+    expected = research_outcome(run)
+    run.native.finalization.status = status
+    assert research_outcome(run) == expected
+
+
+@pytest.mark.parametrize("scope", ["PARTIAL", "COMPLETE"])
+def test_a_registered_final_candidate_retains_its_actual_declared_scope(scope):
+    item = candidate(scope)
+    run = run_with(item, workflow=Workflow.SOLVE, execution="native", state=State.COMPLETED)
+    run.native.finalization.status = "completed"
+    run.native.finalization.candidate_id = item.id
+    shown = research_outcome(run)["solve"]
+    assert shown["status"] == scope
+    assert shown["basis"] == "candidate_scope"
+    assert shown["candidate_id"] == item.id

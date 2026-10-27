@@ -107,7 +107,7 @@ else:
                               'truth_assessment':'Unknown', 'proof_assessment':'Need more evidence'})
         else:
             checkpoint.update(kind='candidate', conclude=True,
-                              candidate={'claim':'Fixture claim', 'proof':'Fixture proof'})
+                              candidate={'claim':'Fixture claim', 'proof':'Fixture proof', 'scope':'COMPLETE'})
     elif behavior in ('lifecycle', 'partial'):
         if 'Independently review the following' in prompt:
             candidate = json.loads((work/'candidate.json').read_text())
@@ -123,7 +123,8 @@ else:
                                 'check_ids':['algebra']}]})
         else:
             checkpoint.update(kind='candidate', conclude=behavior != 'partial',
-                              candidate={'claim':'Sum of odd numbers', 'proof':f'candidate-{count}'})
+                              candidate={'claim':'Sum of odd numbers', 'proof':f'candidate-{count}',
+                                         'scope':'PARTIAL' if behavior == 'partial' else 'COMPLETE'})
     elif behavior == 'stop':
         checkpoint['kind'] = 'stop'
     elif behavior == 'malformed':
@@ -136,7 +137,7 @@ else:
     answer.write_text('Full ordinary Markdown answer with mathematical derivations.\n')
     if behavior == 'answer_milestone':
         checkpoint.update(kind='candidate', conclude=True,
-                          candidate={'claim':'A precise claim', 'proof':'A self-contained proof'})
+                          candidate={'claim':'A precise claim', 'proof':'A self-contained proof', 'scope':'COMPLETE'})
         answer.write_text('Full proof\n```mathlottery\n' + json.dumps(checkpoint) + '\n```\n')
     print(json.dumps({'type':'item.completed','item':{'type':'command_execution','command':'python research.py','exit_code':0}}))
     if behavior == 'search_trace':
@@ -380,9 +381,9 @@ def test_invalid_manual_milestone_is_transactional(store):
 def test_completed_native_research_can_be_extended_in_same_session(
     store, native_config, monkeypatch
 ):
-    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "stop")
+    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "three_tasks")
     engine = Orchestrator(store)
-    run = engine.drive(engine.create(native_config, demo_problem()).id)
+    run = engine.drive(engine.create(native_config, demo_problem(), workflow=Workflow.SOLVE).id)
     assert run.state == State.COMPLETED
     session = run.native.solver_session_id
     resumed = engine.resume(run.id, message="Investigate a generalization")
@@ -412,7 +413,7 @@ def test_native_unknown_usage_stops_token_limited_run(store, native_config, monk
 def test_stop_records_native_session_before_completion(store, native_config, monkeypatch):
     monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "slow")
     engine = Orchestrator(store)
-    run = engine.create(native_config, demo_problem())
+    run = engine.create(native_config, demo_problem(), workflow=Workflow.SOLVE)
     thread = threading.Thread(target=engine.drive, args=(run.id,))
     thread.start()
     deadline = time.monotonic() + 4
@@ -424,7 +425,7 @@ def test_stop_records_native_session_before_completion(store, native_config, mon
     assert not thread.is_alive()
     stopped = store.load(run.id)
     assert stopped.state == State.CANCELLED and stopped.native.solver_session_id
-    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "stop")
+    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "three_tasks")
     resumed = engine.resume(run.id)
     assert resumed.state == State.COMPLETED
     assert resumed.native.solver_session_id == stopped.native.solver_session_id
@@ -576,7 +577,7 @@ def test_recovery_stops_only_its_identified_orphan_process(tmp_path):
 
 
 def test_new_direction_survives_recovery_of_older_completion(store, native_config, monkeypatch):
-    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "stop")
+    monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "three_tasks")
     original = NativeRunner.queue
     interrupted = []
 
@@ -588,7 +589,7 @@ def test_new_direction_survives_recovery_of_older_completion(store, native_confi
 
     monkeypatch.setattr(NativeRunner, "queue", crash_once)
     engine = Orchestrator(store)
-    run = engine.drive(engine.create(native_config, demo_problem()).id)
+    run = engine.drive(engine.create(native_config, demo_problem(), workflow=Workflow.SOLVE).id)
     assert run.native.active_attempt
     run = engine.resume(run.id, message="NEW_DIRECTION_AFTER_CRASH")
     assert run.state == State.COMPLETED and run.iteration == 2

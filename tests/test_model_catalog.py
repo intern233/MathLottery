@@ -364,7 +364,8 @@ def test_custom_selection_reaches_responses_and_resume_uses_saved_provider_snaps
         fields = dict(re.findall(r"^(run_id|task_id): (.+)$", payload["input"], re.MULTILINE))
         checkpoint = {
             **fields, "kind": "candidate", "conclude": True,
-            "candidate": {"claim": "For every natural n, n + 0 = n.", "proof": "Synthetic transport fixture."},
+            "candidate": {"claim": "For every natural n, n + 0 = n.",
+                          "proof": "Synthetic transport fixture.", "scope": "COMPLETE"},
         }
         return httpx.Response(200, json={
             "id": f"resp_provider_fixture_{len(requests)}", "status": "completed",

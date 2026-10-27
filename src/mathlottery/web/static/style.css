@@ -87,6 +87,8 @@ summary::marker { color: #7b8b7d; font-size: 10px; }
 summary .muted { float: right; font-size: 11px; margin-left: 12px; }
 .muted, .field-hint { color: var(--muted); }
 .field-hint { font-size: 12px; margin: 8px 0 12px; line-height: 1.75; }
+.budget-choice { display: flex; align-items: start; gap: 9px; cursor: pointer; }
+.budget-choice input { width: 16px; height: 16px; flex: 0 0 16px; margin: 3px 0 0; }
 .settings { margin: 16px 0; padding: 13px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .settings[open] { padding-bottom: 6px; }
 .task-options { border: 0; margin: 9px 0 18px; padding: 3px 0; }

@@ -60,6 +60,16 @@ class BackendConfig(Model):
 
 class BudgetConfig(Model):
     max_wall_time_minutes: float = Field(default=180, gt=0)
+    finalize_minutes: float = Field(
+        default=5, ge=0, le=30,
+        description="Extra bounded time for one native Solve closing turn after the research "
+        "time limit. Zero disables the model closing turn; hard limits still apply.",
+    )
+    solve_until_budget_exhausted: bool = Field(
+        default=False,
+        description="Native standalone Solve keeps researching until the active-time budget is "
+        "exhausted, even after a complete solution claim. Other hard limits still apply.",
+    )
     max_iterations: int = Field(default=50, gt=0)
     max_input_tokens: int | None = Field(default=None, gt=0)
     max_output_tokens: int | None = Field(default=None, gt=0)
