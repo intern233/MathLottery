@@ -12,12 +12,12 @@ from test_web import SIGNED_IN, finished, serving
 from test_web import web as web
 from typer.testing import CliRunner
 
-from mathlottery import organization
 from mathlottery.cli import app
 from mathlottery.models import Phase, State
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.organized_reports import read_report
-from mathlottery.storage import json_text
+from mathlottery.organize import workflow as organization
+from mathlottery.organize.downloads import read_report
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import json_text
 from mathlottery.web.service import StartRequest, WebService
 
 
@@ -27,7 +27,7 @@ def rendered(monkeypatch):
         data = b"%PDF-1.4\nscripted-export-fixture"
         destination.write_bytes(data)
         return {"sha256": hashlib.sha256(data).hexdigest(), "warnings": []}
-    monkeypatch.setattr("mathlottery.report_pdf.render_pdf", render)
+    monkeypatch.setattr("mathlottery.organize.pdf.render_pdf", render)
 
 
 @pytest.mark.parametrize("extra", [

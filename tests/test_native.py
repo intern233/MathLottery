@@ -11,15 +11,15 @@ from uuid import UUID
 import pytest
 from typer.testing import CliRunner
 
-from mathlottery.backends import BackendStatus
 from mathlottery.cli import app
 from mathlottery.config import BackendConfig, Config
-from mathlottery.demo import demo_problem
 from mathlottery.models import Level, Phase, Run, State, Workflow
-from mathlottery.native import NativeRunner
-from mathlottery.native_backend import NativeWorkBackend
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import json_text
+from mathlottery.providers.base import BackendStatus
+from mathlottery.providers.codex import NativeWorkBackend
+from mathlottery.providers.demo import demo_problem
+from mathlottery.runtime.native import NativeRunner
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import json_text
 
 FAKE_NATIVE = r"""
 import json, os, sys, time, uuid
@@ -281,7 +281,7 @@ def test_inconclusive_review_returns_to_same_solver_then_uses_fresh_reviewer(
 
 
 def test_interrupted_independent_checks_do_not_repeat_a_model_turn(store, native_config, monkeypatch):
-    from mathlottery.candidates import CandidateStore
+    from mathlottery.verify.candidates import CandidateStore
 
     monkeypatch.setenv("MATHLOTTERY_NATIVE_FAKE", "lifecycle")
     native_config.budget.max_iterations = 8

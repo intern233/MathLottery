@@ -9,7 +9,7 @@ import sys
 import threading
 
 from mathlottery.models import now
-from mathlottery.storage import Store, atomic_write, json_text, safe_path
+from mathlottery.storage.core import Store, atomic_write, json_text, safe_path
 
 
 class BusyError(ValueError):

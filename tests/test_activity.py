@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from mathlottery.activity import (
+from mathlottery.telemetry.activity import (
     ActivityReporter,
     controller_activity,
     interrupt_controller_activity,
@@ -107,17 +107,17 @@ def test_missing_legacy_malformed_and_outside_activity_are_not_invented(tmp_path
 def test_resumed_transport_reporter_preserves_existing_bounded_projection(tmp_path):
     ActivityReporter(tmp_path).record("search", "completed", "old-id")
     ActivityReporter(tmp_path).record("model", "running", "new-id")
-    from mathlottery.activity import read_activity
+    from mathlottery.telemetry.activity import read_activity
 
     assert [item["kind"] for item in read_activity(tmp_path / "activity.json")["recent"]] == ["search", "model"]
 
 
 def test_collect_sources_records_controller_completion_without_claiming_source_success(tmp_path):
     from mathlottery.config import Config
-    from mathlottery.literature import collect_sources
     from mathlottery.models import Citation, Problem
-    from mathlottery.orchestrator import Orchestrator
-    from mathlottery.storage import Store
+    from mathlottery.runtime.orchestrator import Orchestrator
+    from mathlottery.storage.core import Store
+    from mathlottery.verify.literature import collect_sources
 
     store = Store(tmp_path)
     config = Config()
@@ -157,7 +157,7 @@ def test_controller_activity_merges_between_processes(tmp_path):
     script = """
 import sys, time
 from pathlib import Path
-from mathlottery.activity import controller_activity
+from mathlottery.telemetry.activity import controller_activity
 directory, stage = Path(sys.argv[1]), sys.argv[2]
 with controller_activity(directory, stage, heartbeat_seconds=0.05):
     (directory / stage).touch()

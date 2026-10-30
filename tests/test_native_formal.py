@@ -18,8 +18,8 @@ from mathlottery.models import (
     digest,
     now,
 )
-from mathlottery.native_formal import _output_budget_error, _run, check_snapshot
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.verify.native_formal import _output_budget_error, _run, check_snapshot
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ def request(**kwargs):
 
 
 def test_missing_sandbox_never_falls_back_to_direct_execution(store, formal_run, monkeypatch):
-    monkeypatch.setattr("mathlottery.native_formal.shutil.which", lambda name: None)
+    monkeypatch.setattr("mathlottery.verify.native_formal.shutil.which", lambda name: None)
     monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: pytest.fail("Must not execute"))
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == "UNAVAILABLE"
@@ -119,7 +119,7 @@ def scripted_tools(tmp_path, monkeypatch):
     toolchain = tmp_path / "trusted"
     (toolchain / "bin").mkdir(parents=True)
     (toolchain / "bin/leanchecker").touch()
-    monkeypatch.setattr("mathlottery.native_formal.shutil.which", lambda name: str(toolchain / "bin" / name))
+    monkeypatch.setattr("mathlottery.verify.native_formal.shutil.which", lambda name: str(toolchain / "bin" / name))
     monkeypatch.setattr(subprocess, "run", lambda command, **kwargs: SimpleNamespace(
         stdout=str(toolchain) if command[-1] == "--print-prefix" else "Lean scripted fixture",
     ))
@@ -158,7 +158,7 @@ def test_explicit_module_root_preserves_bytes_and_module_dependencies(store, for
             text = ""
         return {"status": "OK", "returncode": 0, "output": text}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", scripted_run)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", scripted_run)
     result = check_snapshot(store, formal_run, FormalCheckRequest(
         files=[item.path for item in formal_run.review_evidence.files],
         declarations=["Main.target"], module_root="proof",
@@ -194,7 +194,7 @@ def test_receipt_uses_frozen_objects_and_inspector_output(store, formal_run, scr
         (directory / f"{label}.log").write_text(text)
         return {"status": "OK", "returncode": 0, "output": text, "log": f"{label}.log"}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", scripted_run)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", scripted_run)
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == expected
     assert len(commands) == 3
@@ -215,7 +215,7 @@ def test_unexpected_compiler_outputs_cannot_shadow_inspector_imports(store, form
         (output / "Lean.olean").write_bytes(b"injected library")
         return {"status": "OK", "returncode": 0, "output": ""}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", malicious_output)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", malicious_output)
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == "ERROR"
     assert result["reason"] == "Formal check failed: Unexpected compiler output file: 'Lean.olean'"
@@ -243,7 +243,7 @@ def test_lean_module_ir_companions_are_bounded_recorded_and_excluded_from_replay
         text = json.dumps([{"name": "target", "module": "Example", "type": "True", "axioms": []}]) if label == "inspect" else ""
         return {"status": "OK", "returncode": 0, "output": text}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", module_output)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", module_output)
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == "KERNEL_REPLAYED"
     assert calls == ["compile-0", "replay-0", "inspect"]
@@ -265,7 +265,7 @@ def test_ir_support_does_not_admit_other_modules_or_arbitrary_sidecars(
         (output / filename).write_bytes(b"unexpected")
         return {"status": "OK", "returncode": 0, "output": ""}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", injected_sidecar)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", injected_sidecar)
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == "ERROR"
     assert f"Unexpected compiler output file: {filename!r}" in result["reason"]
@@ -294,7 +294,7 @@ def test_known_ir_companions_do_not_bypass_link_or_size_checks(
                 stream.truncate(1_048_577)
         return {"status": "OK", "returncode": 0, "output": ""}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", unsafe_sidecar)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", unsafe_sidecar)
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == ("OUTPUT_LIMIT" if kind == "size" else "ERROR")
     assert calls == ["compile-0"]
@@ -305,7 +305,7 @@ def test_unexpected_host_exception_details_are_not_exposed(store, formal_run, sc
     def host_error(*args, **kwargs):
         raise OSError("PRIVATE_HOST_PATH_OR_PROXY_SENTINEL")
 
-    monkeypatch.setattr("mathlottery.native_formal._run", host_error)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", host_error)
     result = check_snapshot(store, formal_run, request())
     assert result["reason"] == "Formal check failed: OSError"
     assert "SENTINEL" not in json.dumps(result)
@@ -319,7 +319,7 @@ def test_replay_failure_cannot_be_overridden_by_compiler_success(store, formal_r
             return {"status": "OK", "returncode": 0, "output": ""}
         return {"status": "ERROR", "returncode": 1, "output": "rejected"}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", failed_replay)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", failed_replay)
     assert check_snapshot(store, formal_run, request())["status"] == "ERROR"
 
 
@@ -343,7 +343,7 @@ def test_oversized_objects_interrupt_compilation_before_replay(store, formal_run
         assert interrupted(), "Output limits must be checked while the compiler is running"
         return {"status": "CANCELLED", "returncode": -9, "output": ""}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", oversized_output)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", oversized_output)
     result = check_snapshot(store, formal_run, request())
     assert calls == ["compile-0"]
     assert result["status"] == "OUTPUT_LIMIT"
@@ -367,7 +367,7 @@ def test_configured_large_objects_are_hashed_and_replayed(store, formal_run, scr
         text = json.dumps([{"name": "target", "module": "Example", "type": "True", "axioms": []}]) if label == "inspect" else ""
         return {"status": "OK", "returncode": 0, "output": text}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", large_output)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", large_output)
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == "KERNEL_REPLAYED"
     assert calls == ["compile-0", "replay-0", "inspect"]
@@ -390,7 +390,7 @@ def test_long_formal_timeout_still_shares_remaining_run_budget(store, formal_run
         text = json.dumps([{"name": "target", "module": "Example", "type": "True", "axioms": []}]) if label == "inspect" else ""
         return {"status": "OK", "returncode": 0, "output": text}
 
-    monkeypatch.setattr("mathlottery.native_formal._run", bounded_check)
+    monkeypatch.setattr("mathlottery.verify.native_formal._run", bounded_check)
     result = check_snapshot(store, formal_run, request())
     assert result["status"] == "KERNEL_REPLAYED"
     assert result["limits"]["seconds"] == 1800

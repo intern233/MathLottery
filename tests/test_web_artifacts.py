@@ -5,8 +5,12 @@ from test_web import serving
 
 from mathlottery.config import Config
 from mathlottery.models import Problem, Workflow
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.web.artifacts import MAX_SOURCE_BYTES, list_formal_artifacts, read_formal_artifact
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.verify.artifacts import (
+    MAX_SOURCE_BYTES,
+    list_formal_artifacts,
+    read_formal_artifact,
+)
 from mathlottery.web.service import WebService
 
 
@@ -94,7 +98,7 @@ def test_linked_sources_and_directories_are_neither_listed_nor_read(tmp_path):
 
 
 def test_list_and_reads_are_bounded(tmp_path, monkeypatch):
-    from mathlottery.web import artifacts
+    from mathlottery.verify import artifacts
 
     write(tmp_path, "workspace/Large.lean", "x" * (MAX_SOURCE_BYTES + 1))
     assert list_formal_artifacts(tmp_path)["items"][0]["downloadable"] is False
@@ -154,7 +158,7 @@ def test_linked_workspace_root_is_rejected(tmp_path):
 
 
 def test_parent_symlink_swapped_after_validation_is_rejected(tmp_path, monkeypatch):
-    from mathlottery.web import artifacts
+    from mathlottery.verify import artifacts
 
     root = tmp_path / "run"
     write(root, "workspace/formal/Proof.lean")

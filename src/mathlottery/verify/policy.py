@@ -1,0 +1,219 @@
+"""Evidence gates, independent of the research agent and transport.
+
+These checks establish traceability, not the truth of a source interpretation or
+exhaustiveness of a literature search. Only controller-created snapshots count.
+"""
+
+import re
+import unicodedata
+from datetime import datetime, timezone
+from urllib.parse import urldefrag
+
+from mathlottery.models import (
+    Citation,
+    EvidenceAssessment,
+    LiteratureObstacle,
+    LiteratureSearch,
+    OpenStatus,
+    Problem,
+    now,
+)
+
+POLICY_VERSION = "evidence-v4"
+
+
+def normalized(text: str) -> str:
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", text)).strip()
+
+
+def recent(value: str | None) -> bool:
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(value.replace("Z", "+00:00")))
+        return -300 <= age.total_seconds() <= 7 * 86400
+    except (AttributeError, TypeError, ValueError):
+        return False
+
+
+def assess_sources(
+    citations: list[Citation], search: LiteratureSearch, records: list[dict],
+    *, previous_assessments: list[EvidenceAssessment] = (),
+) -> EvidenceAssessment:
+    from mathlottery.models import digest
+
+    assessment = EvidenceAssessment(
+        policy_version=POLICY_VERSION, assessed_at=now(), limitations=list(search.limitations),
+    )
+    observed = {
+        normalized(query)
+        for record in records if record.get("status") == "OK" and recent(record.get("retrieved_at"))
+        for query in [record.get("query", ""), *record.get("queries", [])]
+        if isinstance(query, str) and query.strip()
+    }
+    assessment.observed_queries = sorted(observed)
+    for citation in citations:
+        snapshots = [
+            record for record in records
+            if record.get("record_kind") == "source_snapshot"
+            and citation.url in (record.get("requested_url"), record.get("url"))
+        ]
+        snapshot = snapshots[-1] if snapshots else {}
+        # A fresh failure at an original URL invalidates its earlier redirect
+        # receipt even when the citation uses the redirect destination.
+        if snapshot.get("requested_url"):
+            snapshot = next((record for record in reversed(records)
+                             if record.get("record_kind") == "source_snapshot"
+                             and record.get("requested_url") == snapshot["requested_url"]), snapshot)
+        reason = ""
+        if not snapshot or snapshot.get("status") != "OK":
+            reason = snapshot.get("reason") or "No independently retrieved source snapshot"
+        elif citation.url not in (snapshot.get("requested_url"), snapshot.get("url")):
+            reason = "The latest source retrieval no longer resolves to the cited URL"
+        elif not recent(snapshot.get("retrieved_at")):
+            reason = "Source snapshot is stale or has an invalid timestamp"
+        elif not snapshot.get("sha256") or not snapshot.get("artifact"):
+            reason = "Source snapshot lacks a content hash or archived artifact"
+        elif digest(normalized(citation.excerpt)) not in snapshot.get("excerpt_hashes", []):
+            reason = "Quoted excerpt was not found in the retrieved source text"
+        elif not citation.locator.strip() or not citation.explanation.strip():
+            reason = "A source locator and explanation of relevance are required"
+        assessment.checked_citations.append({
+            "url": citation.url, "role": citation.role, "relation": citation.relation,
+            "resolved_url": snapshot.get("url"),
+            "requested_url": snapshot.get("requested_url"),
+            "locator": citation.locator, "source_date": citation.source_date,
+            "excerpt_sha256": digest(normalized(citation.excerpt)),
+            "verified_excerpt": not reason, "reason": reason,
+            "artifact": snapshot.get("artifact"), "sha256": snapshot.get("sha256"),
+            "retrieved_at": snapshot.get("retrieved_at"),
+        })
+        if reason:
+            assessment.reasons.append(f"{citation.url}: {reason}")
+    if not citations:
+        assessment.reasons.append("No source quotations and claim-specific comparisons supplied")
+    if not search.queries or not search.conclusion.strip():
+        assessment.reasons.append("Literature search queries and a coverage explanation are missing")
+    elif any(normalized(query) not in observed for query in search.queries):
+        assessment.reasons.append("Some declared search queries have no recent observed search-tool receipt")
+    from mathlottery.verify.obstacles import (
+        assess_obstacles,
+        obstacle_changes,
+        retain_source_obstacles,
+    )
+
+    retain_source_obstacles(search, assessment.checked_citations)
+    assess_obstacles(search, assessment)
+    obstacle_changes(assessment, previous_assessments)
+    assessment.supported = not assessment.reasons
+    return assessment
+
+
+def assess_problem(
+    problem: Problem, records: list[dict], *, previous_assessments: list[EvidenceAssessment] = (),
+) -> Problem:
+    problem = problem.model_copy(deep=True)
+    assessment = assess_sources(
+        problem.citations, problem.literature_search, records, previous_assessments=previous_assessments,
+    )
+    verified = [c for c in assessment.checked_citations if c["verified_excerpt"]]
+    source = urldefrag(problem.source_url or "")[0]
+    if not source or not any(
+        c["role"] == "ORIGINAL_STATEMENT" and source in {
+            urldefrag(c["url"])[0], urldefrag(c.get("resolved_url") or "")[0]
+        } for c in verified
+    ):
+        assessment.reasons.append("The exact original problem has no checked primary-source quotation")
+    roles = {c["role"] for c in verified}
+    solution = any(
+        c["role"] in {"SOLUTION", "PRIOR_RESULT"}
+        and c["relation"] in {"EQUIVALENT", "SPECIAL_CASE"} for c in verified
+    )
+    if problem.status == OpenStatus.OPEN:
+        if "EXPLICIT_OPEN" not in roles:
+            assessment.reasons.append("No checked source explicitly supports an open status")
+        if any(c["role"] == "PRIOR_RESULT" and c["relation"] == "UNKNOWN" for c in verified):
+            assessment.reasons.append("A cited prior result has an unresolved relationship to the original problem")
+        if solution or any(
+            c["role"] in {"SOLUTION", "CORRECTION"} and c["relation"] != "DIFFERENT"
+            for c in verified
+        ):
+            assessment.reasons.append("Possible later solution or correction needs reconciliation")
+    elif problem.status == OpenStatus.SOLVED and not solution:
+        assessment.reasons.append("No checked solution is compared as equivalent to the original problem")
+    elif problem.status in (OpenStatus.PARTIALLY_SOLVED, OpenStatus.DISPUTED):
+        if not roles.intersection({"SOLUTION", "CORRECTION", "PRIOR_RESULT"}):
+            assessment.reasons.append("No checked result supports the reported status")
+    assessment.supported = not assessment.reasons
+    if not assessment.supported:
+        problem.status = OpenStatus.UNKNOWN
+    if solution and "EXPLICIT_OPEN" in roles:
+        problem.status = OpenStatus.DISPUTED
+    problem.status_checked_at = assessment.assessed_at
+    problem.status_evidence = list(dict.fromkeys(c["url"] for c in verified))
+    problem.evidence_assessment = assessment
+    # Keep model bibliography, but never present model-provided receipt metadata as observed.
+    for ref in problem.references:
+        match = next((c for c in verified if c["url"] == ref.url), None)
+        ref.retrieved_at = match["retrieved_at"] if match else None
+        ref.sha256 = match["sha256"] if match else None
+        ref.artifact = match["artifact"] if match else None
+    return problem
+
+
+def assess_novelty(reported: str, assessment: EvidenceAssessment, search: LiteratureSearch | None = None) -> str:
+    from mathlottery.verify.obstacles import matches_source
+
+    checked = [c for c in assessment.checked_citations if c["verified_excerpt"]]
+    prior = [c for c in checked if c["role"] in {"PRIOR_RESULT", "SOLUTION"}]
+    if any(c["relation"] == "EQUIVALENT" for c in prior):
+        return "KNOWN"
+    if any(c["relation"] == "SPECIAL_CASE" for c in prior):
+        return "SPECIAL_CASE"
+    if reported == "POTENTIALLY_NEW":
+        if not prior or any(c["relation"] != "DIFFERENT" for c in prior):
+            assessment.reasons.append("Closest prior results lack checked claim-by-claim comparisons")
+        missing_comparisons = [citation for citation in prior if not any(
+            comparison["supported"] and matches_source(citation, comparison["source_url"])
+            and comparison["locator"] == citation["locator"]
+            and comparison["relation"] == "DIFFERENT"
+            for comparison in assessment.comparisons
+        )]
+        if missing_comparisons:
+            assessment.reasons.append("Closest prior results need structured assumptions-and-conclusions comparisons")
+        for citation in missing_comparisons:
+            if any(matches_source(citation, comparison["source_url"]) and comparison["locator"] == citation["locator"]
+                   for comparison in assessment.comparisons):
+                continue  # Its existing comparison already projects an actionable obstacle.
+            from mathlottery.models import digest
+
+            obstacle_id = "comparison-" + digest(citation["url"] + "\n" + citation["locator"])[:12]
+            obstacle = {
+                "id": obstacle_id, "kind": "UNCLEAR_COMPARISON", "source_url": citation["url"],
+                "description": f"Structured comparison missing for {citation['locator']}",
+                "impact": "The closest prior theorem has not been compared with this candidate",
+                "next_action": "Compare the exact hypotheses, conclusions and implications in literature_search.comparisons, using this source URL and locator",
+                "required_locator": citation["locator"],
+                "status": "OPEN", "resolution": "", "evidence_urls": [], "resolves_legacy_gaps": [],
+                "resolution_supported": False, "resolution_reason": "A checked excerpt alone is not a structured comparison",
+            }
+            if not any(item["id"] == obstacle_id for item in assessment.obstacles):
+                obstacle.update(reported_status="OPEN", previous_status=None, change="NEW")
+                assessment.obstacles.append(obstacle)
+                assessment.obstacle_changes.append({
+                    "id": obstacle_id, "from_status": None, "to_status": "OPEN", "change": "NEW",
+                    "reason": obstacle["resolution_reason"],
+                })
+            if obstacle_id not in assessment.unresolved_obstacle_ids:
+                assessment.unresolved_obstacle_ids.append(obstacle_id)
+            if search is not None and not any(item.id == obstacle_id for item in search.obstacles):
+                # This concrete, controller-discovered gap must survive a new
+                # Verify even if the next model output omits the old citation.
+                search.obstacles = [*search.obstacles, LiteratureObstacle.model_validate({
+                    key: value for key, value in obstacle.items() if key in LiteratureObstacle.model_fields
+                })]
+        assessment.supported = not assessment.reasons
+        if assessment.supported:
+            return reported
+    elif reported in {"KNOWN", "SPECIAL_CASE"}:
+        assessment.reasons.append("Reported prior equivalence or special case lacks checked evidence")
+        assessment.supported = False
+    return "UNKNOWN"

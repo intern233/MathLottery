@@ -5,9 +5,12 @@ import time
 from mathlottery.web.account import AccountError, AccountRPC
 
 
-def codex_models(command, root, *, rpc_factory=AccountRPC):
+def codex_models(command, root, excluded_env=(), *, rpc_factory=AccountRPC):
     """Use an isolated, short-lived RPC client; never start an inference or login."""
-    rpc = rpc_factory(command, root=root)
+    options = {"root": root}
+    if excluded_env:
+        options["excluded_env"] = excluded_env
+    rpc = rpc_factory(command, **options)
     try:
         deadline = time.monotonic() + 15
         data, cursor, seen = [], None, set()

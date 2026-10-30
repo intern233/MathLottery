@@ -5,11 +5,11 @@ import json
 import pytest
 
 from mathlottery.config import Config
-from mathlottery.discovery import problem_fingerprint
+from mathlottery.find.discovery import problem_fingerprint
 from mathlottery.models import Phase, Problem, State, Workflow, digest
-from mathlottery.native import NativeRunner
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import atomic_write, json_text
+from mathlottery.runtime.native import NativeRunner
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import atomic_write, json_text
 
 
 @pytest.fixture

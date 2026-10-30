@@ -3,9 +3,9 @@ import json
 import pytest
 
 from mathlottery.config import Config
-from mathlottery.demo import demo_problem
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import Store
+from mathlottery.providers.demo import demo_problem
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import Store
 
 
 @pytest.fixture

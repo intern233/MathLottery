@@ -6,11 +6,11 @@ import time
 
 import pytest
 
-from mathlottery.backends import BackendStatus, CodexCLIError, WorkBackend, resolve_codex
 from mathlottery.config import BackendConfig
-from mathlottery.demo import demo_problem
 from mathlottery.models import State
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.providers.base import BackendStatus, CodexCLIError, WorkBackend, resolve_codex
+from mathlottery.providers.demo import demo_problem
+from mathlottery.runtime.orchestrator import Orchestrator
 
 FAKE = r"""
 import json, os, sys, time

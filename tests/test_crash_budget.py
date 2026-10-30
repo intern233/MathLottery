@@ -6,11 +6,11 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from test_solve_continuation import ScriptedBackend, candidate, problem
 
-from mathlottery import budget
 from mathlottery.config import Config
 from mathlottery.models import CandidateInput, State, Workflow
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import atomic_write, json_text
+from mathlottery.runtime import budget
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import atomic_write, json_text
 from mathlottery.web.service import WebService
 
 
@@ -19,7 +19,7 @@ def crashed(store, monkeypatch):
     start = datetime(2026, 1, 1, tzinfo=timezone.utc)
     current = start + timedelta(hours=20)
     monkeypatch.setattr(budget, "now", lambda: current.isoformat())
-    monkeypatch.setattr("mathlottery.native.now", lambda: current.isoformat())
+    monkeypatch.setattr("mathlottery.runtime.native.now", lambda: current.isoformat())
     config = Config()
     config.budget.max_wall_time_minutes = 10
     config.budget.max_iterations = 2

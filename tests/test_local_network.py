@@ -7,9 +7,9 @@ import pytest
 from typer.testing import CliRunner
 
 from mathlottery.cli import app
-from mathlottery.codex_identity import CodexIdentity
 from mathlottery.config import load_config
-from mathlottery.local_network import PROXY_KEYS, NetworkConfigError, network_environment
+from mathlottery.providers.identity import CodexIdentity
+from mathlottery.providers.network import PROXY_KEYS, NetworkConfigError, network_environment
 from mathlottery.web import startup
 from mathlottery.web.network import LocalAccess
 

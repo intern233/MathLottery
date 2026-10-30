@@ -7,10 +7,10 @@ import zipfile
 import pytest
 from test_organization import reviewed as reviewed
 
-from mathlottery import organization
 from mathlottery.models import Phase, State
-from mathlottery.organized_reports import read_report
-from mathlottery.storage import atomic_write, json_text
+from mathlottery.organize import workflow as organization
+from mathlottery.organize.downloads import read_report
+from mathlottery.storage.core import atomic_write, json_text
 
 
 @pytest.fixture

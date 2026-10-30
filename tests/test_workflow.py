@@ -4,14 +4,14 @@ import pytest
 from conftest import response
 from typer.testing import CliRunner
 
-from mathlottery.auditor import audit
 from mathlottery.cli import app
 from mathlottery.config import Config
-from mathlottery.demo import DemoBackend, demo_problem
 from mathlottery.models import CandidateInput, Level, Review, State
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.prompts import build_prompt
-from mathlottery.storage import Store
+from mathlottery.providers.demo import DemoBackend, demo_problem
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.runtime.structured_prompts import build_prompt
+from mathlottery.storage.core import Store
+from mathlottery.verify.auditor import audit
 
 
 @pytest.mark.parametrize(
@@ -146,7 +146,7 @@ def test_candidate_artifact_tampering_blocks_review(store, config):
 
 def test_crash_after_tool_output_reuses_saved_result(waiting, store, monkeypatch):
     engine, run = waiting
-    from mathlottery.tools import ToolRegistry
+    from mathlottery.tooling.registry import ToolRegistry
 
     original = ToolRegistry.execute
     executions = []

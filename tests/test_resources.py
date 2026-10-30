@@ -7,18 +7,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from mathlottery.activity import ActivityReporter, read_activity
 from mathlottery.config import Config
-from mathlottery.resources import Coordinator, process_tree_memory
-from mathlottery.storage import Store
+from mathlottery.runtime.resources import Coordinator, process_tree_memory
+from mathlottery.storage.core import Store
+from mathlottery.telemetry.activity import ActivityReporter, read_activity
 
 CHILD = """
 import sys, time
 from pathlib import Path
 from types import SimpleNamespace
 from mathlottery.config import Config
-from mathlottery.resources import Coordinator
-from mathlottery.storage import Store
+from mathlottery.runtime.resources import Coordinator
+from mathlottery.storage.core import Store
 root, run_id, kind, limit = sys.argv[1:]
 store = Store(Path(root))
 run = SimpleNamespace(id=run_id)
@@ -100,8 +100,8 @@ def test_queued_stop_does_not_enter_execution_or_stop_other_owner(processes):
 
 def test_crashed_executor_reclaims_only_its_identified_native_child(processes):
     from mathlottery.models import Problem, Workflow
-    from mathlottery.native_backend import NativeWorkBackend
-    from mathlottery.orchestrator import Orchestrator
+    from mathlottery.providers.codex import NativeWorkBackend
+    from mathlottery.runtime.orchestrator import Orchestrator
 
     store, start = processes
     run = Orchestrator(store).create(Config(), workflow=Workflow.SOLVE, problem=Problem(
@@ -146,7 +146,7 @@ def test_memory_soft_limit_requests_cooperative_stop_only(tmp_path, monkeypatch)
     store = Store(tmp_path)
     run = SimpleNamespace(id="run-000000000008")
     store.run_dir(run.id).mkdir(parents=True)
-    monkeypatch.setattr("mathlottery.resources.process_tree_memory", lambda pid: 300.0)
+    monkeypatch.setattr("mathlottery.runtime.resources.process_tree_memory", lambda pid: 300.0)
     config = Config(resources={"memory_soft_limit_mb": 256, "min_available_memory_mb": 0,
                                "sample_interval_seconds": 0.1})
     with Coordinator(store).admission(run, config) as admitted:
@@ -162,7 +162,7 @@ def test_low_available_memory_queues_without_consuming_capacity(tmp_path, monkey
     store = Store(tmp_path)
     run = SimpleNamespace(id="run-000000000009")
     store.run_dir(run.id).mkdir(parents=True)
-    monkeypatch.setattr("mathlottery.resources.available_memory_mb", lambda: 32.0)
+    monkeypatch.setattr("mathlottery.runtime.resources.available_memory_mb", lambda: 32.0)
     polls = 0
 
     def cancel():
@@ -223,7 +223,7 @@ def test_activity_ignores_unknown_or_malformed_event_metadata(tmp_path):
 
 def test_web_detail_reads_safe_activity_without_reparsing_raw_event_log(tmp_path):
     from mathlottery.models import Problem, Workflow
-    from mathlottery.orchestrator import Orchestrator
+    from mathlottery.runtime.orchestrator import Orchestrator
     from mathlottery.web.service import WebService
 
     store = Store(tmp_path)
@@ -246,8 +246,8 @@ def test_resume_retains_cumulative_time_and_historical_peak_without_offline_time
     run = SimpleNamespace(id="run-000000000010")
     store.run_dir(run.id).mkdir(parents=True)
     clock, rss = [100.0], [600.0]
-    monkeypatch.setattr("mathlottery.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
-    monkeypatch.setattr("mathlottery.resources.process_tree_memory", lambda pid: rss[0])
+    monkeypatch.setattr("mathlottery.runtime.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
+    monkeypatch.setattr("mathlottery.runtime.resources.process_tree_memory", lambda pid: rss[0])
     config = Config(resources={"min_available_memory_mb": 0, "sample_interval_seconds": 0.1})
     coordinator = Coordinator(store)
     with coordinator.admission(run, config) as admitted:
@@ -273,8 +273,8 @@ def test_cancelled_queue_time_is_separate_and_counts_no_active_time(tmp_path, mo
     run = SimpleNamespace(id="run-000000000011")
     store.run_dir(run.id).mkdir(parents=True)
     clock = [0.0]
-    monkeypatch.setattr("mathlottery.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
-    monkeypatch.setattr("mathlottery.resources.available_memory_mb", lambda: 0)
+    monkeypatch.setattr("mathlottery.runtime.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
+    monkeypatch.setattr("mathlottery.runtime.resources.available_memory_mb", lambda: 0)
     calls = 0
 
     def cancelled():
@@ -307,7 +307,7 @@ def test_legacy_snapshot_preserves_observed_peak_and_marks_missing_history(tmp_p
     assert not prior["cumulative"]["history_complete"]
     assert prior["cumulative"]["queue_seconds"] == 3
     assert prior["cumulative"]["active_seconds"] == 10
-    monkeypatch.setattr("mathlottery.resources.process_tree_memory", lambda pid: None)
+    monkeypatch.setattr("mathlottery.runtime.resources.process_tree_memory", lambda pid: None)
     with coordinator.admission(run, Config(resources={"min_available_memory_mb": 0})):
         pass
     value = coordinator.snapshot(run.id)
@@ -322,7 +322,7 @@ def test_resource_history_is_bounded_but_totals_keep_all_admissions(tmp_path, mo
     run = SimpleNamespace(id="run-000000000013")
     store.run_dir(run.id).mkdir(parents=True)
     clock = [0.0]
-    monkeypatch.setattr("mathlottery.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
+    monkeypatch.setattr("mathlottery.runtime.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
     coordinator = Coordinator(store)
     config = Config(resources={"min_available_memory_mb": 0})
     for _ in range(23):
@@ -358,7 +358,7 @@ def test_resource_snapshot_redacts_unknown_metadata_and_untrusted_values(tmp_pat
 
 
 def test_interrupted_resource_record_keeps_last_observed_time():
-    from mathlottery.resources import _interrupt_snapshot
+    from mathlottery.runtime.resources import _interrupt_snapshot
 
     value = _interrupt_snapshot({"state": "running", "queued_at": "2020-01-01T00:00:00+00:00",
                                  "started_at": "2020-01-01T00:00:01+00:00", "updated_at": "2020-01-01T00:00:06+00:00"})
@@ -373,7 +373,7 @@ def test_exception_releases_capacity_and_keeps_cumulative_observations(tmp_path,
     run = SimpleNamespace(id="run-000000000015")
     store.run_dir(run.id).mkdir(parents=True)
     clock = [0.0]
-    monkeypatch.setattr("mathlottery.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
+    monkeypatch.setattr("mathlottery.runtime.resources.time", SimpleNamespace(monotonic=lambda: clock[0]))
     config = Config(resources={"min_available_memory_mb": 0})
     coordinator = Coordinator(store)
     with pytest.raises(RuntimeError, match="PRIVATE_TOKEN"):

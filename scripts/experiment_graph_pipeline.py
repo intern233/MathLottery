@@ -4,8 +4,8 @@ import argparse
 from pathlib import Path
 
 from mathlottery.config import load_config
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import Store
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import Store
 
 SOURCE = "https://www.ejgta.org/index.php/ejgta/article/download/1077/pdf_357"
 REQUEST = (

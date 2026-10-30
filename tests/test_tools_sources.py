@@ -5,12 +5,18 @@ import httpx
 import pytest
 
 from mathlottery.config import ToolConfig
-from mathlottery.execution import python_exec
-from mathlottery.formal import lean_check
 from mathlottery.models import OpenStatus, Phase, Problem, ToolCall, now
-from mathlottery.sources import WebTools, conservative_status, parse_arxiv, parse_page, public_url
-from mathlottery.storage import safe_path
-from mathlottery.tools import ToolRegistry
+from mathlottery.storage.core import safe_path
+from mathlottery.tooling.execution import python_exec
+from mathlottery.tooling.registry import ToolRegistry
+from mathlottery.tooling.sources import (
+    WebTools,
+    conservative_status,
+    parse_arxiv,
+    parse_page,
+    public_url,
+)
+from mathlottery.verify.formal import lean_check
 
 
 def test_python_runs_real_sympy_in_isolation(tmp_path):

@@ -10,8 +10,6 @@ from bs4 import BeautifulSoup
 from test_organization import pdf as pdf
 from test_organization import reviewed as reviewed
 
-from mathlottery import organization
-from mathlottery.expert_brief import MARKER, material_link, metadata, render, safe_link
 from mathlottery.models import (
     LiteratureObstacle,
     ProofCheck,
@@ -21,9 +19,11 @@ from mathlottery.models import (
     StatementAlignment,
     digest,
 )
-from mathlottery.organized_reports import read_report, summary
-from mathlottery.report_pdf import _render_html
-from mathlottery.storage import json_text
+from mathlottery.organize import workflow as organization
+from mathlottery.organize.brief import MARKER, material_link, metadata, render, safe_link
+from mathlottery.organize.downloads import read_report, summary
+from mathlottery.organize.pdf import _render_html
+from mathlottery.storage.core import json_text
 
 
 def test_brief_distinguishes_original_claim_failed_checks_and_legacy_missing_coverage(store, reviewed):
@@ -194,7 +194,7 @@ def test_historical_snapshot_accepts_new_empty_defaults_but_rejects_new_evidence
 
 
 def test_quoted_source_formulas_render_literally_without_changing_latex():
-    from mathlottery.expert_brief import text
+    from mathlottery.organize.brief import text
 
     statement = r"For $\forall x \in \mathbb{R}$, $x^2 \ge 0$."
     document, _, _ = _render_html(text(statement), "Literal source")
@@ -297,7 +297,7 @@ def test_same_id_different_sources_and_late_severe_records_remain_visible(store,
 
 
 def test_legacy_prefix_is_authenticated_and_only_explicit_acceptance_refreshes_it(store, reviewed, pdf):
-    from mathlottery.expert_brief import LEGACY_MARKER, _render_v1
+    from mathlottery.organize.brief import LEGACY_MARKER, _render_v1
 
     config, engine, source = reviewed
     run = engine.organize(config, source.id)
@@ -377,8 +377,8 @@ def test_compact_rows_do_not_trust_malformed_support_values_or_activate_their_li
 def test_v2_literal_intervals_do_not_open_pdf_math_or_activate_source_links(store, reviewed):
     from urllib.parse import unquote
 
-    from mathlottery.expert_brief import _render_v1, text
     from mathlottery.models import OrganizationDocument
+    from mathlottery.organize.brief import _render_v1, text
 
     config, engine, source = reviewed
     literal = (r"x ∈ [0,∞), y ∈ [0,1]. Literal \[x\] and \\[y\\]. "

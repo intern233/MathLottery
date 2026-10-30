@@ -20,11 +20,13 @@ backend:
   reasoning_effort: max
 ```
 
-Use a model and effort supported by your account. This is a configuration example, not a guarantee of model access. The browser's **Model for this task** panel reads the selected provider's directory and keeps manual input available for unlisted models. Codex supplies advertised effort options; a Responses directory may only supply model IDs. Missing capability information remains unknown. Refresh the directory with **Refresh models**; listing a model does not test inference, quota or tools.
+Use a model and effort supported by your account. This is a configuration example, not a guarantee of model access. The browser's **Model for this task** panel reads the selected provider's directory and keeps manual input available for unlisted models. The Codex subscription directory supplies advertised effort options; a Responses directory may only supply model IDs. Codex API authentication uses configured or manually entered model IDs without consulting the subscription directory. Missing capability information remains unknown. Refresh the directory with **Refresh models**; listing a model does not test inference, quota or tools.
 
 | Field | Meaning and unset behavior |
 | --- | --- |
 | `backend.mode` | `codex` for official Codex sessions; `chat` for Responses calls. |
+| `backend.codex_auth` | Codex only: `chatgpt` (default, subscription login) or `api_key` (OpenAI API billing). Both use the native Codex agent. |
+| `backend.codex_api_key_env` | Codex API only: environment variable **name**, default `OPENAI_API_KEY`. Never put a key value here. |
 | `backend.provider` | Optional profile ID: `codex`, `chat`, or a configured name such as `research-api`. Omit it or use `null` for the mode's built-in connection. |
 | `backend.model` | Exact model ID, without an appended effort such as ` max`. `null` uses Codex's dedicated-home default; built-in Chat may use `OPENAI_MODEL`. Custom API profiles require an explicit model. |
 | `backend.reasoning_effort` | Optional provider-supported value such as `max`; `null` leaves it to the backend. |
@@ -38,6 +40,28 @@ Do not put `pro` in `reasoning_effort` or infer a model ID by adding `-pro`. The
 
 <a id="providers"></a>
 ## API credentials and additional providers
+
+Agent execution and authentication are separate choices. **Codex agent** supports ChatGPT subscription login or an OpenAI API key. **API agent** retains the independent Responses harness for compatible providers and future protocol adapters; its historical configuration name is `chat`. An API key alone does not specify which harness runs.
+
+### Codex agent with an OpenAI API key
+
+Keep `mode: codex` to retain Codex's native terminal, files, tools and session continuation:
+
+```yaml
+backend:
+  mode: codex
+  execution: native
+  codex_auth: api_key
+  codex_api_key_env: OPENAI_API_KEY
+  model: your-api-model-id
+  reasoning_effort: null
+```
+
+Set the named environment variable in the server/CLI's launching terminal using the key-entry command below. On the Agents page, choose **Codex agent**, then **API Key**. This selects official OpenAI API billing; it does not consume the ChatGPT subscription allowance. No device login is needed, and the key is not saved through `codex login`. MathLottery supplies it only to the Codex execution process and clears known credential values from its shell tools. Some ChatGPT workspace integrations may require subscription authentication even though native terminal/file tools remain available. See [official authentication](https://learn.chatgpt.com/docs/auth).
+
+API-mode Codex state uses `.mathlottery/codex-api-home`, or `.mathlottery/codex-api-accounts/<slot-id>` for a slot. Subscription authentication and sessions remain separate. Resume keeps the saved authentication choice and environment variable name; start a new task to select another route. Presence of a key is only a local configuration check, not confirmation of account access or model availability. Enter API model IDs manually; the subscription model catalog is not reused for API authentication.
+
+### Independent API agent (Responses)
 
 The built-in `chat` connection uses the OpenAI Responses API. It requires its own API key and API billing; the MathLottery Codex login does not supply these credentials.
 
@@ -104,6 +128,8 @@ An optional nonempty `models` list supplies the local directory instead of reque
 <a id="account"></a>
 ## Codex account, isolation and native tools
 
+Parallel Solve can use a separate connection per researcher. The [Agent configuration page](agents.md) manages Codex authentication and independent API settings. Subscription logins live under `.mathlottery/codex-accounts/<slot-id>`; the default account described below remains separate. The login instructions in this section apply to `codex_auth: chatgpt`.
+
 Install the official Codex CLI in the same Linux/WSL environment as MathLottery; confirm `codex --version` works there. Installation options are documented in the [official CLI guide](https://learn.chatgpt.com/docs/cli) and [Codex repository](https://github.com/openai/codex). A Windows launcher inherited through WSL's `PATH` may be the wrong executable; check `command -v node`, `command -v npm` and `command -v codex` if it cannot start.
 
 Sign in once through the browser's **MathLottery account** panel, even if ordinary Codex is already logged in. Device-code authentication may need enabling in ChatGPT security settings or by an administrator. Complete authorization on the official page, not in MathLottery. [Official authentication guidance](https://learn.chatgpt.com/docs/auth)
@@ -114,7 +140,7 @@ For a terminal-only setup, activate the MathLottery environment and run this **f
 python - <<'PY'
 from pathlib import Path
 import subprocess
-from mathlottery.codex_identity import CodexIdentity
+from mathlottery.providers.identity import CodexIdentity
 
 identity = CodexIdentity(Path.cwd())
 subprocess.run(
@@ -201,7 +227,7 @@ backend:
 | Input/output token limits | Use actual backend reports, checked between calls. A call can exceed the threshold; unreported usage remains unknown. |
 | `native_turn_timeout_seconds: null` | A native call may use the remaining overall time budget. |
 | `chat.request_timeout_seconds` | Timeout for one HTTP request, not the total time the remote model may think. |
-| `max_external_cost_usd` | Only `null` or legacy `0`; `0` blocks Chat API calls. `null` delegates spending controls to the provider account and does not mean free usage. |
+| `max_external_cost_usd` | Only `null` or legacy `0`; `0` blocks API-funded calls, including Codex API and paid Solve slots. `null` delegates spending controls to the provider account and does not mean free usage. |
 
 In native Solve, a `PARTIAL` or `UNKNOWN` candidate, or one with unresolved mathematical obligations, is a saved checkpoint: research continues in the same session while budget remains. By default, a candidate can finish standalone Solve early only with `conclude: true`, an explicit `COMPLETE` or `COUNTEREXAMPLE` scope, and an empty `remaining_obligations` list. This records the solver's claim; correctness, original-problem coverage and novelty still require Verify. In `run`, partial candidates can receive independent reviews, but even a positive review does not end research as a full solution.
 

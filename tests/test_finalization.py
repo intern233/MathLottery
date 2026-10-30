@@ -5,12 +5,12 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from mathlottery import budget
-from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
 from mathlottery.models import Phase, Problem, State, Workflow, now
-from mathlottery.native import NativeRunner
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.providers.base import BackendResult, BackendStatus
+from mathlottery.runtime import budget
+from mathlottery.runtime.native import NativeRunner
+from mathlottery.runtime.orchestrator import Orchestrator
 
 
 def problem():
@@ -64,7 +64,7 @@ def clock(monkeypatch):
         return instant[0].isoformat()
 
     monkeypatch.setattr(budget, "now", current)
-    monkeypatch.setattr("mathlottery.native.now", current)
+    monkeypatch.setattr("mathlottery.runtime.native.now", current)
 
     def advance(seconds):
         instant[0] += timedelta(seconds=seconds)

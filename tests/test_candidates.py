@@ -4,10 +4,7 @@ import json
 
 import pytest
 
-from mathlottery.candidates import review_input
 from mathlottery.config import Config
-from mathlottery.demo import demo_problem
-from mathlottery.evidence_policy import assess_sources, normalized
 from mathlottery.models import (
     CandidateInput,
     Citation,
@@ -18,8 +15,11 @@ from mathlottery.models import (
     digest,
     now,
 )
-from mathlottery.native_workspace import NativeWorkspace
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.providers.demo import demo_problem
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.runtime.workspace import NativeWorkspace
+from mathlottery.verify.candidates import review_input
+from mathlottery.verify.policy import assess_sources, normalized
 
 
 @pytest.fixture

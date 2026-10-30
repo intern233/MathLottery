@@ -5,12 +5,12 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from mathlottery import budget
-from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
 from mathlottery.models import State, Workflow, now
-from mathlottery.native import NativeRunner
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.providers.base import BackendResult, BackendStatus
+from mathlottery.runtime import budget
+from mathlottery.runtime.native import NativeRunner
+from mathlottery.runtime.orchestrator import Orchestrator
 
 RAW_INTERRUPTION = "Stop requested or total wall-time budget reached"
 
@@ -113,7 +113,7 @@ def test_recovered_interruption_is_consumed_once_and_continues_same_session(stor
     run.native.active_attempt = f"tasks/{run.task_id}/attempt-recovered"
     (store.run_dir(run.id) / run.native.active_attempt).mkdir(parents=True)
     store.save(run, "fixture_interrupted_without_receipt")
-    monkeypatch.setattr("mathlottery.native_attempts.NativeWorkBackend.stop_orphan", lambda directory: None)
+    monkeypatch.setattr("mathlottery.runtime.attempts.NativeWorkBackend.stop_orphan", lambda directory: None)
     resumed = engine.drive(run.id)
     assert calls == ["fixture_preserved_session"]
     assert resumed.state == State.RATE_LIMITED

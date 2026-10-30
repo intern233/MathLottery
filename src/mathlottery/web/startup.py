@@ -9,7 +9,7 @@ import tomllib
 import webbrowser
 from pathlib import Path
 
-from mathlottery.local_network import apply_network_environment
+from mathlottery.providers.network import apply_network_environment
 from mathlottery.web.network import detect_access, is_wsl, windows_excluded_ports
 from mathlottery.web.service import WebService, workspace_key
 

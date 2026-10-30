@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>MathLottery · Agent setup</title>
+  <link rel="icon" href="/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/agents.css">
+  <script src="/dom.js" defer></script>
+  <script src="/account-panel.js" defer></script>
+  <script src="/agents.js" defer></script>
+</head>
+<body class="agents-page">
+  <main>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="MathLottery home"><img src="/mark.svg" alt=""><span>MathLottery</span></a>
+      <div class="topbar-tools"><a href="/" class="text-button" data-text="back">← Research workspace</a><button id="language" class="text-button" type="button">中文</button></div>
+    </header>
+    <section class="agents-heading" aria-labelledby="page-title">
+      <p class="eyebrow" data-text="eyebrow">SOLVE · YOUR RESEARCH TEAM</p>
+      <h1 id="page-title" data-text="title">One slot. One connection.</h1>
+      <p data-text="intro">Choose how each parallel researcher connects. Mix independent Codex logins and Responses API connections in the same Solve team.</p>
+    </section>
+    <div id="page-error" class="notice error" role="alert" hidden></div>
+    <form id="agents-form">
+      <section class="panel agents-toolbar" aria-label="Agent setup">
+        <div class="agents-count"><label for="agent-count" data-text="count">Maximum parallel agents</label><input id="agent-count" type="number" min="1" max="32" step="1" value="1" required aria-describedby="count-note"></div>
+        <p id="count-note" data-text="countNote">Each researcher keeps its connection when groups change. Slot 1 also handles supervision and wrap-up, outside the parallel research round.</p>
+        <div class="agents-save"><button id="save-agents" class="primary" type="submit" disabled data-text="save">Save configuration</button><span id="save-status" role="status" aria-live="polite"></span></div>
+      </section>
+      <div id="agent-cards" class="agent-cards" aria-live="polite"></div>
+    </form>
+    <section class="agents-footer">
+      <div><strong data-text="nextTitle">Start a Solve task</strong><p data-text="next">Return to the workspace and select “Use configured agent slots”. Existing runs keep their saved connections.</p><a href="/" class="secondary account-link" data-text="back">← Research workspace</a></div>
+      <div><strong data-text="privacyTitle">Local, separate sign-ins</strong><p data-text="privacy">Each Codex slot has its own login, separate from the default MathLottery account and your normal CLI / IDE. API keys remain in server environment variables. Account usage limits still apply; a limit never triggers an automatic account switch.</p></div>
+    </section>
+    <datalist id="reasoning-values"><option value="low"></option><option value="medium"></option><option value="high"></option><option value="xhigh"></option><option value="max"></option></datalist>
+  </main>
+</body>
+</html>

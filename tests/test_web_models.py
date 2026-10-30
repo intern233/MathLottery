@@ -6,8 +6,8 @@ import pytest
 import yaml
 from test_web import SIGNED_IN, serving
 
-from mathlottery.chat_backend import ChatBackend
 from mathlottery.config import BackendConfig, Config
+from mathlottery.providers.chat import ChatBackend
 from mathlottery.web.account import AccountError
 from mathlottery.web.model_directory import codex_models
 from mathlottery.web.service import WebService

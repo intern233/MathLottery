@@ -6,11 +6,7 @@ import types
 
 import pytest
 
-from mathlottery import organization
-from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
-from mathlottery.demo import demo_problem
-from mathlottery.milestones import validate_milestone
 from mathlottery.models import (
     CandidateInput,
     Level,
@@ -23,9 +19,13 @@ from mathlottery.models import (
     Workflow,
     now,
 )
-from mathlottery.native import NativeRunner
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import atomic_write, json_text
+from mathlottery.organize import workflow as organization
+from mathlottery.providers.base import BackendResult, BackendStatus
+from mathlottery.providers.demo import demo_problem
+from mathlottery.runtime.milestones import validate_milestone
+from mathlottery.runtime.native import NativeRunner
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import atomic_write, json_text
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ def pdf(monkeypatch):
         return {"renderer": "fixture", "warnings": []}
 
     # A deterministic renderer isolates workflow checks from optional system PDF dependencies.
-    monkeypatch.setitem(sys.modules, "mathlottery.report_pdf", types.SimpleNamespace(render_pdf=render))
+    monkeypatch.setitem(sys.modules, "mathlottery.organize.pdf", types.SimpleNamespace(render_pdf=render))
     return calls
 
 
@@ -211,7 +211,7 @@ def test_pdf_failure_retains_durable_markdown_and_local_retry(store, reviewed, p
     config, engine, source = reviewed
     backend = Editor()
     engine.backend_override = backend
-    module = sys.modules["mathlottery.report_pdf"]
+    module = sys.modules["mathlottery.organize.pdf"]
     good_render = module.render_pdf
 
     def fail(*args, **kwargs):
@@ -308,7 +308,7 @@ def test_pdf_projection_rejects_link_swapped_by_renderer(store, reviewed, pdf, m
     store.save(run, "fixture_draft")
     outside = tmp_path / "outside-export"
     outside.mkdir()
-    module = sys.modules["mathlottery.report_pdf"]
+    module = sys.modules["mathlottery.organize.pdf"]
     regular_render = module.render_pdf
     root = store.run_dir(run.id)
 
@@ -392,7 +392,7 @@ def test_switch_to_chat_checks_frozen_dossier_limit_before_inference(reviewed, m
 
 def test_controlled_pdf_setup_instructions_are_visible(reviewed, pdf, monkeypatch):
     config, engine, source = reviewed
-    module = sys.modules["mathlottery.report_pdf"]
+    module = sys.modules["mathlottery.organize.pdf"]
 
     class PDFRenderError(RuntimeError):
         pass
@@ -462,7 +462,7 @@ def test_failure_of_one_pdf_preserves_other_language_and_both_markdowns(store, r
                                                                       failed_language):
     config, engine, source = reviewed
     engine.backend_override = Editor()
-    module = sys.modules["mathlottery.report_pdf"]
+    module = sys.modules["mathlottery.organize.pdf"]
     regular = module.render_pdf
 
     def fail_one_language(markdown, destination, **kwargs):

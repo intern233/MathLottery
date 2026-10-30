@@ -1,206 +1,19 @@
 "use strict";
 
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => [...document.querySelectorAll(selector)];
-const words = {
-  en: {
-    chooseStep: "Find → Choose → Solve", chooseHint: "Compare the shortlist and choose a problem. Find does not start solving automatically.", estimateHint: "Difficulty and Lean feasibility are reasoned estimates, not success probabilities. Check source evidence before treating a problem as open.",
-    findCriteria: "Original search preferences",
-    searchLimitations: "Search coverage limits (reported)",
-    yourChoice: "Your choice", chooseProblem: "Choose this problem", chosen: "Selected", recommended: "Agent recommendation", clearChoice: "Clear choice", discoveryCarry: "The Find dossier, notes and sources will accompany this problem. Review your choice, then start solving.",
-    difficulty: "Difficulty", leanFeasibility: "Lean feasibility", prerequisites: "Prerequisites", obstacles: "Main obstacles", initialApproach: "Possible first approach", findNotReady: "Wait for Find to finish before choosing.",
-    discoveryOrigin: "Selected from Find", contextFiles: "Research files carried forward", contextOmitted: "Files not carried forward", contextScope: "A frozen research dossier in a new Solve session. This does not transfer hidden reasoning or certify the findings.",
-    specialistAgents: "Specialist agents", researchMemories: "Research memories", nativeInherit: "Inherit isolated Codex settings", enabled: "Enabled", disabled: "Disabled", capabilitiesHint: "Codex settings apply within MathLottery's separate account. Review sessions always disable memories. Extra agents share the research budget and can use more tokens.",
-
-    localLab: "LOCAL RESEARCH LAB", workflows: "WORKFLOWS", find: "Find problems", solve: "Attempt a solution", verify: "Verify a proof",
-    sideNote: "One agent. A little curiosity. A result worth checking.", connecting: "Connecting…", connected: "Local workspace connected", disconnected: "Server disconnected",
-    workspace: "Research workspace", eyebrow: "MATHEMATICS, WITH A LITTLE CHANCE", heroCopy: "Find a worthwhile question. Give it a serious attempt. Check what holds.",
-    accountTitle: "MathLottery account", accountSignIn: "Sign in with ChatGPT", accountRefresh: "Refresh status", accountChecking: "Checking account…", accountConnected: "Signed in to MathLottery", accountSignedOut: "Sign in to MathLottery to use your ChatGPT subscription with Codex.", accountUnavailable: "Codex is unavailable. Install or configure it, then refresh.",
-    accountCliMissing: "No working Codex CLI was found. Install the official CLI in the environment running MathLottery, then restart MathLottery from that environment and refresh.", accountCliBroken: "The installed Codex CLI could not run. Repair its installation in the environment running MathLottery, then refresh.", accountCliPlatform: "The Codex npm launcher is missing its platform package. Install the official CLI in the environment running MathLottery. In WSL, install the Linux CLI inside WSL, then refresh the account status.",
-    accountTimeout: "Codex account request timed out; sign-in status could not be confirmed. Check the server's network/proxy settings, or configure .mathlottery/network.json, then restart and refresh. A timeout does not by itself mean the account was signed out.", accountNetworkInvalid: "Invalid local network settings. Check .mathlottery/network.json, then restart the server and refresh.",
-    accountWaiting: "Waiting for you to finish signing in…", accountStarting: "Starting sign-in…", accountCancelling: "Cancelling sign-in…", accountInstructions: "Open the official sign-in page and enter this one-time code.", accountOpen: "Continue at OpenAI ↗", accountCode: "One-time code", accountCopy: "Copy", accountCopied: "Code copied.", accountSelectCode: "Code selected. Copy it with your browser's copy command.", accountCancel: "Cancel sign-in", accountInvalidLink: "No valid official sign-in link was returned. Cancel and try again.", accountReadFailed: "Could not check the Codex account. Refresh to try again.",
-    accountSwitch: "Switch account", accountSignOut: "Sign out", accountSwitching: "Signing out and starting a new sign-in…", accountSigningOut: "Signing out…", accountUsingApiKey: "Codex uses an API key. Switch to ChatGPT to use your subscription.",
-    accountConfirmSwitch: "Switch the MathLottery account?\n\nThis signs out of this workspace first, then starts a new ChatGPT sign-in. If you cancel or the new sign-in fails, MathLottery stays signed out. Your local Codex CLI / IDE login is unchanged.\n\nContinue?",
-    accountConfirmLogout: "Sign out of MathLottery?\n\nThis workspace will need to sign in again. Your local Codex CLI / IDE login is unchanged.\n\nContinue?",
-    accountNote: "This workspace has its own login. Switching or signing out leaves your local Codex CLI / IDE login unchanged. You may use the same ChatGPT account; its usage limits still apply across sessions. Chat API requires a separate API key and API billing.", accountApiKey: "API key", accountPlan: "Plan",
-    totalRuns: "Run records", activeRuns: "Running now", savedProblems: "Saved problems", candidates: "Candidate proofs", newAttempt: "NEW ATTEMPT",
-    findDescription: "Search public sources, compare promising questions, and keep the evidence for their status.",
-    solveDescription: "Give the research agent a precise question and room to explore its own approach.",
-    verifyDescription: "Ask a separate reviewer to examine the proof, its assumptions, and its novelty.",
-    criteria: "What kind of problem?", criteriaPlaceholder: "For example: a precise combinatorics problem with a short statement and potential for Lean verification.",
-    source: "Preferred source · optional", shortlistSize: "Shortlist size", reviewInput: "What would you like to review?", savedCandidate: "Latest candidate from a saved run", pasteProof: "A proof I provide",
-    sourceRun: "Run with a candidate", separateReview: "The reviewer starts a separate session with the displayed candidate, its references, and any source files you select.", problem: "Problem", newProblem: "Enter a new problem",
-    sourceRefresh: "Refresh source", sourceRefreshHint: "Refresh loads the latest candidate and clears the file selection. Background updates never change the candidate shown here.", sourceLoading: "Loading the candidate and available source files…", sourceChoose: "Select a saved run to load its candidate.", sourceMissing: "This run has no candidate to review.", sourceBusy: "Wait for the source task to finish or stop before reviewing its saved candidate.", sourceBinding: "Candidate to review", sourceFiles: "Attach proof source files · optional", sourceFilesHint: "Select the files needed to reproduce the proof. Save accompanying text, JSON/CSV certificates and Python scripts under proof/ or formal/. No files are attached by default. The reviewer must recheck these untrusted inputs; attaching them does not raise the proof level.", sourceFilesEmpty: "No eligible solver source files are available.", sourceLimits: "Up to 20 files, 1,000,000 bytes each and 2,000,000 bytes in total. Chat accepts at most 128,000 bytes in total as inline text.", sourceUnsupported: "Source attachments require native execution.", nativeExecutionRequired: "Browser research requires native execution. Set backend.execution to native in config.yaml, then refresh this page.", sourceTooLarge: "This source file exceeds the per-file limit.", sourceSelectionOver: "The selected source files exceed the count or byte limit. Deselect files before starting.", sourceSelected: "Selected files", sourceBytes: "bytes", sourceCapturedHint: "Files are copied and hashed when the review starts. The captured manifest appears in Results; later source changes do not change that snapshot.", evidenceSnapshot: "Review input snapshot", snapshotCandidate: "Source candidate", snapshotFiles: "Captured source files", snapshotEmpty: "No source files were attached; the review received the candidate text and references.", snapshotNote: "These hashes identify the captured inputs, not their correctness. The reviewer checks the copied files independently.",
-    problemTitle: "Title · optional", titlePlaceholder: "Give this research attempt a name", statement: "Problem statement", statementPlaceholder: "State the question, assumptions, and what you would like to prove.",
-    proof: "Proof to review", proofPlaceholder: "Paste the complete proof, including assumptions and references.", settings: "Model & budget", configDefault: "defaults from config.yaml",
-    instructions: "Task instructions · optional", instructionsPlaceholder: "For example: provide Lean source files, record the compiler command and result, and check boundary cases.", instructionsHint: "Add requirements for this task, such as Lean verification. The original problem statement stays unchanged.",
-    backend: "Backend", model: "Model", useConfig: "Use configuration", inherited: "Inherit backend default", effort: "Reasoning effort", chatMode: "Chat reasoning mode",
-    timeBudget: "Time budget · minutes", roundBudget: "Maximum rounds", overrideHint: "Overrides apply to this task only. Credentials stay in your environment.",
-    fullSolveBudget: "Use full Solve time budget", fullSolveBudgetHint: "Continue research and self-checking until the total time limit, even after a complete claim. Other limits, errors or your stop request can still interrupt work. This does not replace Verify or guarantee a solution.",
-    codexHint: "Uses this MathLottery workspace's Codex login and tools.", chatHint: "Uses the Chat API and its API billing. An API key must be configured in the server environment.",
-    readinessChecking: "Checking the MathLottery account before starting Codex…", readinessSignIn: "Sign in with ChatGPT in the account panel above to start Codex research. Your draft stays here.", readinessPending: "Finish signing in on the official page, then return here. Your draft stays here.", readinessUnavailable: "Codex is unavailable. Install or configure it, then refresh the account status above.", readinessUnknown: "Account status could not be checked. Refresh the account status above before starting Codex.", readinessApiKey: "Use Switch account above to sign in with ChatGPT before starting subscription-backed Codex research.",
-    backgroundHint: "Runs in the background. You can close this page and return later.", notebook: "YOUR NOTEBOOK", recentRuns: "Research history",
-    historyHint: "Each Find keeps its shortlist. Solve and Verify are grouped by problem; repeated runs are numbered. Agent turns include continuations.",
-    stageFind: "Find", stageSolve: "Solve", stageVerify: "Verify", stagePipeline: "Full workflow", runRecords: "run records", lastUpdated: "Updated", startedAt: "Started", attempt: "Attempt {n}",
-    startFind: "Start finding", startSolve: "Start solving", startVerify: "Start verification", starting: "Starting…", emptyRuns: "Your next question starts here.", emptyRunsHint: "Start a task to collect problems, proof attempts, and review evidence.",
-    rounds: "agent turns", tokens: "tokens", elapsed: "active time", unknown: "unknown", stop: "Stop task", stopping: "Stop requested…", resume: "Resume / add direction", verifyLatest: "Verify latest candidate", download: "Download report ↓",
-    direction: "Additional direction · optional", directionPlaceholder: "Point out an approach, ask for an edge case, or give the agent a new direction.", newTotalBudget: "New total time budget · minutes", newTotalRounds: "New total round limit",
-    resumeHint: "These replace total limits, rather than adding time. The saved model settings are preserved.", continue: "Continue research", results: "Results", activity: "Activity", report: "Report",
-    leanLimits: "Independent Lean check resources", leanLimitsHint: "Optional limits for this task’s independent checker. Blank fields keep the saved limits. The Lean threshold is not measured RAM usage.", leanMemory: "Lean memory threshold · MB", leanAddress: "Virtual address-space limit · MB", leanTimeout: "Total formal check timeout · seconds",
-    visibleProgress: "Latest visible output", checkingEvidence: "Research output is saved; independent evidence checks are not yet complete.", events: "Recent checkpoint events", footer: "Curiosity starts the run. Evidence decides the result.", noCandidates: "No candidate runs yet — solve a problem first, or provide a proof.",
-    noResults: "No results have been submitted yet.", waitingResults: "Check Activity for saved checkpoints and visible agent output.", shortlist: "Discovered problems", solveThis: "Solve this problem →", statementDetails: "Statement and sources", sourceEvidence: "Status evidence", selection: "Why this problem", feasibility: "Verification feasibility",
-    fullProof: "Read full proof", claim: "Claim", review: "Independent review", novelty: "Novelty", unreviewed: "Awaiting independent review", assessmentLimit: "Task completion, proof evidence, and novelty are separate. A favorable agent review does not establish a new solution to a still-open problem.", proofLevel: "Recorded proof level", latestReview: "Latest agent review", problemStatus: "Recorded problem status", levelCandidate: "A proposed proof awaiting independent checking.", levelSelfChecked: "An agent review found no issues. Full formal verification and expert review have not been established by this level.", levelPartial: "Some evidence has been checked. This level does not establish a complete formal proof of the original statement.", levelFormal: "Recorded as formally verified. Check the verification evidence and its correspondence to the original statement.", levelExpert: "Recorded as expert reviewed. Read the review's evidence and scope.", levelRejected: "The recorded review identified supported issues in this candidate.",
-    proofEvidence: "Evidence and references", leanFiles: "Proof files", leanFilesNote: "These are agent-generated source files. Their presence does not establish successful compilation or a complete proof of the original statement.", leanFileTooLarge: "Too large to download here", leanFilesTruncated: "Only part of the file list is shown. The remaining files stay in the local run directory.",
-    declaredScope: "Researcher's scope", originalCoverage: "Reviewer: original problem coverage", obligations: "Remaining proof obligations", evidenceGaps: "Evidence checks and gaps", notAssessed: "Not assessed under the evidence policy", excerptMatched: "Source excerpt matched", excerptMissing: "Source excerpt not verified", searchObserved: "Observed searches", proofChecks: "Explicit proof checks", formalReceipt: "Independent Lean execution receipt", formalScope: "Checks named declarations only; equivalence to the original problem is not certified.", evidenceGate: "Evidence gate", sourceLimit: "Matching source text does not certify its interpretation or search completeness.",
-    COMPLETE: "Declared complete", COUNTEREXAMPLE: "Counterexample", FULL: "Full coverage reported", PARTIAL: "Partial result", DIFFERENT: "Different statement", KERNEL_REPLAYED: "Kernel replay passed", UNAVAILABLE: "Unavailable", ERROR: "Execution error", TIMEOUT: "Time limit", OUTPUT_LIMIT: "Output limit", SUPPORTED: "Supported", CONTRADICTED: "Contradicted", UNRESOLVED: "Unresolved",
-    noProgress: "No visible output has been saved yet. A long native turn can be quiet while tools are running.", truncated: "Preview truncated; the full artifact remains in the local run directory.", noReport: "The report is not available yet.",
-    launched: "Task started. Progress is saved locally.", resumed: "Research resumed.", stopSent: "Stop requested. Waiting for the background task to stop; saved progress is preserved.", requestError: "Request failed. Check research history before retrying.",
-    workerInterrupted: "The background worker exited without recording completion. Resume to recover the checkpoint.",
-    CREATED: "Created", DISCOVERING: "Finding", SELECTING: "Selecting", SOLVING: "Solving", VERIFYING: "Verifying", REPORTING: "Reporting", COMPLETED: "Completed", PAUSED: "Paused", WAITING_FOR_USER: "Manual handoff", RATE_LIMITED: "Rate limited", FAILED: "Failed", CANCELLED: "Stopped",
-    OPEN: "Open", SOLVED: "Solved", PARTIALLY_SOLVED: "Partially solved", DISPUTED: "Disputed", UNKNOWN: "Unknown", NO_ISSUES_FOUND: "Agent found no issues", ISSUES_FOUND: "Issues found", INCONCLUSIVE: "Inconclusive", CANDIDATE: "Candidate proof", SELF_CHECKED: "Agent checked", PARTIALLY_VERIFIED: "Partially verified", FORMALLY_VERIFIED: "Formally verified", EXPERT_REVIEWED: "Expert reviewed", REJECTED: "Rejected", KNOWN: "Known result", SPECIAL_CASE: "Special case", POTENTIALLY_NEW: "Potentially new",
-  },
-  zh: {
-    chooseStep: "找题 → 用户选题 → 求解", chooseHint: "比较候选列表，选择你想研究的问题。Find 不会自动启动求解。", estimateHint: "难度和 Lean 可行性是有理由的估计，并非成功概率。问题是否仍开放，请结合来源证据判断。",
-    findCriteria: "本次找题的完整要求",
-    searchLimitations: "检索范围与局限（研究者说明）",
-    yourChoice: "你选择的题目", chooseProblem: "选择这道题", chosen: "已选择", recommended: "Agent 推荐", clearChoice: "清除选题", discoveryCarry: "将携带这次找题的资料、笔记和来源。确认题目与设置后，点击开始求解。",
-    difficulty: "求解难度", leanFeasibility: "Lean 可行性", prerequisites: "所需知识", obstacles: "主要障碍", initialApproach: "可尝试的起点", findNotReady: "请等待 Find 结束后再选题。",
-    discoveryOrigin: "选题来自 Find", contextFiles: "已携带的研究文件", contextOmitted: "未携带的文件", contextScope: "在新求解会话中使用冻结的找题资料；不包含隐藏推理，也不代表资料中的结论已获认证。",
-    specialistAgents: "辅助子 agent", researchMemories: "研究长期记忆", nativeInherit: "继承独立 Codex 配置", enabled: "开启", disabled: "关闭", capabilitiesHint: "仅作用于 MathLottery 独立账号环境。验真始终关闭长期记忆。子 agent 共用研究预算，可能增加 token 消耗。",
-
-    localLab: "本地数学研究工作台", workflows: "研究流程", find: "找题", solve: "求解", verify: "验真",
-    sideNote: "一个 agent，一点好奇心，一份值得检验的结果。", connecting: "正在连接…", connected: "已连接本地工作区", disconnected: "服务连接已断开",
-    workspace: "数学研究工作台", eyebrow: "从一个问题开始，给发现一次机会", heroCopy: "找一个值得尝试的问题，认真探索，再检查结论是否成立。",
-    accountTitle: "MathLottery 账号", accountSignIn: "使用 ChatGPT 账号登录", accountRefresh: "刷新状态", accountChecking: "正在检查账号…", accountConnected: "已登录 MathLottery", accountSignedOut: "登录 MathLottery 后，可通过 Codex 使用你的 ChatGPT 订阅。", accountUnavailable: "Codex 当前不可用，请安装或完成配置后刷新。",
-    accountCliMissing: "未找到可运行的 Codex CLI。请在运行 MathLottery 的环境中安装官方 CLI，再从该环境重启 MathLottery 并刷新状态。", accountCliBroken: "已安装的 Codex CLI 无法运行。请修复运行 MathLottery 的环境中的 CLI 安装，然后刷新状态。", accountCliPlatform: "Codex 的 npm 启动器缺少当前系统的平台包。请在运行 MathLottery 的环境中安装官方 CLI；使用 WSL 时，请在 WSL 内安装 Linux 版 Codex，再刷新账号状态。",
-    accountTimeout: "Codex 账号请求超时，登录状态尚未确认。请检查服务的网络或代理，也可在 .mathlottery/network.json 中配置本机网络，然后重启并刷新。超时本身不代表账号已退出。", accountNetworkInvalid: "本机网络配置无效。请检查 .mathlottery/network.json，然后重启服务并刷新。",
-    accountWaiting: "等待你在官方页面完成登录…", accountStarting: "正在启动登录…", accountCancelling: "正在取消登录…", accountInstructions: "打开官方登录页面，输入下面的一次性验证码。", accountOpen: "前往 OpenAI 登录 ↗", accountCode: "一次性验证码", accountCopy: "复制", accountCopied: "验证码已复制。", accountSelectCode: "已选中验证码，请使用浏览器的复制操作。", accountCancel: "取消登录", accountInvalidLink: "未收到有效的官方登录链接，请取消后重试。", accountReadFailed: "无法检查 Codex 账号，请刷新重试。",
-    accountSwitch: "切换账号", accountSignOut: "退出登录", accountSwitching: "正在退出当前账号并启动新登录…", accountSigningOut: "正在退出登录…", accountUsingApiKey: "Codex 当前使用 API Key；切换到 ChatGPT 账号后可使用订阅额度。",
-    accountConfirmSwitch: "切换 MathLottery 账号？\n\n会先退出当前工作区的登录，再启动新的 ChatGPT 登录。如果取消或新登录失败，MathLottery 将保持退出状态。本地 Codex CLI / IDE 的登录不受影响。\n\n继续切换？",
-    accountConfirmLogout: "退出 MathLottery 登录？\n\n当前工作区之后需要重新登录。本地 Codex CLI / IDE 的登录不受影响。\n\n继续退出？",
-    accountNote: "当前工作区独立保存登录，切换或退出不影响本地 Codex CLI / IDE。可以使用同一个 ChatGPT 账号，订阅额度仍按账号共用。Chat API 仍需单独的 API Key，使用 API 计费。", accountApiKey: "API Key", accountPlan: "订阅",
-    totalRuns: "执行记录", activeRuns: "正在运行", savedProblems: "已存题目", candidates: "候选证明", newAttempt: "开启一次尝试",
-    findDescription: "搜索公开来源，比较值得尝试的问题，保留开放状态的证据。", solveDescription: "给研究 agent 一个明确的问题，让它自主选择方法、探索与推导。", verifyDescription: "由独立审查会话检查证明、前提与新颖性，记录依据和疑点。",
-    criteria: "想找什么样的问题？", criteriaPlaceholder: "例如：找一个陈述简洁、范围较小、有希望用 Lean 验证的组合数学开放问题。",
-    source: "优先检索的来源 · 可选", shortlistSize: "候选题数", reviewInput: "准备检查哪份证明？", savedCandidate: "已有任务的最新候选证明", pasteProof: "粘贴自己的证明",
-    sourceRun: "选择含候选证明的任务", separateReview: "审查者使用独立会话，接收下方显示的候选证明、参考资料，以及你选择的源文件。", problem: "数学问题", newProblem: "输入一个新问题",
-    sourceRefresh: "刷新来源", sourceRefreshHint: "刷新会加载最新候选并清空文件选择；后台更新不会改变这里显示的候选。", sourceLoading: "正在加载候选证明和可选源文件…", sourceChoose: "选择一个已有任务，加载其候选证明。", sourceMissing: "该任务没有可供审查的候选证明。", sourceBusy: "请等待来源任务结束或停止后，再审查其保存的候选证明。", sourceBinding: "本次审查的候选", sourceFiles: "附带证明源文件 · 可选", sourceFilesHint: "选择复现证明所需的文件；配套文本、JSON/CSV 证书和 Python 脚本请放在 proof/ 或 formal/ 下。默认不附带任何文件。审查者必须重新检查这些不可信输入；附带文件不会提升证明等级。", sourceFilesEmpty: "没有可选的求解源文件。", sourceLimits: "最多 20 个文件，单个不超过 1,000,000 字节，总计不超过 2,000,000 字节。Chat 以内联文本接收，总计不超过 128,000 字节。", sourceUnsupported: "附带源文件需要 native 执行模式。", nativeExecutionRequired: "前端研究任务需要 native 执行模式。请将 config.yaml 中的 backend.execution 设为 native，然后刷新页面。", sourceTooLarge: "该源文件超过单个文件大小限制。", sourceSelectionOver: "所选源文件超过数量或大小限制，请取消部分选择后再启动。", sourceSelected: "已选文件", sourceBytes: "字节", sourceCapturedHint: "验真启动时复制文件并计算哈希，结果区会展示捕获清单；之后修改源文件不影响这份快照。", evidenceSnapshot: "审查输入快照", snapshotCandidate: "来源候选", snapshotFiles: "已捕获源文件", snapshotEmpty: "未附带源文件，审查者接收的是候选文本和参考资料。", snapshotNote: "哈希用于确认捕获的输入内容，不代表输入正确；审查者需独立检查复制的文件。",
-    problemTitle: "题目名称 · 可选", titlePlaceholder: "给这次探索起个名字", statement: "问题陈述", statementPlaceholder: "写下要研究的问题、已知条件，以及希望证明的结论。",
-    proof: "待审查的证明", proofPlaceholder: "粘贴完整证明，包含所用假设和参考资料。", settings: "模型与预算", configDefault: "默认读取 config.yaml",
-    instructions: "本次任务要求 · 可选", instructionsPlaceholder: "例如：提供 Lean 源文件，记录编译命令及结果，并检查边界情况。", instructionsHint: "可补充 Lean 验证等本次任务要求，原始数学命题保持不变。",
-    backend: "调用方式", model: "模型", useConfig: "使用配置文件", inherited: "继承后端默认值", effort: "推理强度", chatMode: "Chat 思考模式",
-    timeBudget: "时间预算 · 分钟", roundBudget: "最大轮数", overrideHint: "这里的修改仅影响本次任务。密钥仍从服务环境读取。",
-    fullSolveBudget: "用满求解时间预算", fullSolveBudgetHint: "持续研究和自查至总时间上限，声称完整解决后也继续。其他限额、执行错误或你的停止请求仍可中断任务；此选项不替代 Verify，也不保证解出问题。",
-    codexHint: "使用当前 MathLottery 工作区独立的 Codex 登录与工具配置。", chatHint: "使用 Chat API 及其 API 额度，需要在服务环境中配置 API Key。",
-    readinessChecking: "正在检查 MathLottery 账号，完成后即可启动 Codex…", readinessSignIn: "请先在上方账号区域使用 ChatGPT 登录，再启动 Codex 研究。已填写的内容会保留。", readinessPending: "请在官方页面完成登录后回到这里，已填写的内容会保留。", readinessUnavailable: "Codex 当前不可用，请安装或完成配置，再刷新上方的账号状态。", readinessUnknown: "暂时无法确认账号状态，请刷新上方的账号状态后再启动 Codex。", readinessApiKey: "请通过上方「切换账号」登录 ChatGPT，再使用订阅额度启动 Codex 研究。",
-    backgroundHint: "任务在后台运行，关闭页面后也可以随时回来查看。", notebook: "研究记录", recentRuns: "任务历史",
-    historyHint: "每次 Find 保留独立候选列表；求解与验真按题目分组，同阶段多次执行单独编号。调用回合包含中断后续接。",
-    stageFind: "找题", stageSolve: "求解", stageVerify: "验真", stagePipeline: "完整流程", runRecords: "条执行记录", lastUpdated: "最近更新", startedAt: "开始于", attempt: "第 {n} 次执行",
-    startFind: "开始找题", startSolve: "开始求解", startVerify: "开始验真", starting: "正在启动…", emptyRuns: "下一个问题，从这里开始。", emptyRunsHint: "启动一次任务，积累题目、证明尝试和审查证据。",
-    rounds: "调用回合", tokens: "tokens", elapsed: "活动耗时", unknown: "未知", stop: "停止任务", stopping: "正在停止…", resume: "继续 / 补充方向", verifyLatest: "验真最新候选", download: "下载报告 ↓",
-    direction: "补充研究方向 · 可选", directionPlaceholder: "提示一种方法、要求检查边界条件，或补充新的研究方向。", newTotalBudget: "新的总时间预算 · 分钟", newTotalRounds: "新的总轮数上限",
-    resumeHint: "这里设置的是新的总上限，不是追加额度；沿用该任务保存的模型配置。", continue: "继续研究", results: "结果", activity: "运行动态", report: "报告",
-    leanLimits: "独立 Lean 检查资源", leanLimitsHint: "可调整本次任务的独立检查上限，留空沿用已保存的设置。Lean 内部阈值不等于实际内存占用；请结合可用资源设置。", leanMemory: "Lean 内存阈值 · MB", leanAddress: "虚拟地址空间上限 · MB", leanTimeout: "形式检查总时限 · 秒",
-    visibleProgress: "最近的可见输出", checkingEvidence: "研究回复已保存，独立证据检查尚未完成。", events: "最近的检查点事件", footer: "好奇心开启尝试，证据决定结论。", noCandidates: "还没有候选证明，请先求解或选择粘贴证明。",
-    noResults: "还没有提交研究结果。", waitingResults: "可以在「运行动态」查看检查点与已保存的 agent 输出。", shortlist: "找到的题目", solveThis: "求解这道题 →", statementDetails: "问题陈述与来源", sourceEvidence: "状态证据", selection: "选题理由", feasibility: "验证可行性",
-    fullProof: "阅读完整证明", claim: "结论", review: "独立审查", novelty: "新颖性", unreviewed: "等待独立审查", assessmentLimit: "任务完成、证明证据和新颖性是不同结论。Agent 审查未发现问题，不代表首次解决了一个仍未解决的问题。", proofLevel: "记录的证明等级", latestReview: "最近一次 Agent 审查", problemStatus: "记录的问题状态", levelCandidate: "提出的证明，尚待独立检查。", levelSelfChecked: "Agent 审查未发现问题；这一等级尚未确立完整形式验证或专家认可。", levelPartial: "部分证据已核验，这一等级不代表原始命题已有完整形式证明。", levelFormal: "记录为已形式验证，请检查验证证据与原始命题的对应关系。", levelExpert: "记录为已获专家审查，请查看审查证据与适用范围。", levelRejected: "记录的审查指出了有证据支持的问题。",
-    proofEvidence: "证据与参考资料", leanFiles: "证明文件", leanFilesNote: "这些是 agent 生成的源文件。文件存在不代表已编译通过，也不代表完整证明了原始命题。", leanFileTooLarge: "文件过大，无法在此下载", leanFilesTruncated: "这里只显示部分文件，其余文件仍保存在本地任务目录中。",
-    declaredScope: "求解者声明的范围", originalCoverage: "审查者判断的原题覆盖", obligations: "尚待证明的内容", evidenceGaps: "证据核对与缺口", notAssessed: "尚未按新证据规则评估", excerptMatched: "原文摘录已核对", excerptMissing: "原文摘录未核实", searchObserved: "已记录的检索", proofChecks: "具体证明检查", formalReceipt: "独立 Lean 执行记录", formalScope: "仅检查指定定理；与原始问题的等价性尚未认证。", evidenceGate: "证据规则", sourceLimit: "原文匹配不代表引用解释正确，也不代表文献检索完整。",
-    COMPLETE: "声明为完整结果", COUNTEREXAMPLE: "反例", FULL: "审查报告完整覆盖", PARTIAL: "部分结果", DIFFERENT: "不同命题", KERNEL_REPLAYED: "内核重放通过", UNAVAILABLE: "不可用", ERROR: "执行失败", TIMEOUT: "达到时间限制", OUTPUT_LIMIT: "达到输出限制", SUPPORTED: "有支持", CONTRADICTED: "发现矛盾", UNRESOLVED: "未解决",
-    noProgress: "尚无保存的可见输出。原生 agent 使用工具的长回合中可能暂时没有文字更新。", truncated: "预览已截断，完整内容保留在本地任务目录。", noReport: "报告尚未生成。",
-    launched: "任务已启动，进度保存在本地。", resumed: "已继续研究。", stopSent: "已请求停止，正在等待后台任务结束；已有进度会保留。", requestError: "请求失败，请先查看任务历史再重试。",
-    workerInterrupted: "后台进程退出时未记录完成状态，可以继续任务以恢复检查点。",
-    CREATED: "已创建", DISCOVERING: "找题中", SELECTING: "选题中", SOLVING: "求解中", VERIFYING: "验真中", REPORTING: "生成报告", COMPLETED: "已完成", PAUSED: "已暂停", WAITING_FOR_USER: "等待手动交接", RATE_LIMITED: "额度受限", FAILED: "失败", CANCELLED: "已停止",
-    OPEN: "开放", SOLVED: "已解决", PARTIALLY_SOLVED: "部分解决", DISPUTED: "有争议", UNKNOWN: "未知", NO_ISSUES_FOUND: "Agent 未发现问题", ISSUES_FOUND: "发现问题", INCONCLUSIVE: "尚无定论", CANDIDATE: "候选证明", SELF_CHECKED: "Agent 已检查", PARTIALLY_VERIFIED: "部分已验证", FORMALLY_VERIFIED: "已形式验证", EXPERT_REVIEWED: "已获专家审查", REJECTED: "已否定", KNOWN: "已知结果", SPECIAL_CASE: "特殊情形", POTENTIALLY_NEW: "可能是新结果",
-  },
-};
-
-Object.assign(words.en, {
-  unsupportedChoice: "not supported by this catalog", unconfirmedChoice: "not confirmed by this catalog", unsupportedEffort: "The catalog does not support the selected reasoning effort ({value}) for this model. Your selection is preserved; choose another value before starting.", unconfirmedEffort: "The catalog does not confirm the selected reasoning effort ({value}). Your selection is preserved and will be submitted unchanged.", unsupportedMode: "The provider no longer lists reasoning mode {value}. Your selection is preserved; choose another mode or the provider default before starting.", unconfirmedMode: "The catalog does not confirm reasoning mode {value}. Your selection is preserved and will be submitted unchanged.",
-  provider: "Provider", modelSettings: "Model for this task", budgetSettings: "Budget & agent settings", modelsRefresh: "Refresh models", modelIdentifier: "Model ID", effortIdentifier: "Reasoning effort value", manualModel: "Enter a model ID…", manualEffort: "Enter a reasoning value…", providerDefault: "Provider default", effectiveModel: "New task will use", modelsLoading: "Loading model catalog…", modelsLive: "Model catalog loaded from the provider.", modelsConfigured: "Models from your provider configuration.", modelsUnavailable: "Model catalog is unavailable. Configuration and manual model IDs still work.", modelsIdle: "Model catalog will load when the workspace is connected.", modelCatalogHint: "The catalog reports available choices, not guaranteed account access. You can enter an unlisted model ID.", modelScope: "Applies to new tasks only. Your config file, saved runs and account stay unchanged.", effortUnknown: "This provider has not reported reasoning capabilities for this model.", effortUnavailable: "This model reports no configurable reasoning effort.", modelRequired: "Enter a model ID, or select a model/default from the list.", effortRequired: "Enter a reasoning effort value, or choose the provider default.", modeLabel: "Mode", effortLabel: "Effort", configuredModel: "Configured model", customProviderHint: "Uses the selected provider's API and billing. Configure its API key in the server environment.",
-});
-Object.assign(words.zh, {
-  unsupportedChoice: "当前目录不支持", unconfirmedChoice: "当前目录未确认", unsupportedEffort: "当前目录不支持这个模型使用推理强度 {value}。已保留你的选择，请重新选择后启动。", unconfirmedEffort: "当前目录无法确认推理强度 {value}。已保留你的选择，提交时会原样使用。", unsupportedMode: "提供方当前不再列出思考模式 {value}。已保留你的选择，请更换模式或选择提供方默认值后启动。", unconfirmedMode: "当前目录无法确认思考模式 {value}。已保留你的选择，提交时会原样使用。",
-  provider: "模型提供方", modelSettings: "本次任务的模型", budgetSettings: "预算与 agent 设置", modelsRefresh: "刷新模型列表", modelIdentifier: "模型 ID", effortIdentifier: "推理强度值", manualModel: "手动输入模型 ID…", manualEffort: "手动输入推理强度…", providerDefault: "提供方默认值", effectiveModel: "新任务将使用", modelsLoading: "正在加载模型目录…", modelsLive: "已从提供方加载模型目录。", modelsConfigured: "显示提供方配置中的模型。", modelsUnavailable: "暂时无法获取模型目录，仍可使用配置或手动输入模型 ID。", modelsIdle: "连接工作区后加载模型目录。", modelCatalogHint: "模型目录不保证当前账号拥有调用权限。未列出的模型仍可手动输入 ID。", modelScope: "仅用于新任务，不修改配置文件、历史任务或登录账号。", effortUnknown: "提供方尚未报告这个模型支持的推理强度。", effortUnavailable: "这个模型未提供可选的推理强度。", modelRequired: "请输入模型 ID，或从列表选择模型或默认值。", effortRequired: "请输入推理强度，或选择提供方默认值。", modeLabel: "思考模式", effortLabel: "推理强度", configuredModel: "配置中的模型", customProviderHint: "使用所选提供方的 API 与计费；API Key 需要在服务环境中配置。",
-});
-
-Object.assign(words.en, {
-  taskOptions: "Additional requirements", modelHelp: "Model details & help", accountManage: "Manage account",
-  useConfig: "Config", historySearchLabel: "Search history",
-  historySearch: "Search title, model or run ID", historyFilter: "Run status", historyAll: "All runs",
-  historyRunning: "Running", historyAttention: "Needs attention", historyCompleted: "Completed runs",
-  historyCount: "{n} of {total} runs", historyNoMatch: "No matching runs", historyNoMatchHint: "Try another search or status filter.",
-  historyEarlier: "Earlier attempts ({n})", historyHint: "Once a problem is selected for Solve, its source Find joins the same problem group. A Find used by multiple problems is shared, counted once. Run status, solver claims and review findings are separate.", historyHelp: "How runs are grouped",
-  COMPLETED: "Run completed", candidateVersion: "Candidate {n}", latestCandidate: "Latest candidate",
-  earlierCandidate: "Earlier candidate {n}", reviewDetails: "Review reasoning & evidence", reviewVersion: "Review {n}",
-  assumptions: "Assumptions", accountConnected: "Codex connected", accountSignedOut: "Sign in to use Codex",
-  accountUnavailable: "Codex unavailable", accountReadFailed: "Account status unknown",
-});
-Object.assign(words.zh, {
-  taskOptions: "补充要求", modelHelp: "模型详情与说明", accountManage: "管理账号",
-  useConfig: "配置默认", historySearchLabel: "搜索记录",
-  historySearch: "搜索题目、模型或任务 ID", historyFilter: "运行状态", historyAll: "全部任务",
-  historyRunning: "正在运行", historyAttention: "需要关注", historyCompleted: "运行完成",
-  historyCount: "显示 {n} / {total} 条", historyNoMatch: "没有匹配的任务", historyNoMatchHint: "试试其他关键词或状态筛选。",
-  historyEarlier: "较早的尝试（{n}）", historyHint: "选题开始求解后，来源 Find 与后续步骤按问题归组。一次 Find 可作为多个问题的共享来源，执行总数只计一次。运行状态、求解声称和审查结论分别展示。", historyHelp: "任务归组说明",
-  COMPLETED: "运行完成", candidateVersion: "候选证明 {n}", latestCandidate: "最新候选证明",
-  earlierCandidate: "较早的候选证明 {n}", reviewDetails: "审查过程与证据", reviewVersion: "审查 {n}",
-  assumptions: "前提假设", accountConnected: "Codex 已连接", accountSignedOut: "登录后使用 Codex",
-  accountUnavailable: "Codex 暂不可用", accountReadFailed: "登录状态未确认",
-});
-Object.assign(words.en, {
-  organize: "Organize the research", stageOrganize: "Organize", ORGANIZING: "Organizing",
-  organizeDescription: "Turn the proof and its review into a report for a human expert, with traceable supporting materials.",
-  startOrganize: "Create expert report", organizeReviewed: "Organize for expert review",
-  organizeSource: "Run with a reviewed candidate", organizeLanguages: "Chinese + English · Markdown and PDF for each",
-  organizeChoose: "Choose a run with at least one reviewed candidate.", organizeNone: "No reviewed candidates yet — run Verify first",
-  organizeSourceHint: "Choose a completed review to organize. Unresolved findings and rejected candidates can also be documented.",
-  organizeSourceCount: "{n} reviewed candidate(s). The report retains the findings and remaining gaps.",
-  organizeScope: "Organizes the statement, proof, supporting materials and review findings for expert reading. This editorial step does not establish correctness or novelty.",
-  organizeReport: "Expert reading report", organizeOrigin: "Source research & review", organizePending: "No expert report has been saved yet.", downloadTaskReport: "Download task summary ↓",
-  organizeMarkdown: "Download Markdown", organizePdf: "Download PDF", organizeBundle: "Download report + materials (ZIP)", organizePdfFailed: "PDF is unavailable. The Markdown report is still available.",
-  organizeRetryPdf: "Retry PDF export", organizeRetryingPdf: "Exporting PDF…", organizeRetryHint: "Rebuilds PDFs for all saved language versions without another model call. It does not translate missing versions.",
-  organizePdfWarnings: "PDF export notes", organizeDigest: "Markdown SHA-256", organizePrepared: "Source selected. Review the model settings, then create both language versions.",
-  organizeMissingLanguage: "This language version has not been generated. Start Organize from the reviewed source to create both versions.",
-  organizeLegacy: "This saved report contains one language version. PDF export does not add a translation.",
-});
-Object.assign(words.zh, {
-  organize: "整理研究材料", stageOrganize: "整理", ORGANIZING: "正在整理",
-  organizeDescription: "将证明过程与审查结果整理为供人类专家阅读的报告，并保留可追溯的支持材料。",
-  startOrganize: "生成专家阅读报告", organizeReviewed: "整理为专家阅读报告",
-  organizeSource: "包含已审查候选证明的任务", organizeLanguages: "中文 + English · 各一份 Markdown 和 PDF",
-  organizeChoose: "请选择至少包含一份已审查候选证明的任务。", organizeNone: "暂无已审查候选，请先运行验真",
-  organizeSourceHint: "选择要整理的审查记录。尚存疑点或被否定的候选证明也可以整理。",
-  organizeSourceCount: "包含 {n} 份已审查候选证明。报告会保留审查发现与未解决的缺口。",
-  organizeScope: "整理原命题、证明、支持材料与审查结论，便于专家阅读。这一步不新增正确性或新颖性认证。",
-  organizeReport: "专家阅读报告", organizeOrigin: "来源研究与审查", organizePending: "尚未保存专家阅读报告。", downloadTaskReport: "下载任务摘要 ↓",
-  organizeMarkdown: "下载 Markdown", organizePdf: "下载 PDF", organizeBundle: "下载报告与材料（ZIP）", organizePdfFailed: "PDF 暂不可用，仍可下载 Markdown 报告。",
-  organizeRetryPdf: "重新导出 PDF", organizeRetryingPdf: "正在导出 PDF…", organizeRetryHint: "重新导出各已保存语言版本的 PDF，不再次调用模型；不会翻译缺失的语言版本。",
-  organizePdfWarnings: "PDF 导出说明", organizeDigest: "Markdown SHA-256", organizePrepared: "已选择来源。确认模型配置后，生成中英文两版报告。",
-  organizeMissingLanguage: "尚未生成此语言版本。请从已审查来源启动整理，生成中英文两版报告。",
-  organizeLegacy: "这份已保存的报告只有一种语言；重新导出 PDF 不会补充翻译。",
-});
-
+const { $, $$, node, text, notice, options } = MathLotteryDOM.scope(document);
 function preference(key, value) {
   try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { /* Storage can be disabled. */ }
   return null;
 }
 const state = { language: preference("mathlottery.language") || (navigator.language.startsWith("zh") ? "zh" : "en"), workflow: "find", settings: null, runs: [], problems: [], csrf: "", selected: preference("mathlottery.run"), detail: null, resultsKey: "", discoveryChoice: null, polling: false, submitting: false, resuming: false };
-// Model choices stay in this form; do not restore stale selections from localStorage.
-const modelState = { providers: [], data: null, generation: 0, requestedProvider: "", loading: false, error: "", initialized: false };
-// Account identity and device codes stay in memory, separate from saved UI preferences.
-const accountState = { data: null, busy: false, operation: "status", error: "" };
 // This form snapshot changes only on an explicit source choice/refresh, never a background poll.
 const reviewSource = { generation: 0, runId: "", loading: false, error: "", run: null, candidate: null, files: [], selected: new Set(), filesKey: "" };
 const pdfExports = new Set();
-if (!words[state.language]) state.language = "en";
-const t = (key) => words[state.language][key] || key;
-const compact = (value) => value == null ? t("unknown") : new Intl.NumberFormat(state.language, { notation: "compact", maximumFractionDigits: 1 }).format(value);
-const date = (value) => new Date(value).toLocaleString(state.language === "zh" ? "zh-CN" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+state.language = MathLotteryI18n.language(state.language);
+const t = key => MathLotteryI18n.translate(state.language, key);
+const compact = value => MathLotteryI18n.compact(state.language, value);
+const date = value => MathLotteryI18n.date(state.language, value);
 
-function node(tag, className, text) { const item = document.createElement(tag); if (className) item.className = className; if (text != null) item.textContent = text; return item; }
-function text(selector, value) { const item = $(selector); if (item.textContent !== String(value)) item.textContent = value; }
-function notice(selector, value) { text(selector, value || ""); $(selector).hidden = !value; }
 function toast(value) { notice("#toast", value); clearTimeout(toast.timer); toast.timer = setTimeout(() => { $("#toast").hidden = true; }, 5000); }
 function badge(value) {
   const style = value === "COMPLETED" ? "execution-status" : value === "NO_ISSUES_FOUND" ? "success" : ["FAILED", "ISSUES_FOUND"].includes(value) ? "error" : ["PAUSED", "RATE_LIMITED", "INCONCLUSIVE", "DISPUTED"].includes(value) ? "warning" : ["DISCOVERING", "SOLVING", "VERIFYING", "ORGANIZING", "CREATED"].includes(value) ? "active" : "";
@@ -239,15 +52,6 @@ function finalizationNotice(run) {
     : "No agent wrap-up summary was obtained. A local checkpoint summary preserves existing progress without inventing a final result or upgrading the proof claim.";
   return "";
 }
-function options(selector, entries, emptyLabel) {
-  const select = $(selector), previous = select.value;
-  const all = [["", emptyLabel], ...entries];
-  const signature = JSON.stringify(all);
-  if (select.dataset.options === signature) return;
-  select.replaceChildren(...all.map(([value, label]) => { const option = node("option", "", label); option.value = value; return option; }));
-  select.value = all.some(([value]) => value === previous) ? previous : "";
-  select.dataset.options = signature;
-}
 function safeLink(value, title) {
   try {
     const url = new URL(value);
@@ -263,170 +67,15 @@ async function api(path, body) {
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
   return data;
 }
-function configuredProvider() { return state.settings?.provider || state.settings?.backend || "codex"; }
-function selectedProvider() { return $("#backend").value || configuredProvider(); }
-function providers() {
-  const entries = new Map([
-    ["codex", { id: "codex", label: "Codex", transport: "codex", reasoning_modes: [] }],
-    ["chat", { id: "chat", label: "OpenAI API", transport: "responses", reasoning_modes: [] }],
-  ]);
-  if (!entries.has(configuredProvider())) entries.set(configuredProvider(), { id: configuredProvider(), label: configuredProvider(), transport: state.settings?.backend === "chat" ? "responses" : state.settings?.backend, reasoning_modes: [] });
-  for (const provider of modelState.providers) entries.set(provider.id, provider);
-  return [...entries.values()];
-}
-function selectedProviderInfo() { return providers().find((provider) => provider.id === selectedProvider()); }
-function selectedBackend() { return selectedProviderInfo()?.transport === "responses" ? "chat" : selectedProviderInfo()?.transport || state.settings?.backend; }
-function selectedModelId() {
-  const value = $("#model-select").value;
-  if (value === "__manual") return $("#model").value.trim() || null;
-  if (value === "__default") return null;
-  return value || (selectedProvider() === configuredProvider() ? state.settings?.model : null);
-}
-function selectedModelInfo() {
-  if (modelState.data?.provider !== selectedProvider()) return null;
-  return modelState.data.models.find((model) => model.id === selectedModelId()) || null;
-}
-function modelOverrides() {
-  const values = {}, provider = $("#backend").value, model = $("#model-select").value;
-  if (provider) values.provider = provider;
-  if (model) values.model = selectedModelId();
-  const effort = $("#effort-select").value;
-  if (effort) values.reasoning_effort = effort === "__default" ? null : effort === "__manual" ? $("#effort").value.trim() || null : effort;
-  const mode = $("#reasoning-mode").value;
-  if (mode) values.reasoning_mode = mode === "__default" ? null : mode;
-  return values;
-}
-function selectedReasoningModes() {
-  // A missing metadata response means unknown capabilities, not an empty list.
-  const metadata = modelState.data?.provider === selectedProvider() ? modelState.data.providers?.find((item) => item.id === selectedProvider()) : null;
-  return Array.isArray(metadata?.reasoning_modes) ? metadata.reasoning_modes : null;
-}
-function modelCapabilityIssues() {
-  const overrides = modelOverrides();
-  const effort = Object.hasOwn(overrides, "reasoning_effort") ? overrides.reasoning_effort : state.settings?.reasoning_effort;
-  const mode = Object.hasOwn(overrides, "reasoning_mode") ? overrides.reasoning_mode : state.settings?.reasoning_mode;
-  const efforts = selectedModelInfo()?.reasoning_efforts, modes = selectedReasoningModes(), issues = [];
-  if (effort && (!Array.isArray(efforts) || !efforts.includes(effort))) issues.push({ blocking: Array.isArray(efforts), message: t(Array.isArray(efforts) ? "unsupportedEffort" : "unconfirmedEffort").replace("{value}", effort) });
-  if (selectedBackend() === "chat" && mode && (!modes || !modes.includes(mode))) issues.push({ blocking: Boolean(modes), message: t(modes ? "unsupportedMode" : "unconfirmedMode").replace("{value}", mode) });
-  return issues;
-}
-function modelSelectionBlock() {
-  if ($("#model-select").value === "__manual" && !$("#model").value.trim()) return t("modelRequired");
-  if ($("#effort-select").value === "__manual" && !$("#effort").value.trim()) return t("effortRequired");
-  return modelCapabilityIssues().find((issue) => issue.blocking)?.message || "";
-}
-function resetReasoningSelection() {
-  $("#effort-select").value = "__default"; $("#effort").value = "";
-  $("#reasoning-mode").value = "__default";
-}
-function modelSummary(settings, fallbackProvider) {
-  const provider = settings.provider || settings.backend || fallbackProvider;
-  // Saved configs may retain dormant chat settings while executing with Codex.
-  const backend = settings.backend || providers().find((item) => item.id === provider)?.transport || fallbackProvider;
-  const showMode = ["chat", "responses"].includes(backend) && settings.reasoning_mode;
-  return [provider, settings.model || t("providerDefault"), `${t("effortLabel")}: ${settings.reasoning_effort || t("providerDefault")}`, showMode ? `${t("modeLabel")}: ${settings.reasoning_mode}` : ""].filter(Boolean).join(" · ");
-}
-function renderModelPreview() {
-  if (!state.settings) return;
-  const overrides = modelOverrides();
-  const selected = { provider: selectedProvider(), backend: selectedBackend(), model: selectedModelId(), reasoning_effort: Object.hasOwn(overrides, "reasoning_effort") ? overrides.reasoning_effort : state.settings.reasoning_effort, reasoning_mode: Object.hasOwn(overrides, "reasoning_mode") ? overrides.reasoning_mode : state.settings.reasoning_mode };
-  const summary = modelSummary(selected);
-  text("#model-preview", summary);
-}
-function renderModels() {
-  const provider = selectedProvider();
-  options("#backend", providers().map((item) => [item.id, item.label]), `${t("useConfig")} · ${configuredProvider()}`);
-  const catalog = modelState.data?.provider === provider ? modelState.data.models : [];
-  const entries = [["__default", t("providerDefault")], ...catalog.map((model) => [model.id, model.label && model.label !== model.id ? `${model.label} · ${model.id}` : model.id])];
-  const configuredModel = provider === configuredProvider() ? state.settings?.model : null;
-  if (configuredModel && !entries.some(([id]) => id === configuredModel)) entries.push([configuredModel, `${configuredModel} · ${t("configuredModel")}`]);
-  // A refreshed catalog must not silently erase an explicitly chosen model.
-  const current = $("#model-select").value;
-  if (current && !["__manual", "__default"].includes(current) && !entries.some(([id]) => id === current)) entries.push([current, current]);
-  entries.push(["__manual", t("manualModel")]);
-  options("#model-select", entries, `${t("useConfig")}${configuredModel ? ` · ${configuredModel}` : ""}`);
-  const inheritModel = $("#model-select").options[0];
-  inheritModel.hidden = inheritModel.disabled = provider !== configuredProvider();
-  if (inheritModel.disabled && !$("#model-select").value) $("#model-select").value = "__default";
-  $("#manual-model").hidden = $("#model-select").value !== "__manual";
-  $("#model").disabled = $("#manual-model").hidden;
-  const model = selectedModelInfo(), efforts = model?.reasoning_efforts;
-  const effortEntries = [["__default", t("providerDefault")], ...(Array.isArray(efforts) ? efforts.map((effort) => [effort, effort]) : [["__manual", t("manualEffort")]])];
-  const currentEffort = $("#effort-select").value;
-  if (currentEffort && !effortEntries.some(([value]) => value === currentEffort)) {
-    const label = currentEffort === "__manual" ? t("manualEffort") : `${currentEffort} · ${t(Array.isArray(efforts) ? "unsupportedChoice" : "unconfirmedChoice")}`;
-    effortEntries.push([currentEffort, label]);
-  }
-  options("#effort-select", effortEntries, `${t("useConfig")}${!$("#model-select").value && provider === configuredProvider() && state.settings?.reasoning_effort ? ` · ${state.settings.reasoning_effort}` : ""}`);
-  // A newly selected model never borrows another model's configured effort.
-  const inheritEffort = $("#effort-select").options[0];
-  inheritEffort.hidden = inheritEffort.disabled = Boolean($("#model-select").value);
-  if (inheritEffort.disabled && !$("#effort-select").value) $("#effort-select").value = "__default";
-  $("#manual-effort").hidden = $("#effort-select").value !== "__manual";
-  $("#effort").disabled = $("#manual-effort").hidden;
-  const knownModes = selectedReasoningModes(), modes = knownModes || [];
-  const previousMode = $("#reasoning-mode").value;
-  const modeEntries = [["__default", t("providerDefault")], ...modes.map((mode) => [mode, mode === "pro" ? "Pro" : mode === "standard" ? "Standard" : mode])];
-  if (previousMode && !modeEntries.some(([value]) => value === previousMode)) modeEntries.push([previousMode, `${previousMode} · ${t(knownModes ? "unsupportedChoice" : "unconfirmedChoice")}`]);
-  options("#reasoning-mode", modeEntries, t("useConfig"));
-  const inheritMode = $("#reasoning-mode").options[0];
-  inheritMode.hidden = inheritMode.disabled = Boolean($("#model-select").value);
-  if (inheritMode.disabled && !$("#reasoning-mode").value) $("#reasoning-mode").value = "__default";
-  const inheritedMode = !previousMode && selectedBackend() === "chat" && state.settings?.reasoning_mode;
-  const showMode = Boolean(modes.length || inheritedMode || (previousMode && previousMode !== "__default"));
-  $("#reasoning-mode-field").hidden = !showMode;
-  $("#reasoning-mode").disabled = !showMode;
-  const details = [model?.description, Array.isArray(efforts) ? (!efforts.length ? t("effortUnavailable") : "") : t("effortUnknown")].filter(Boolean).join(" ");
-  text("#model-description", details); $("#model-description").hidden = !details;
-  const source = modelState.data?.provider === provider ? modelState.data.source : null;
-  text("#models-status", t(modelState.loading ? "modelsLoading" : !modelState.initialized ? "modelsIdle" : source === "live" ? "modelsLive" : source === "configured" ? "modelsConfigured" : "modelsUnavailable"));
-  notice("#models-error", modelState.error);
-  notice("#model-capability-warning", modelCapabilityIssues().map((issue) => issue.message).join("\n"));
-  $("#models-refresh").disabled = modelState.loading || !state.settings;
-  renderModelPreview();
-}
-async function loadModels(refreshCatalog = false) {
-  if (!state.settings) return;
-  const provider = selectedProvider(), generation = ++modelState.generation;
-  modelState.initialized = true; modelState.requestedProvider = provider; modelState.loading = true; modelState.error = "";
-  if (modelState.data?.provider !== provider) modelState.data = null;
-  renderModels();
-  try {
-    const data = await api(`/api/models?provider=${encodeURIComponent(provider)}${refreshCatalog ? "&refresh=1" : ""}`);
-    if (generation !== modelState.generation || provider !== selectedProvider()) return;
-    if (Array.isArray(data.providers)) {
-      // Keep transport identities through temporary metadata gaps; capability
-      // checks above use only the current response, never these cached entries.
-      const known = new Map(modelState.providers.map((item) => [item.id, item]));
-      for (const item of data.providers) known.set(item.id, item);
-      modelState.providers = [...known.values()];
-    }
-    modelState.data = { ...data, provider, models: Array.isArray(data.models) ? data.models : [] };
-    modelState.error = typeof data.error === "string" ? data.error : "";
-  } catch (error) {
-    if (generation !== modelState.generation || provider !== selectedProvider()) return;
-    modelState.data = { provider, models: [], source: "unavailable" }; modelState.error = error.message;
-  } finally {
-    if (generation === modelState.generation) { modelState.loading = false; updateForm(); }
-  }
-}
-function officialLoginUrl(value) {
-  try {
-    const url = new URL(value);
-    if (url.protocol === "https:" && ["auth.openai.com", "chatgpt.com"].includes(url.hostname) && !url.username && !url.password && !url.port) return url.href;
-  } catch { /* Only official HTTPS login URLs are clickable. */ }
-  return null;
-}
-function executionBlock(backend) {
-  if (!["codex", "work"].includes(backend)) return "";
-  const data = accountState.data;
-  if (accountState.busy) return t("readinessChecking");
-  if (!data) return t(accountState.error ? "readinessUnknown" : "readinessChecking");
-  if (!data.available) return t(["ACCOUNT_TIMEOUT", "NETWORK_CONFIG_INVALID"].includes(data.error_code) ? "readinessUnknown" : "readinessUnavailable");
-  if (data.authenticated && ["chatgpt", "chatgptAuthTokens"].includes(data.account?.type)) return "";
-  if (data.account?.type === "apiKey") return t("readinessApiKey");
-  return t(data.login?.status === "pending" ? "readinessPending" : "readinessSignIn");
-}
+// Components own their feature state. This controller composes workflow transitions.
+const models = MathLotteryModels.create({ root: $("#task-form"), settings: () => state.settings, translate: t, request: api, onChange: updateForm });
+const account = MathLotteryAccount.create({ root: $("#account-panel"), translate: t, request: api, onChange: updateExecutionControls, notify: toast, connection: () => state.settings ? models.connection() : null, reloadConnection: refresh });
+const solveTeams = MathLotterySolveTeams.create($("#solve-team"));
+const agentSlots = MathLotteryAgentSlots.create({ root: $("#agent-slots"), workflow: () => state.workflow, language: () => state.language, request: api, onChange: updateForm });
+let manualParallel = "", rosterWasEnabled = false;
+
+function savedAgentSlots(run) { return run?.workflow === "solve" && Boolean(run.settings?.solve_agent_slots?.length); }
+
 function selectedSourceFiles() { return reviewSource.files.filter((file) => reviewSource.selected.has(file.path)); }
 function sourceAttachmentsSupported() { return state.settings?.execution === "native"; }
 function reviewedCandidateCount(run) { return run?.reviewed_candidate_count ?? run?.candidates?.filter((candidate) => candidate.reviews?.length).length ?? 0; }
@@ -445,7 +94,7 @@ function reviewSourceBlock() {
   if (reviewSource.run?.busy) return t("sourceBusy");
   const files = selectedSourceFiles();
   if (files.length && !sourceAttachmentsSupported()) return t("sourceUnsupported");
-  const backend = selectedBackend();
+  const backend = models.backend();
   const bytes = files.reduce((sum, file) => sum + file.size, 0);
   if (files.length > 20 || bytes > (backend === "chat" ? 128000 : 2000000) || files.some((file) => file.size > 1000000)) return t("sourceSelectionOver");
   return "";
@@ -494,70 +143,28 @@ async function loadReviewSource() {
   finally { if (generation === reviewSource.generation) { reviewSource.loading = false; renderReviewSource(); updateExecutionControls(); } }
 }
 function newTaskBlock() {
+  if (agentSlots.enabled()) return agentSlots.block();
   if (state.settings?.execution && state.settings.execution !== "native") return t("nativeExecutionRequired");
-  return modelSelectionBlock() || executionBlock(selectedBackend()) || reviewSourceBlock() || organizeSourceBlock();
+  if (state.workflow === "solve" && ($("#solve-groups").value || state.settings?.solve_max_groups)
+      && !($("#solve-parallel").value || state.settings?.solve_parallel_agents)) return t("solveGroupsNeedParallel");
+  return models.block() || account.block(models.backend(), models.connection()) || reviewSourceBlock() || organizeSourceBlock();
 }
 function updateExecutionControls() {
+  account.ensureLoaded();
   const block = newTaskBlock();
   $("#start").disabled = state.submitting || !state.csrf || !state.settings || Boolean(block);
   notice("#start-readiness", block);
   // Resume uses the saved run configuration, independently of the new-task form.
-  const run = state.detail, resumeBlock = run ? executionBlock(run.settings.backend || run.mode) : "";
+  const run = state.detail;
+  const resumeGroupBlock = run?.workflow === "solve" && ($("#resume-groups").value || run.settings.solve_max_groups)
+    && !($("#resume-parallel").value || run.settings.solve_parallel_agents) ? t("solveGroupsNeedParallel") : "";
+  const subscriptionResume = run && !savedAgentSlots(run) && ["codex", "work"].includes(run.settings.backend || run.mode) && run.settings.codex_auth !== "api_key";
+  if (subscriptionResume) account.ensureLoaded(true);
+  const resumeAccountBlock = run && !savedAgentSlots(run) ? account.block(run.settings.backend || run.mode, run.settings) : "";
+  const resumeBlock = resumeGroupBlock || resumeAccountBlock;
   $("#resume-submit").disabled = state.resuming || !run || run.busy || !state.csrf || Boolean(resumeBlock);
-  notice("#resume-readiness", resumeBlock);
-}
-function renderAccount() {
-  const data = accountState.data, connected = Boolean(data?.available && (data.authenticated || data.account)), pending = data?.available && data.login?.status === "pending" && !connected;
-  let status = !data ? "accountChecking" : !data.available ? "accountUnavailable" : connected ? data.account?.type === "apiKey" ? "accountUsingApiKey" : "accountConnected" : pending ? "accountWaiting" : "accountSignedOut";
-  if (!data?.available && ["ACCOUNT_TIMEOUT", "NETWORK_CONFIG_INVALID"].includes(data?.error_code)) status = "accountReadFailed";
-  if (accountState.busy && accountState.operation !== "status") status = ({ login: "accountStarting", cancel: "accountCancelling", switch: "accountSwitching", logout: "accountSigningOut" })[accountState.operation];
-  else if (!data && accountState.error) status = "accountReadFailed";
-  text("#account-status", t(status));
-  const account = connected ? data.account : null;
-  const details = account ? [["chatgpt", "chatgptAuthTokens"].includes(account.type) ? "ChatGPT" : account.type === "apiKey" ? t("accountApiKey") : account.type, account.email, account.plan_type ? `${t("accountPlan")}: ${account.plan_type}` : null].filter(Boolean).join(" · ") : "";
-  text("#account-details", details); $("#account-details").hidden = !details;
-  $("#account-login").hidden = Boolean(connected || pending);
-  $("#account-login").disabled = accountState.busy || !data?.available || !state.csrf;
-  ["#account-switch", "#account-logout"].forEach((selector) => {
-    $(selector).hidden = !connected;
-    $(selector).disabled = accountState.busy || !state.csrf;
-  });
-  $("#account-refresh").disabled = accountState.busy;
-  $("#account-panel").setAttribute("aria-busy", accountState.busy);
-  const url = pending ? officialLoginUrl(data.login.url) : null;
-  const code = pending && typeof data.login.user_code === "string" ? data.login.user_code.slice(0, 64) : "";
-  $("#account-pending").hidden = !pending;
-  text("#account-code", url ? code : "");
-  $("#account-copy").disabled = !url || !code;
-  $("#account-cancel").disabled = accountState.busy || !state.csrf;
-  const link = $("#account-link");
-  if (url) link.href = url;
-  else link.removeAttribute("href");
-  link.hidden = !url;
-  const errorKey = ({ CLI_NOT_FOUND: "accountCliMissing", CLI_UNAVAILABLE: "accountCliBroken", CLI_PLATFORM_DEPENDENCY_MISSING: "accountCliPlatform", ACCOUNT_TIMEOUT: "accountTimeout", NETWORK_CONFIG_INVALID: "accountNetworkInvalid" })[data?.error_code];
-  notice("#account-error", accountState.error || (errorKey ? t(errorKey) : data?.error) || (pending && (!url || !code) ? t("accountInvalidLink") : ""));
-  // Open on a new actionable state, without fighting the user's manual toggle.
-  const attention = accountState.error || data?.error_code || data?.error || (pending ? "pending" : data && (!data.available || !connected || account?.type === "apiKey") ? status : "");
-  if (attention && accountState.attention !== attention) $("#account-panel").open = true;
-  accountState.attention = attention;
-  updateExecutionControls();
-}
-async function refreshAccount(operation = "status") {
-  if (accountState.busy) return;
-  const accountChange = ["switch", "logout"].includes(operation);
-  if (accountChange && !window.confirm(t(operation === "switch" ? "accountConfirmSwitch" : "accountConfirmLogout"))) return;
-  accountState.busy = true; accountState.operation = operation; accountState.error = ""; renderAccount();
-  try { accountState.data = await api(operation === "status" ? "/api/account" : `/api/account/${operation}`, operation === "status" ? undefined : accountChange ? { confirm_account_change: true } : {}); }
-  catch (error) {
-    accountState.error = error.message;
-    accountState.data = null;
-    // A failed mutation may still have signed out. Re-read without hiding its error.
-    if (operation !== "status") {
-      try { accountState.data = await api("/api/account"); }
-      catch { /* Unknown state must not look like the previous connected account. */ }
-    }
-  }
-  finally { accountState.busy = false; renderAccount(); }
+  $("#resume-account").hidden = !subscriptionResume || !resumeAccountBlock || run.busy;
+  notice("#resume-readiness", resumeBlock ? `${resumeBlock}${subscriptionResume && resumeAccountBlock ? ` ${t("resumeAccountHint")}` : ""}` : "");
 }
 function applyLanguage() {
   document.documentElement.lang = state.language === "zh" ? "zh-CN" : "en";
@@ -565,7 +172,7 @@ function applyLanguage() {
   $$('[data-placeholder]').forEach((item) => { item.placeholder = t(item.dataset.placeholder); });
   text("#language", state.language === "zh" ? "English" : "中文");
   state.resultsKey = "";
-  renderOverview(); updateForm(); renderAccount();
+  renderOverview(); updateForm(); account.render(Boolean(state.csrf));
   if (state.detail) renderDetail(state.detail);
 }
 function setWorkflow(workflow, scroll = false) {
@@ -575,6 +182,11 @@ function setWorkflow(workflow, scroll = false) {
 }
 function updateForm() {
   const flow = state.workflow, savedReview = flow === "verify" && $("#verify-mode").value === "saved";
+  // Establish visibility before disabling hidden controls. Otherwise leaving
+  // roster mode exposes model fields that are still disabled by the old layout.
+  agentSlots.render();
+  const roster = agentSlots.enabled();
+  $("#task-model-settings").hidden = roster;
   $$("[data-workflow]").forEach((button) => { const active = button.dataset.workflow === flow; button.classList.toggle("selected", active); button.setAttribute("aria-pressed", active); });
   text("#form-title", t(flow)); text("#form-description", t(`${flow}Description`)); text("#form-number", { find: "01", solve: "02", verify: "03", organize: "04" }[flow]);
   text("#start-label", state.submitting ? t("starting") : t({ find: "startFind", solve: "startSolve", verify: "startVerify", organize: "startOrganize" }[flow]));
@@ -583,6 +195,9 @@ function updateForm() {
   const organizeSource = state.runs.find((item) => item.id === $("#organize-from-run").value);
   text("#organize-source-note", organizeSource ? t("organizeSourceCount").replace("{n}", reviewedCandidateCount(organizeSource)) : t("organizeSourceHint"));
   $("#find-options").hidden = flow !== "find";
+  $("#solve-parallel-field").hidden = flow !== "solve";
+  $("#solve-groups-field").hidden = flow !== "solve";
+  $("#solve-team-limits").hidden = flow !== "solve";
   $("#solve-full-budget-field").hidden = flow !== "solve" || state.settings?.execution !== "native";
   $("#saved-review").hidden = !savedReview; $("#problem-fields").hidden = ["find", "organize"].includes(flow) || savedReview;
   $("#proof-fields").hidden = flow !== "verify" || savedReview;
@@ -595,12 +210,21 @@ function updateForm() {
   $("#selected-statement-risk").hidden = !problem;
   $("#selected-statement-risk").replaceChildren(...(problem ? [MathLotteryDetails.statement(problem, state.language)] : []));
   $$("#task-form input, #task-form textarea, #task-form select").forEach((input) => { if (!input.closest("#source-file-list")) input.disabled = Boolean(input.closest("[hidden]")); });
-  const backend = selectedBackend();
-  renderModels();
-  $("#native-capabilities").hidden = backend !== "codex";
-  $("#multi-agent").disabled = $("#memories").disabled = backend !== "codex";
-  text("#backend-hint", t(backend === "chat" ? selectedProvider() === "chat" ? "chatHint" : "customProviderHint" : "codexHint"));
+  const backend = models.backend();
+  models.render();
+  if (roster && !rosterWasEnabled) manualParallel = $("#solve-parallel").value;
+  if (roster) $("#solve-parallel").value = agentSlots.count || "";
+  else if (rosterWasEnabled) $("#solve-parallel").value = manualParallel;
+  rosterWasEnabled = roster;
+  $("#solve-parallel").disabled = flow !== "solve" || roster;
+  $$("#task-model-settings input, #task-model-settings select").forEach(input => { if (roster) input.disabled = true; });
+  $("#native-capabilities").hidden = backend !== "codex" || roster;
+  $("#multi-agent").disabled = backend !== "codex" || (flow === "solve" && Boolean($("#solve-parallel").value || state.settings?.solve_parallel_agents));
+  $("#memories").disabled = backend !== "codex" || roster;
+  if (roster) $("#multi-agent").disabled = true;
+  text("#backend-hint", t(backend === "chat" ? models.provider() === "chat" ? "chatHint" : "customProviderHint" : "codexHint"));
   renderReviewSource();
+  account.render(Boolean(state.csrf));
   updateExecutionControls();
 }
 function workflowLabel(workflow) {
@@ -678,8 +302,10 @@ function renderOverview() {
   text("#count-runs", state.runs.length); text("#count-active", state.runs.filter((run) => run.busy).length);
   text("#count-problems", state.problems.length); text("#count-candidates", state.runs.reduce((sum, run) => sum + run.candidate_count, 0));
   if (state.settings) {
-    renderModelPreview();
+    models.renderPreview();
     for (const [id, value] of [["budget", state.settings.budget_minutes], ["iterations", state.settings.max_iterations]]) $("#" + id).placeholder = value ?? t("inherited");
+    $("#solve-parallel").placeholder = state.settings.solve_parallel_agents ?? t("inherited");
+    $("#solve-groups").placeholder = state.settings.solve_max_groups ?? t("solveGroupsDefault");
     if (!$("#solve-full-budget").dataset.touched) $("#solve-full-budget").checked = Boolean(state.settings.solve_until_budget_exhausted);
     text("#solve-full-budget-hint", `${t("fullSolveBudgetHint")} ${finalizationBudgetHint(state.settings)}`);
   }
@@ -998,6 +624,15 @@ function renderResults(run) {
 }
 function renderDetail(run) {
   $("#run-detail").hidden = false;
+  $("#resume-parallel-field").hidden = run.workflow !== "solve";
+  $("#resume-parallel").disabled = run.workflow !== "solve" || savedAgentSlots(run);
+  if (savedAgentSlots(run)) $("#resume-parallel").value = "";
+  $("#resume-parallel").placeholder = run.settings.solve_parallel_agents ?? t("inherited");
+  $("#resume-groups-field").hidden = run.workflow !== "solve";
+  $("#resume-groups").disabled = run.workflow !== "solve";
+  $("#resume-team-limits").hidden = run.workflow !== "solve";
+  $("#resume-groups").placeholder = run.settings.solve_max_groups ?? t("solveGroupsDefault");
+  solveTeams.render(run, state.language);
   $("#resume-full-budget-field").hidden = run.workflow !== "solve" || run.settings.execution !== "native";
   if ($("#resume-full-budget").dataset.runId !== run.id) {
     $("#resume-full-budget").checked = Boolean(run.settings.solve_until_budget_exhausted);
@@ -1006,7 +641,7 @@ function renderDetail(run) {
   text("#resume-full-budget-hint", `${t("fullSolveBudgetHint")} ${finalizationBudgetHint(run.settings)}`);
   text("#detail-id", `${run.workflow.toUpperCase()} / ${run.id}`); text("#detail-title", run.title);
   const status = executionBadge(run); $("#detail-state").className = status.className; text("#detail-state", status.textContent);
-  $("#run-facts").replaceChildren(...[modelSummary(run.settings, run.mode), `${run.iteration} ${t("rounds")}`, `${Math.round(run.elapsed_seconds / 60 * 10) / 10} min ${t("elapsed")}`, `${compact(run.usage.input_tokens)} in / ${compact(run.usage.output_tokens)} out ${t("tokens")}`].map((fact) => node("span", "", fact)));
+  $("#run-facts").replaceChildren(...[models.summary(run.settings, run.mode), `${run.iteration} ${t("rounds")}`, `${Math.round(run.elapsed_seconds / 60 * 10) / 10} min ${t("elapsed")}`, `${compact(run.usage.input_tokens)} in / ${compact(run.usage.output_tokens)} out ${t("tokens")}`].map((fact) => node("span", "", fact)));
   const outcomeKey = JSON.stringify([run.id, run.workflow, state.language, run.research_outcome]);
   if (renderDetail.outcomeKey !== outcomeKey) {
     $("#research-outcome").replaceChildren(MathLotteryOutcomes.detail(run, state.language));
@@ -1048,8 +683,8 @@ async function selectRun(id, scroll = false) {
     const run = await api(`/api/runs/${id}`);
     if (state.selected !== id) return;
     delete $("#resume-full-budget").dataset.runId;
+    $("#resume-budget").value = ""; $("#resume-rounds").value = ""; $("#resume-parallel").value = ""; $("#resume-groups").value = ""; $("#direction").value = "";
     state.detail = run; renderOverview(); renderDetail(run);
-    $("#resume-budget").value = ""; $("#resume-rounds").value = ""; $("#direction").value = "";
     $("#resume-budget").placeholder = run.settings.budget_minutes; $("#resume-rounds").placeholder = run.settings.max_iterations;
     $("#resume-lean-limits").hidden = !["verify", "run"].includes(run.workflow);
     for (const [field, selector] of Object.entries({formal_memory_mb: "#resume-lean-memory", formal_address_space_mb: "#resume-lean-address", formal_timeout_seconds: "#resume-lean-timeout"})) {
@@ -1064,8 +699,8 @@ async function refresh() {
   const selectedAtStart = state.selected;
   try {
     const data = await api("/api/bootstrap"); state.csrf = data.csrf_token; state.settings = data.settings; state.runs = data.runs; state.problems = data.problems;
-    text("#connection", t("connected")); notice("#global-error", data.config_error); renderOverview(); updateForm(); renderAccount();
-    if (!modelState.initialized || modelState.requestedProvider !== selectedProvider()) void loadModels();
+    text("#connection", t("connected")); notice("#global-error", data.config_error); renderOverview(); updateForm(); account.render(Boolean(state.csrf));
+    models.ensureLoaded();
     // A poll begun before a click/start must not replace that newer selection.
     if (state.selected !== selectedAtStart) return;
     if (state.selected && state.runs.some((run) => run.id === state.selected)) {
@@ -1076,7 +711,7 @@ async function refresh() {
   finally { state.polling = false; }
 }
 function overrides() {
-  const values = modelOverrides();
+  const values = agentSlots.enabled() ? { use_agent_slots: true } : models.overrides();
   for (const [id, key] of [["budget", "budget_minutes"], ["iterations", "max_iterations"]]) {
     const input = $("#" + id), value = input.value.trim();
     if (value && !input.disabled) values[key] = ["budget", "iterations"].includes(id) ? Number(value) : value;
@@ -1085,27 +720,15 @@ function overrides() {
     const input = $("#" + id); if (input.value && !input.disabled) values[key] = input.value === "inherit" ? null : input.value === "true";
   }
   if (!$("#solve-full-budget-field").hidden && !$("#solve-full-budget").disabled) values.solve_until_budget_exhausted = $("#solve-full-budget").checked;
+  if (!$("#solve-parallel-field").hidden && !$("#solve-parallel").disabled && $("#solve-parallel").value) values.solve_parallel_agents = Number($("#solve-parallel").value);
+  if (!$("#solve-groups-field").hidden && $("#solve-groups").value) values.solve_max_groups = Number($("#solve-groups").value);
   return values;
 }
+$("#solve-parallel").addEventListener("change", updateForm);
+["solve-parallel", "solve-groups", "resume-parallel", "resume-groups"].forEach(id => $("#" + id).addEventListener("input", updateExecutionControls));
 $("#solve-full-budget").addEventListener("change", () => { $("#solve-full-budget").dataset.touched = "true"; });
 $$("[data-workflow]").forEach((button) => button.addEventListener("click", () => setWorkflow(button.dataset.workflow, button.classList.contains("nav-item"))));
 $("#verify-mode").addEventListener("change", updateForm);
-$("#backend").addEventListener("change", () => {
-  $("#model-select").value = $("#backend").value ? "__default" : ""; $("#model").value = ""; $("#effort").value = "";
-  $("#effort-select").value = $("#reasoning-mode").value = $("#backend").value ? "__default" : "";
-  modelState.data = null; updateForm(); void loadModels();
-});
-$("#model-select").addEventListener("change", () => {
-  $("#model").value = "";
-  if (!$("#model-select").value) { $("#effort-select").value = ""; $("#effort").value = ""; $("#reasoning-mode").value = ""; }
-  else resetReasoningSelection();
-  updateForm();
-});
-$("#model").addEventListener("input", () => { resetReasoningSelection(); updateForm(); });
-$("#effort-select").addEventListener("change", () => { $("#effort").value = ""; updateForm(); });
-$("#effort").addEventListener("input", () => { renderModels(); updateExecutionControls(); });
-$("#reasoning-mode").addEventListener("change", () => { renderModels(); updateExecutionControls(); });
-$("#models-refresh").addEventListener("click", () => loadModels(true));
 $("#problem-id").addEventListener("change", () => { state.discoveryChoice = null; state.resultsKey = ""; if (state.detail) renderResults(state.detail); updateForm(); });
 $("#clear-discovery").addEventListener("click", () => { state.discoveryChoice = null; $("#problem-id").value = ""; state.resultsKey = ""; if (state.detail) renderResults(state.detail); updateForm(); });
 $("#from-run").addEventListener("change", loadReviewSource);
@@ -1115,17 +738,6 @@ $("#language").addEventListener("click", () => { state.language = state.language
 $("#refresh").addEventListener("click", refresh);
 $("#history-search").addEventListener("input", renderHistory);
 $("#history-filter").addEventListener("change", renderHistory);
-$("#account-login").addEventListener("click", () => refreshAccount("login"));
-$("#account-switch").addEventListener("click", () => refreshAccount("switch"));
-$("#account-logout").addEventListener("click", () => refreshAccount("logout"));
-$("#account-refresh").addEventListener("click", () => refreshAccount());
-$("#account-cancel").addEventListener("click", () => refreshAccount("cancel"));
-$("#account-copy").addEventListener("click", async () => {
-  const value = $("#account-code").textContent;
-  if (!value) return;
-  try { await navigator.clipboard.writeText(value); toast(t("accountCopied")); }
-  catch { const range = document.createRange(); range.selectNodeContents($("#account-code")); const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range); toast(t("accountSelectCode")); }
-});
 $("#task-form").addEventListener("submit", async (event) => {
   event.preventDefault(); if (state.submitting) return;
   const block = newTaskBlock();
@@ -1153,7 +765,7 @@ $("#task-form").addEventListener("submit", async (event) => {
   }
   state.submitting = true; updateForm(); notice("#form-error", "");
   try { const run = await api("/api/runs", body); await refresh(); await selectRun(run.id, true); toast(t("launched")); }
-  catch (error) { notice("#form-error", error.message); await refreshAccount(); }
+  catch (error) { notice("#form-error", error.message); await account.refresh(); }
   finally { state.submitting = false; updateForm(); }
 });
 // Native validation must reveal an invalid optional field before focusing it.
@@ -1166,13 +778,16 @@ $("#stop").addEventListener("click", async () => {
   catch (error) { notice("#run-message", error.message); $("#stop").disabled = false; }
 });
 $("#show-resume").addEventListener("click", () => { $("#resume-form").hidden = !$("#resume-form").hidden; if (!$("#resume-form").hidden) $("#direction").focus(); });
+$("#resume-account").addEventListener("click", () => account.openSubscription());
 $("#resume-form").addEventListener("submit", async (event) => {
   event.preventDefault(); const body = {};
   const run = state.detail;
-  if (state.resuming || !run || run.busy || !state.csrf || executionBlock(run.settings.backend || run.mode)) { updateExecutionControls(); return; }
+  if (state.resuming || !run || run.busy || !state.csrf || (!savedAgentSlots(run) && account.block(run.settings.backend || run.mode, run.settings))) { updateExecutionControls(); return; }
   if ($("#direction").value.trim()) body.message = $("#direction").value.trim();
   if ($("#resume-budget").value) body.budget_minutes = Number($("#resume-budget").value);
   if ($("#resume-rounds").value) body.max_iterations = Number($("#resume-rounds").value);
+  if (!$("#resume-parallel-field").hidden && !$("#resume-parallel").disabled && $("#resume-parallel").value) body.solve_parallel_agents = Number($("#resume-parallel").value);
+  if (!$("#resume-groups-field").hidden && $("#resume-groups").value) body.solve_max_groups = Number($("#resume-groups").value);
   if (!$("#resume-full-budget-field").hidden) body.solve_until_budget_exhausted = $("#resume-full-budget").checked;
   if (!$("#resume-lean-limits").hidden) {
     for (const [field, selector] of Object.entries({formal_memory_mb: "#resume-lean-memory", formal_address_space_mb: "#resume-lean-address", formal_timeout_seconds: "#resume-lean-timeout"})) {
@@ -1181,7 +796,7 @@ $("#resume-form").addEventListener("submit", async (event) => {
   }
   state.resuming = true; updateExecutionControls();
   try { await api(`/api/runs/${state.selected}/resume`, body); $("#resume-form").hidden = true; toast(t("resumed")); await refresh(); }
-  catch (error) { notice("#run-message", error.message); await refreshAccount(); }
+  catch (error) { notice("#run-message", error.message); await account.refresh(); }
   finally { state.resuming = false; updateExecutionControls(); }
 });
 $("#verify-latest").addEventListener("click", () => { $("#verify-mode").value = "saved"; $("#from-run").value = state.selected; setWorkflow("verify", true); loadReviewSource(); });
@@ -1193,7 +808,8 @@ $("#organize-reviewed").addEventListener("click", () => {
 $$("[data-tab]").forEach((button) => button.addEventListener("click", () => {
   $$("[data-tab]").forEach((item) => { const active = item === button; item.classList.toggle("selected", active); item.setAttribute("aria-selected", active); $("#" + item.dataset.tab).hidden = !active; });
 }));
-applyLanguage(); refresh(); refreshAccount();
+applyLanguage(); refresh(); account.refresh(); agentSlots.refresh();
 setInterval(() => { if (!document.hidden) refresh(); }, 2000);
-setInterval(() => { if (!document.hidden && accountState.data?.login?.status === "pending") refreshAccount(); }, 2000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { refresh(); refreshAccount(); } });
+setInterval(() => { if (!document.hidden && account.pending) account.refresh(); }, 2000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { refresh(); account.refresh(); agentSlots.refresh(); } });
+window.addEventListener("focus", () => { if (state.workflow === "solve") agentSlots.refresh(); });

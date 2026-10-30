@@ -1,0 +1,54 @@
+/* The agent page keeps independent connections visible without nesting dashboards. */
+.agents-page main { max-width: 1200px; padding-bottom: 48px; }
+.agents-heading { padding: 38px 0 28px; max-width: 780px; }
+.agents-heading h1 { font: 550 clamp(27px, 3.8vw, 40px)/1.25 ui-sans-serif, system-ui, sans-serif; letter-spacing: -1.2px; }
+.agents-heading > p:last-child { margin: 15px 0 0; color: var(--muted); font-size: 14px; }
+.agents-toolbar { display: grid; grid-template-columns: 185px minmax(0, 1fr) 190px; gap: 24px; align-items: center; margin-bottom: 24px; padding: 22px 24px; }
+.agents-count label { margin: 0 0 7px; }
+.agents-count input { max-width: 112px; font-variant-numeric: tabular-nums; }
+.agents-toolbar > p { margin: 0; color: var(--muted); font-size: 12px; }
+.agents-save { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.agents-save .primary { justify-content: center; padding: 10px 14px; }
+#save-status { min-height: 20px; font-size: 11px; color: var(--muted); }
+.agent-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.agent-card { border: 1px solid var(--line); border-radius: 12px; background: white; padding: 23px; min-width: 0; }
+.agent-card header { display: flex; gap: 12px; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+.agent-number { display: grid; place-items: center; flex: 0 0 34px; height: 34px; background: var(--pale); color: var(--green); font-size: 13px; border-radius: 9px; font-variant-numeric: tabular-nums; }
+.agent-card header h2 { font-size: 16px; letter-spacing: 0; }
+.agent-card header p { margin: 1px 0 0; color: var(--muted); font: 11px/1.5 ui-monospace, monospace; }
+.agent-card header .badge { margin-left: auto; }
+.agent-card .fields-row { gap: 12px; }
+.agent-card label { font-size: 12px; }
+.agent-card input, .agent-card select { font-size: 13px; }
+.agent-account { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.agent-account-status { margin: 0 0 10px; font-size: 12px; overflow-wrap: anywhere; }
+.agent-account .account-actions { gap: 7px 15px; }
+.agent-account .notice { margin-bottom: 0; }
+.agent-login { background: var(--pale); border-radius: 8px; padding: 13px; margin-top: 12px; }
+.agent-login p { margin: 0 0 8px; font-size: 12px; }
+.agent-login code { font: 600 22px/1.6 ui-monospace, monospace; letter-spacing: 2px; user-select: all; }
+.agent-login-code { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.agent-login-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.agent-api-note { color: var(--muted); font-size: 12px; margin: 13px 0 0; overflow-wrap: anywhere; }
+.agent-api-state { font-size: 12px; margin: 12px 0 0; color: var(--green); }
+.agent-api-state.missing { color: var(--orange); }
+.agents-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
+.agents-footer strong { font-size: 13px; }
+.agents-footer p { color: var(--muted); font-size: 12px; margin: 8px 0 14px; }
+@media (max-width: 760px) {
+  .agents-toolbar { grid-template-columns: 1fr auto; gap: 16px; }
+  .agents-toolbar > p { grid-column: 1 / -1; grid-row: 2; }
+  .agent-cards { grid-template-columns: 1fr; }
+  .agents-footer { grid-template-columns: 1fr; gap: 16px; }
+}
+@media (max-width: 480px) {
+  .agents-page main { padding-left: 16px; padding-right: 16px; }
+  .agents-page .topbar { flex-wrap: wrap; padding: 16px 0; gap: 12px; }
+  .agents-page .topbar-tools { gap: 16px; }
+  .agents-toolbar { padding: 18px; grid-template-columns: 1fr; }
+  .agents-toolbar > p { grid-column: auto; grid-row: auto; }
+  .agents-save { align-items: stretch; }
+  .agent-card { padding: 18px; }
+  .agent-card .fields-row { display: block; }
+  .agent-card header .badge { white-space: normal; text-align: right; }
+}

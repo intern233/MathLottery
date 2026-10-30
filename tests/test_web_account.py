@@ -13,7 +13,7 @@ from test_web import serving
 
 from mathlottery.config import Config
 from mathlottery.models import Workflow
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.runtime.orchestrator import Orchestrator
 from mathlottery.web.account import AccountRPC, AccountTimeoutError, CodexAccount
 from mathlottery.web.service import WebService
 

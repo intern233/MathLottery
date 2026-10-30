@@ -5,7 +5,7 @@ from test_web import SIGNED_IN, serving
 from test_web import web as web
 
 from mathlottery.models import Problem, Workflow
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.runtime.orchestrator import Orchestrator
 from mathlottery.web.service import ResumeRequest
 
 

@@ -2,9 +2,9 @@
 
 import pytest
 
-from mathlottery.discovery import problem_fingerprint
+from mathlottery.find.discovery import problem_fingerprint
+from mathlottery.find.risks import assess_statement, present_problem
 from mathlottery.models import Problem, StatementRisk
-from mathlottery.statement_risks import assess_statement, present_problem
 
 
 def problem():
@@ -66,8 +66,8 @@ def test_checked_redirect_endpoints_can_match_the_original_source(verified):
 
 
 def test_both_find_protocols_request_statement_risks():
-    from mathlottery.evidence_guidance import GUIDANCE
     from mathlottery.models import Phase
+    from mathlottery.verify.guidance import GUIDANCE
 
     for field in ("source_statement", "scope_relation", "scope_description", "prior_work_summary", "statement_risks"):
         assert field in GUIDANCE[Phase.FIND]
@@ -89,7 +89,7 @@ def test_every_nonempty_disclosure_is_frozen(field, value):
 
 def test_legacy_obstacle_fields_do_not_change_frozen_problem_hash():
     from mathlottery.models import LiteratureObstacle, digest
-    from mathlottery.storage import json_text
+    from mathlottery.storage.core import json_text
 
     item = problem()
     obstacle = LiteratureObstacle(

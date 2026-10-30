@@ -1,7 +1,11 @@
 # 复制为 config.yaml，在这里选择模型；运行命令只需指定研究任务。
 backend:
-  # codex：官方 Codex 会话；chat：OpenAI Responses API。
+  # codex: official Codex agent; chat: independent Responses API harness.
   mode: codex
+  # Codex authentication: chatgpt (subscription) or api_key (OpenAI API billing).
+  # Both use the same native Codex tools. Keys stay in the launching environment.
+  codex_auth: chatgpt
+  codex_api_key_env: OPENAI_API_KEY
   model: gpt-6-astra
   reasoning_effort: max
   chat:
@@ -33,6 +37,21 @@ backend:
   # Legacy structured calls only:
   timeout_seconds: 300
   max_retries: 2
+solve:
+  # Standalone native Solve only: simultaneous researchers across all groups (1–32).
+  # null preserves historical native delegation. An explicit cap routes all extra
+  # researchers through MathLottery; nested Codex spawning is disabled to enforce it.
+  parallel_agents: null
+  # Optional cap on active research groups (1–32), across which the above agents
+  # are shared. Requires parallel_agents; null follows the total researcher cap.
+  max_groups: null
+  # Supervisor is separate overhead, charged to total time/tokens/call limits.
+  # Reallocation happens at natural checkpoints; existing sessions are preserved.
+  supervisor_timeout_seconds: 120
+  # Optional per-researcher connections (native standalone Solve only).
+  # Use the /agents page for browser tasks, or configure slots here for CLI Solve.
+  # With slots, parallel_agents must equal their count. See docs/agents.md.
+  agent_slots: []
 discovery:
   # Frozen Find dossier passed to a user-selected Solve task; skipped files are reported.
   context_max_files: 300
@@ -58,7 +77,8 @@ budget:
   max_iterations: 50
   max_input_tokens: null
   max_output_tokens: null
-  # null: provider account controls spending. Legacy value 0 blocks the Chat API.
+  # null: provider account controls spending. Legacy 0 blocks ALL API-key billing,
+  # including Codex with codex_auth: api_key and any paid Solve slots.
   max_external_cost_usd: null
 tools:
   # Legacy structured tools only; native commands use Codex's runtime.

@@ -3,8 +3,8 @@ import time
 
 import pytest
 
-from mathlottery.activity import ActivityReporter, controller_activity, read_activity
-from mathlottery.telemetry_archive import append_public_record, export_activity_archive
+from mathlottery.telemetry.activity import ActivityReporter, controller_activity, read_activity
+from mathlottery.telemetry.archive import append_public_record, export_activity_archive
 
 
 def records(data):

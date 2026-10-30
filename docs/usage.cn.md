@@ -11,7 +11,7 @@ MathLottery 提供两种运行入口，共用同一工作区的配置、账号�
 | **浏览器：`mathlottery serve`** | 找题、选题求解、审查证明、整理报告。建议从这里开始。 |
 | **终端：`find`、`solve`、`verify`、`organize`、`run`** | 单独执行各阶段，或自动串联研究流程。 |
 
-运行入口与模型接入方式是两回事：**Codex** 使用官方 CLI 和 MathLottery 独立登录；**Chat** 使用 API Key 和 Responses API，也可以配置[兼容的提供方](configuration.cn.md#providers)。
+运行入口与 agent 引擎分别选择：**Codex agent** 使用官方 CLI，可以选择独立 ChatGPT 登录或 OpenAI API Key；**API agent（Responses）**保留独立 API harness，配置名称仍是 `chat`，也可以配置[兼容的提供方](configuration.cn.md#providers)。
 
 ## 本地浏览器工作台
 
@@ -60,6 +60,8 @@ mathlottery serve
 在 **MathLottery 账号**面板选择**使用 ChatGPT 账号登录**，去官方页面完成授权。它与普通 Codex CLI / IDE 的登录状态独立；可以使用同一个账号，但额度仍按账号共享。设备码登录可能需要先在 ChatGPT 安全设置中开启。[官方认证说明](https://learn.chatgpt.com/docs/auth)
 
 在**本次任务的模型**中选择提供方、模型和推理强度。例如，`gpt-6-astra` 是模型 ID，`max` 是另一个推理强度选项，需要账号支持。开始任务会消耗所选后端的额度或产生 API 费用。第一次测试可在**预算与 agent 设置**中先缩短时间预算。
+
+如果并行 Solve 要使用不同账号或 API，打开 **Agent 配置**（`/agents`）。逐个配置槽位并保存，再在 Solve 中勾选**使用已配置的 agent 槽位**。Codex 槽位可选择 ChatGPT 登录或 API Key，独立 Responses 槽位也继续保留；密钥均通过服务端环境变量读取。[逐步配置说明](agents.cn.md)
 
 ### 4. 跑通一次流程
 
@@ -129,6 +131,10 @@ mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
 
 最后一条审查的是给定的示例证明。要审查刚才求解产生的候选，请用 `verify --from-run <solve-run-id>`。自行输入问题不代表它已被确认为开放问题或新成果。
 
+并行求解可在页面设置**求解并行数**和**最大研究组数**，或配置 `solve.parallel_agents`、
+`solve.max_groups`，也可以为 `solve` 添加 `--parallel-agents 6 --max-groups 2`。组数上限可选，
+所有组共用人数上限。跨组留言、监督分配、预算计数和恢复规则见 [Solve 多组研究](solve-teams.cn.md)。
+
 <a id="organize"></a>
 
 ### 验真后：整理专家阅读报告
@@ -187,7 +193,8 @@ mathlottery run
 | 接入方式 | 需要什么 | 在哪里配置 |
 | --- | --- | --- |
 | **Codex**（默认） | 官方 CLI、MathLottery 的 ChatGPT 登录 | `backend.mode: codex`；在 MathLottery 登录一次 |
-| **Chat / OpenAI API** | API Key 和可用模型 | `backend.mode: chat`；密钥放环境变量 |
+| **Codex + API Key** | 官方 CLI、OpenAI API Key 和 API 模型权限 | `backend.mode: codex`；`backend.codex_auth: api_key` |
+| **API agent（Responses）** | API Key 和可用模型 | `backend.mode: chat`；密钥放环境变量 |
 | **其他 Responses 提供方** | 兼容的 API 地址、密钥和模型 | 命名的 `model_providers` 配置与 `backend.provider` |
 
 ### Codex：浏览器和终端共用工作区登录
@@ -206,9 +213,24 @@ backend:
 
 先通过 `mathlottery serve` 登录一次，之后在同一工作区直接执行终端命令即可。不使用 MathLottery 页面时，参见[独立终端登录步骤](configuration.cn.md#account)。普通 `codex login` 登录的是个人 Codex，不是 MathLottery。
 
+### Codex：保留原生工具，使用 API 计费
+
+在 Agent 配置页选择 **Codex agent → API Key**，或在配置中填写：
+
+```yaml
+backend:
+  mode: codex
+  execution: native
+  codex_auth: api_key
+  codex_api_key_env: OPENAI_API_KEY
+  model: your-api-model-id
+```
+
+按下方的安全输入命令设置 `OPENAI_API_KEY` 后，再启动服务或终端工作流。此方式保留 Codex 原生工具和会话管理，走 OpenAI API 计费，不需要设备码登录，也不会改变订阅登录。[鉴权与隔离说明](configuration.cn.md#providers)。
+
 <a id="chat-api"></a>
 
-### Chat：配置 API Key
+### 独立 API agent：Responses
 
 将后端段改为下例，并把 `your-model-id` 换成实际可用的模型 ID。默认托管工具是网页搜索和 Code Interpreter，模型和账号需要支持它们。
 

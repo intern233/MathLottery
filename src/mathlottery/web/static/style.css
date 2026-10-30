@@ -99,8 +99,13 @@ summary .muted { float: right; font-size: 11px; margin-left: 12px; }
 .model-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .model-heading h3 { margin: 0; font-size: 13px; font-weight: 650; }
 .model-heading .text-button { flex-shrink: 0; }
+.agent-slots-settings { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 18px; }
+.agent-slots-settings .field-hint { margin-bottom: 0; }
+.agent-slots-settings .budget-choice { margin-bottom: 0; }
+.agent-slots-settings > .text-button { margin-top: 4px; }
 .model-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr); gap: 0 10px; }
 .model-fields > div { min-width: 0; }
+.codex-auth-fields { margin-top: 12px; }
 .model-settings label { margin-top: 12px; font-size: 12px; font-weight: 400; color: var(--muted); }
 .model-settings select, .model-settings input { font-size: 13px; padding: 9px; }
 .model-preview { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 9px; margin: 12px 0 0; font-size: 11px; overflow-wrap: anywhere; }

@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
 from mathlottery.models import State, Workflow
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.providers.base import BackendResult, BackendStatus
+from mathlottery.runtime.orchestrator import Orchestrator
 
 
 def recorded_errors(store, run_id):

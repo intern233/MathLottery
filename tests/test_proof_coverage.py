@@ -2,8 +2,8 @@
 
 import pytest
 
-from mathlottery.auditor import audit
 from mathlottery.models import Candidate, ProofCheck, ProofStep, Review, StatementAlignment, digest
+from mathlottery.verify.auditor import audit
 
 CLAIM = "For every natural number n, n + 0 = n."
 

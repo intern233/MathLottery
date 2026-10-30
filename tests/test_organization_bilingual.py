@@ -10,11 +10,11 @@ from test_organization import reviewed as reviewed
 from test_web import serving
 from typer.testing import CliRunner
 
-from mathlottery import organization
 from mathlottery.cli import app
 from mathlottery.models import Phase, State
-from mathlottery.organized_reports import read_report, summary
-from mathlottery.storage import json_text
+from mathlottery.organize import workflow as organization
+from mathlottery.organize.downloads import read_report, summary
+from mathlottery.storage.core import json_text
 from mathlottery.web.service import WebService
 
 
@@ -32,7 +32,7 @@ def bilingual(store, reviewed, monkeypatch):
         destination.write_bytes(payload)
         return {"warnings": []}
 
-    monkeypatch.setattr("mathlottery.report_pdf.render_pdf", render)
+    monkeypatch.setattr("mathlottery.organize.pdf.render_pdf", render)
     run = engine.export_organized(run.id)
     assert json_text(store.load(source.id)) == before
     return run
@@ -77,7 +77,7 @@ def test_bilingual_export_refuses_tampering_in_either_language(store, bilingual,
 
 
 def test_pdf_failure_in_one_language_preserves_other_report_and_retry_is_local(store, bilingual, monkeypatch):
-    from mathlottery.orchestrator import Orchestrator
+    from mathlottery.runtime.orchestrator import Orchestrator
 
     def render(markdown, destination, **kwargs):
         if "# English report" in markdown:
@@ -85,7 +85,7 @@ def test_pdf_failure_in_one_language_preserves_other_report_and_retry_is_local(s
         destination.write_bytes(b"%PDF-1.4\nChinese")
         return {}
 
-    monkeypatch.setattr("mathlottery.report_pdf.render_pdf", render)
+    monkeypatch.setattr("mathlottery.organize.pdf.render_pdf", render)
     monkeypatch.setattr(Orchestrator, "drive", lambda *args: pytest.fail("Local retry must not call a model"))
     before = {language: doc.markdown_sha256 for language, doc in organization.report_documents(bilingual).items()}
     run = Orchestrator(store).export_organized(bilingual.id)

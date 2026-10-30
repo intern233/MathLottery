@@ -8,7 +8,7 @@ from mathlottery.models import Model
 
 
 class ChatConfig(Model):
-    api_key_env: str = "OPENAI_API_KEY"
+    api_key_env: str = Field(default="OPENAI_API_KEY", pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
     base_url: str = "https://api.openai.com/v1"
     reasoning_mode: Literal["standard", "pro"] | None = None
     poll_interval_seconds: float = Field(default=1, gt=0, le=30)
@@ -47,6 +47,10 @@ class BackendConfig(Model):
     model: str | None = None
     reasoning_effort: str | None = None
     codex_profile: str | None = None
+    # A workspace-local credential namespace, never a caller-provided filesystem path.
+    codex_identity: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
+    codex_auth: Literal["chatgpt", "api_key"] = "chatgpt"
+    codex_api_key_env: str = Field(default="OPENAI_API_KEY", pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
     native_turn_timeout_seconds: float | None = Field(default=None, gt=0)
     native_web_search: Literal["live", "cached", "disabled"] = "live"
     native_network_access: bool = True
@@ -56,6 +60,18 @@ class BackendConfig(Model):
     native_max_log_bytes: int = Field(default=100_000_000, ge=100000)
     timeout_seconds: int = Field(default=300, gt=0)
     max_retries: int = Field(default=2, ge=0, le=5)
+
+    @property
+    def uses_api_key(self) -> bool:
+        return self.mode == "chat" or (
+            self.mode in {"codex", "work"} and self.codex_auth == "api_key"
+        )
+
+    @property
+    def api_key_env_name(self) -> str | None:
+        if self.mode == "chat":
+            return self.chat.api_key_env
+        return self.codex_api_key_env if self.uses_api_key else None
 
 
 class BudgetConfig(Model):
@@ -75,6 +91,51 @@ class BudgetConfig(Model):
     max_output_tokens: int | None = Field(default=None, gt=0)
     # Legacy zero-cost restriction; null delegates API spending limits to the provider account.
     max_external_cost_usd: Literal[0] | None = None
+
+
+class AgentSlot(Model):
+    """A fixed Solve researcher route. Secrets are supplied by its transport at runtime."""
+
+    id: str = Field(pattern=r"^[a-z][a-z0-9_-]{0,63}$")
+    label: str | None = Field(default=None, min_length=1, max_length=100)
+    backend: BackendConfig
+
+    @model_validator(mode="after")
+    def isolated_native_route(self):
+        if self.backend.execution != "native" or self.backend.mode not in {"codex", "chat"}:
+            raise ValueError("Agent slots require native Codex or Responses API execution")
+        if self.backend.mode == "codex":
+            if self.backend.codex_identity not in {None, self.id}:
+                raise ValueError("A Codex slot must use its own named account identity")
+            self.backend.codex_identity = self.id
+        elif self.backend.codex_identity is not None:
+            raise ValueError("Responses API slots cannot select a Codex account identity")
+        return self
+
+
+class SolveConfig(Model):
+    # None preserves historical native delegation; an explicit number is enforced.
+    parallel_agents: int | None = Field(default=None, ge=1, le=32, strict=True)
+    # None adds no group limit beyond the total researcher cap.
+    max_groups: int | None = Field(default=None, ge=1, le=32, strict=True)
+    supervisor_timeout_seconds: float = Field(default=120, gt=0, le=600)
+    agent_slots: list[AgentSlot] = Field(default_factory=list, max_length=32)
+
+    @model_validator(mode="after")
+    def managed_groups(self):
+        if self.max_groups is not None and self.parallel_agents is None:
+            raise ValueError("Set solve.parallel_agents to enforce solve.max_groups")
+        if self.agent_slots:
+            if self.parallel_agents != len(self.agent_slots):
+                raise ValueError("solve.parallel_agents must match the number of configured agent slots")
+            if len({slot.id for slot in self.agent_slots}) != len(self.agent_slots):
+                raise ValueError("Solve agent slot IDs must be unique")
+        return self
+
+    @property
+    def group_limit(self) -> int:
+        # Each active group needs at least one researcher.
+        return min(self.max_groups or 32, self.parallel_agents or 1)
 
 
 class ToolConfig(Model):
@@ -185,6 +246,7 @@ class Config(Model):
     backend: BackendConfig = Field(default_factory=BackendConfig)
     model_providers: dict[str, ModelProvider] = Field(default_factory=dict, max_length=30)
     budget: BudgetConfig = Field(default_factory=BudgetConfig)
+    solve: SolveConfig = Field(default_factory=SolveConfig)
     tools: ToolConfig = Field(default_factory=ToolConfig)
     verification: VerificationConfig = Field(default_factory=VerificationConfig)
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
@@ -210,32 +272,50 @@ class Config(Model):
         if not isinstance(value, dict):
             return value
         data = dict(value)
-        backend = data.get("backend") or {}
-        backend = backend.model_dump(exclude_unset=True) if isinstance(backend, BackendConfig) else dict(backend)
-        provider = backend.get("provider")
-        if provider is None:
-            return value
         profiles = data.get("model_providers") or {}
-        if provider in {"codex", "chat"}:
-            mode = provider
-        elif provider in profiles:
-            mode = "chat"
-            profile = profiles[provider]
-            profile = profile if isinstance(profile, ModelProvider) else ModelProvider.model_validate(profile)
-            old_chat = backend.get("chat") or {}
-            old_chat = old_chat.model_dump() if isinstance(old_chat, ChatConfig) else old_chat
-            resolved_chat = profile.chat.model_dump()
-            if "reasoning_mode" in old_chat:
-                resolved_chat["reasoning_mode"] = old_chat["reasoning_mode"]
-            if resolved_chat["reasoning_mode"] and resolved_chat["reasoning_mode"] not in profile.reasoning_modes:
-                raise ValueError("Reasoning mode is not declared by the selected provider")
-            backend["chat"] = resolved_chat
-        else:
-            raise ValueError("Unknown model provider; configure it before selecting it")
-        if "mode" in backend and backend["mode"] != mode:
-            raise ValueError("Model provider and backend mode conflict")
-        backend["mode"] = mode
-        data["backend"] = backend
+
+        def resolve(raw):
+            was_model = isinstance(raw, BackendConfig)
+            backend = raw or {}
+            backend = backend.model_dump(exclude_unset=True) if isinstance(backend, BackendConfig) else dict(backend)
+            provider = backend.get("provider")
+            if provider is None:
+                return raw if was_model else backend
+            if provider in {"codex", "chat"}:
+                mode = provider
+            elif provider in profiles:
+                mode = "chat"
+                profile = profiles[provider]
+                profile = profile if isinstance(profile, ModelProvider) else ModelProvider.model_validate(profile)
+                old_chat = backend.get("chat") or {}
+                old_chat = old_chat.model_dump() if isinstance(old_chat, ChatConfig) else old_chat
+                resolved_chat = profile.chat.model_dump()
+                if "reasoning_mode" in old_chat:
+                    resolved_chat["reasoning_mode"] = old_chat["reasoning_mode"]
+                if resolved_chat["reasoning_mode"] and resolved_chat["reasoning_mode"] not in profile.reasoning_modes:
+                    raise ValueError("Reasoning mode is not declared by the selected provider")
+                backend["chat"] = resolved_chat
+            else:
+                raise ValueError("Unknown model provider; configure it before selecting it")
+            if "mode" in backend and backend["mode"] != mode:
+                raise ValueError("Model provider and backend mode conflict")
+            backend["mode"] = mode
+            return BackendConfig.model_validate(backend) if was_model else backend
+
+        if "backend" in data:
+            data["backend"] = resolve(data["backend"])
+        solve = data.get("solve")
+        was_solve_model = isinstance(solve, SolveConfig)
+        if was_solve_model:
+            solve = solve.model_dump(mode="json")
+        if isinstance(solve, dict) and solve.get("agent_slots"):
+            solve = dict(solve)
+            slots = []
+            for slot in solve["agent_slots"]:
+                slot = slot.model_dump(exclude_unset=True) if isinstance(slot, AgentSlot) else dict(slot)
+                slots.append({**slot, "backend": resolve(slot.get("backend"))})
+            solve["agent_slots"] = slots
+            data["solve"] = SolveConfig.model_validate(solve) if was_solve_model else solve
         return data
 
 

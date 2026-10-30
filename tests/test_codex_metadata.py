@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from mathlottery.codex_metadata import clean_usage, session_path, session_runtime, turn_usage
+from mathlottery.providers.metadata import clean_usage, session_path, session_runtime, turn_usage
 
 BEFORE = {"input_tokens": 1000, "output_tokens": 100, "cached_input_tokens": 800}
 AFTER = {"input_tokens": 1500, "output_tokens": 130, "cached_input_tokens": 1200}

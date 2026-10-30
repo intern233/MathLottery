@@ -6,7 +6,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 import pytest
 
 from mathlottery.config import Config
-from mathlottery.model_catalog import ModelCatalog
+from mathlottery.providers.catalog import ModelCatalog
 
 
 def configuration(*, active_custom=False):
@@ -44,7 +44,7 @@ def track_follower(monkeypatch):
             waiting.set()
             return super().result(timeout)
 
-    monkeypatch.setattr("mathlottery.model_catalog.Future", ObservedFuture)
+    monkeypatch.setattr("mathlottery.providers.catalog.Future", ObservedFuture)
     return waiting
 
 

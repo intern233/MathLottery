@@ -3,9 +3,6 @@
 import pytest
 from pydantic import ValidationError
 
-from mathlottery.auditor import audit
-from mathlottery.evidence_policy import assess_novelty, assess_sources, normalized
-from mathlottery.literature_obstacles import carry_literature
 from mathlottery.models import (
     Candidate,
     Citation,
@@ -17,6 +14,9 @@ from mathlottery.models import (
     digest,
     now,
 )
+from mathlottery.verify.auditor import audit
+from mathlottery.verify.obstacles import carry_literature
+from mathlottery.verify.policy import assess_novelty, assess_sources, normalized
 
 URL = "https://example.org/paper"
 GAP = "Theorem 2 may already cover the odd case; full text was unavailable."

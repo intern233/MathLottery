@@ -8,11 +8,11 @@ import threading
 from pathlib import Path
 
 from mathlottery.config import Config
-from mathlottery.demo import DemoBackend
-from mathlottery.local_network import apply_network_environment
 from mathlottery.models import now
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import Store, atomic_write, json_text
+from mathlottery.providers.demo import DemoBackend
+from mathlottery.providers.network import apply_network_environment
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import Store, atomic_write, json_text
 from mathlottery.web.jobs import Jobs
 
 

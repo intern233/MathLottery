@@ -1,6 +1,6 @@
 from mathlottery.config import Config
-from mathlottery.metrics import run_metrics
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.telemetry.metrics import run_metrics
 
 
 def test_measurements_distinguish_missing_handoffs_and_unknown_history(store):

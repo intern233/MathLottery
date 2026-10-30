@@ -11,7 +11,7 @@ MathLottery has two entry points. Both use the same workspace, configuration, ac
 | **Browser: `mathlottery serve`** | Find problems, choose one to solve, review candidates, and organize reports. Start here. |
 | **Terminal: `find`, `solve`, `verify`, `organize`, `run`** | Run individual stages or automate the research pipeline. |
 
-The entry point is separate from the model connection: **Codex** uses the official CLI and a dedicated MathLottery login; **Chat** uses an API key and the Responses API. [Compatible providers](configuration.md#providers) are also configurable.
+The entry point is separate from the agent engine: **Codex agent** uses the official CLI with either a dedicated ChatGPT login or an OpenAI API key; **API agent (Responses)** keeps an independent API harness (configuration name `chat`). [Compatible providers](configuration.md#providers) are also configurable.
 
 ## Local browser workspace
 
@@ -60,6 +60,8 @@ Open the **address printed in the terminal**. The preferred port is `8765`; the 
 In the **MathLottery account** panel, choose **Sign in with ChatGPT** and complete authorization on the official page. Your ordinary Codex CLI / IDE login stays separate. The same account can be used, but its quota is shared. Device-code login may need enabling in ChatGPT security settings. [Authentication guidance](https://learn.chatgpt.com/docs/auth)
 
 Select the provider, model and reasoning effort in **Model for this task**. For example, `gpt-6-astra` is a model ID and `max` is a separate effort setting, when supported by your account. Starting a task uses the selected backend's quota or API billing. For a first test, reduce the time budget under **Budget & agent settings**.
+
+For parallel Solve with different accounts or APIs, open **Agent configuration** (`/agents`). Configure each slot, save, then select **Use configured agent slots** in Solve. Each Codex slot can use ChatGPT login or an API key; independent Responses slots remain available. API keys come from server-side environment variables. [Step-by-step agent setup](agents.md)
 
 ### 4. Run a workflow
 
@@ -129,6 +131,11 @@ mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
 
 That last command reviews the supplied example proof. Use `verify --from-run <solve-run-id>` to review your solver's candidate instead. A supplied problem is not automatically classified as open or new.
 
+For parallel Solve research, set **Solve parallelism** and **Maximum research groups** in the browser,
+`solve.parallel_agents` and `solve.max_groups` in configuration, or `--parallel-agents 6 --max-groups 2`
+on `solve`. The group cap is optional; all groups share the researcher cap. See [Solve teams](solve-teams.md)
+for cross-group messages, supervision, budget accounting and recovery.
+
 <a id="organize"></a>
 
 ### After Verify: organize an expert reading report
@@ -187,7 +194,8 @@ Both entry points read the workspace's **`config.yaml` for new tasks**. Edit the
 | Connection | What you need | Where to configure it |
 | --- | --- | --- |
 | **Codex** (default) | Official CLI and a MathLottery ChatGPT login | `backend.mode: codex`; sign in once through MathLottery |
-| **Chat / OpenAI API** | API key and a supported model | `backend.mode: chat`; key in an environment variable |
+| **Codex with API Key** | Official CLI, OpenAI API key and API model access | `backend.mode: codex`; `backend.codex_auth: api_key` |
+| **API agent (Responses)** | API key and a supported model | `backend.mode: chat`; key in an environment variable |
 | **Other Responses provider** | Compatible API endpoint, key and model | Named `model_providers` profile and `backend.provider` |
 
 ### Codex: use the same login for browser and terminal
@@ -206,9 +214,24 @@ backend:
 
 Sign in through `mathlottery serve` once, then use the terminal commands with the same workspace. For login without the MathLottery page, use the [isolated terminal login instructions](configuration.md#account). Plain `codex login` signs into your ordinary Codex, not MathLottery.
 
+### Codex: keep native tools with API billing
+
+Choose **Codex agent → API Key** on the Agents page, or configure:
+
+```yaml
+backend:
+  mode: codex
+  execution: native
+  codex_auth: api_key
+  codex_api_key_env: OPENAI_API_KEY
+  model: your-api-model-id
+```
+
+Set `OPENAI_API_KEY` using the secure input command below, then start the server or a terminal workflow. This keeps Codex's native tools and session handling. It uses OpenAI API billing, requires no device login, and leaves the subscription login untouched. [Authentication and isolation details](configuration.md#providers).
+
 <a id="chat-api"></a>
 
-### Chat: use an API key
+### Independent API agent: Responses
 
 Replace the backend section below with your chosen model ID. `your-model-id` is a placeholder. The default hosted tools are web search and Code Interpreter; the model and account must support them.
 

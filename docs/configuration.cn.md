@@ -20,11 +20,13 @@ backend:
   reasoning_effort: max
 ```
 
-请使用账号实际支持的模型和强度；上面是配置示例，不保证模型权限。浏览器的「本次任务的模型」读取所选提供方的目录，也允许手填未列出的模型。Codex 目录提供声明支持的思考档位；Responses 目录可能只有模型 ID，缺失的能力信息仍记为未知。点击「刷新模型列表」更新目录；列出模型不等于已测试推理、额度或工具可用性。
+请使用账号实际支持的模型和强度；上面是配置示例，不保证模型权限。浏览器的「本次任务的模型」读取所选提供方的目录，也允许手填未列出的模型。Codex 订阅目录提供声明支持的思考档位；Responses 目录可能只有模型 ID。Codex API 鉴权使用配置或手填的模型 ID，不查询订阅目录。缺失的能力信息仍记为未知。点击「刷新模型列表」更新目录；列出模型不等于已测试推理、额度或工具可用性。
 
 | 字段 | 含义与未设置时的行为 |
 | --- | --- |
 | `backend.mode` | `codex` 使用官方 Codex 会话；`chat` 调用 Responses。 |
+| `backend.codex_auth` | Codex 的鉴权：`chatgpt`（默认，订阅登录）或 `api_key`（OpenAI API 计费），都使用原生 Codex agent。 |
+| `backend.codex_api_key_env` | Codex API 使用的环境变量**名称**，默认 `OPENAI_API_KEY`；不要填写密钥本身。 |
 | `backend.provider` | 可选配置 ID：`codex`、`chat` 或自定义名称，如 `research-api`。省略或设为 `null` 时使用该 mode 的内置接入。 |
 | `backend.model` | 准确的模型 ID，不附加 ` max` 等强度。`null` 时 Codex 使用独立目录的默认值；内置 Chat 可读取 `OPENAI_MODEL`。自定义 API 配置必须明确指定模型。 |
 | `backend.reasoning_effort` | 提供方支持的可选值，如 `max`；`null` 交给后端默认处理。 |
@@ -38,6 +40,28 @@ backend:
 
 <a id="providers"></a>
 ## API 凭据与其他提供方
+
+执行方式与鉴权分别选择。**Codex agent** 可以使用 ChatGPT 订阅登录或 OpenAI API Key；**API agent** 保留独立的 Responses harness，供兼容提供方及未来的协议适配使用，配置中的历史名称仍是 `chat`。使用 API Key 不代表一定走独立 API harness。
+
+### Codex agent 使用 OpenAI API Key
+
+保留 `mode: codex`，即可继续使用 Codex 的原生终端、文件、工具与会话续接：
+
+```yaml
+backend:
+  mode: codex
+  execution: native
+  codex_auth: api_key
+  codex_api_key_env: OPENAI_API_KEY
+  model: your-api-model-id
+  reasoning_effort: null
+```
+
+在启动服务或 CLI 的终端设置对应环境变量，输入方法见下方。Agent 配置页选择 **Codex agent → API Key**。此模式走 OpenAI 官方 API 计费，不消耗 ChatGPT 订阅额度；不需要设备码登录，也不通过 `codex login` 保存密钥。MathLottery 只向 Codex 执行进程传入所选密钥，并清除其 shell 工具环境中的已知凭据值。部分依赖 ChatGPT 工作区的集成仍可能要求订阅登录，但原生终端与文件工具保留。见[官方认证说明](https://learn.chatgpt.com/docs/auth)。
+
+API 模式的 Codex 状态保存在 `.mathlottery/codex-api-home`，各槽位使用 `.mathlottery/codex-api-accounts/<slot-id>`，与订阅登录及会话分开。续跑使用原任务的鉴权选择和环境变量名；需要更换接入时新建任务。检测到环境变量仅表示本地已配置，不代表账号权限或模型可用性已经验证。API 模型 ID 请手动填写，不复用订阅账号的模型目录。
+
+### 独立 API agent（Responses）
 
 内置 `chat` 接入使用 OpenAI Responses API，需要单独的 API Key 和 API 计费；MathLottery 的 Codex 登录不会提供这份凭据。
 
@@ -104,6 +128,8 @@ model_providers:
 <a id="account"></a>
 ## Codex 账号隔离与原生工具
 
+并行 Solve 可以为每个研究者指定不同接入。[Agent 配置页](agents.cn.md)管理 Codex 鉴权与独立 API 设置。订阅槽位登录位于 `.mathlottery/codex-accounts/<slot-id>`，与下文所述的默认账号分开。本节登录步骤适用于 `codex_auth: chatgpt`。
+
 请把官方 Codex CLI 安装在运行 MathLottery 的同一个 Linux/WSL 环境，并确认该环境中 `codex --version` 可用。安装方式见[官方 CLI 文档](https://learn.chatgpt.com/docs/cli)和 [Codex 仓库](https://github.com/openai/codex)。WSL 的 `PATH` 若继承了 Windows 启动器，可能选错程序；无法启动时检查 `command -v node`、`command -v npm`、`command -v codex`。
 
 即使普通 Codex 已登录，也需要在浏览器「MathLottery 账号」面板登录一次。设备码授权可能需要先在 ChatGPT 安全设置中启用，或由管理员开启。授权在官方页面完成，不在 MathLottery 中输入密码。[官方认证说明](https://learn.chatgpt.com/docs/auth)
@@ -114,7 +140,7 @@ model_providers:
 python - <<'PY'
 from pathlib import Path
 import subprocess
-from mathlottery.codex_identity import CodexIdentity
+from mathlottery.providers.identity import CodexIdentity
 
 identity = CodexIdentity(Path.cwd())
 subprocess.run(
@@ -201,7 +227,7 @@ backend:
 | 输入/输出 token 上限 | 依据后端真实返回，在调用之间检查。一次调用可能超过阈值，未报告用量保持未知。 |
 | `native_turn_timeout_seconds: null` | 一次原生调用可以使用剩余总时间预算。 |
 | `chat.request_timeout_seconds` | 单次 HTTP 请求超时，不是远端模型的总思考时限。 |
-| `max_external_cost_usd` | 只接受 `null` 或旧版 `0`；`0` 阻止 Chat API 调用，`null` 交给服务商账号控制支出，不代表免费。 |
+| `max_external_cost_usd` | 只接受 `null` 或旧版 `0`；`0` 阻止 API 计费调用，包括 Codex API 和付费 Solve 槽位；`null` 交给服务商账号控制支出，不代表免费。 |
 
 原生 Solve 收到 `PARTIAL`、`UNKNOWN`，或仍有数学义务未完成的候选时，会保存检查点，在剩余预算内续接同一研究会话。默认只有候选同时声明 `conclude: true`、范围为 `COMPLETE` 或 `COUNTEREXAMPLE`，且 `remaining_obligations` 为空，才可提前结束独立 Solve。这只记录求解者的声称；正确性、原题覆盖和新颖性仍由 Verify 审查。`run` 可以独立审查部分候选，但即使审查通过，也不会把部分结果当作完整解答而结束研究。
 

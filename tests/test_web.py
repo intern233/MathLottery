@@ -16,7 +16,7 @@ from typer.testing import CliRunner
 from mathlottery.cli import app
 from mathlottery.config import Config
 from mathlottery.models import CandidateInput, FormalCheckRequest, Problem, Review, Workflow
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.runtime.orchestrator import Orchestrator
 from mathlottery.web.jobs import BusyError
 from mathlottery.web.server import LocalServer
 from mathlottery.web.service import ResumeRequest, StartRequest, WebService
@@ -29,7 +29,7 @@ SIGNED_IN = {
 
 
 def test_activity_download_keeps_all_attempts_beyond_polling_window(web):
-    from mathlottery.activity import ActivityReporter
+    from mathlottery.telemetry.activity import ActivityReporter
 
     run = Orchestrator(web.store).create(web.config(), workflow=Workflow.FIND)
     directory = web.store.run_dir(run.id)

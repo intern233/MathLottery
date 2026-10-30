@@ -6,12 +6,12 @@ import pytest
 from test_native import native_config as native_config
 from test_web import serving
 
-from mathlottery.backends import BackendResult, BackendStatus
 from mathlottery.config import Config
-from mathlottery.evidence_policy import assess_sources
 from mathlottery.models import LiteratureSearch, State, Workflow
-from mathlottery.native_backend import NativeWorkBackend
-from mathlottery.orchestrator import Orchestrator
+from mathlottery.providers.base import BackendResult, BackendStatus
+from mathlottery.providers.codex import NativeWorkBackend
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.verify.policy import assess_sources
 from mathlottery.web.service import WebService
 
 

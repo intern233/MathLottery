@@ -4,10 +4,7 @@ import json
 
 import pytest
 
-from mathlottery.auditor import audit
 from mathlottery.config import Config
-from mathlottery.evidence_policy import assess_problem, normalized
-from mathlottery.literature import collect_sources, snapshot
 from mathlottery.models import (
     Candidate,
     CandidateInput,
@@ -20,8 +17,11 @@ from mathlottery.models import (
     digest,
     now,
 )
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.sources import WebTools
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.tooling.sources import WebTools
+from mathlottery.verify.auditor import audit
+from mathlottery.verify.literature import collect_sources, snapshot
+from mathlottery.verify.policy import assess_problem, normalized
 
 
 def citations():
@@ -89,7 +89,7 @@ def test_one_checked_primary_source_can_support_a_limited_open_assessment():
 
 
 def test_general_search_limits_remain_visible_without_claiming_exhaustiveness():
-    from mathlottery.reporting import source_assessment
+    from mathlottery.telemetry.reporting import source_assessment
 
     p = problem()
     p.literature_search.limitations = ["English-language indexed sources checked; unindexed work may exist."]
@@ -393,7 +393,7 @@ def test_failed_refetch_does_not_leave_a_tampered_snapshot_accepted(store, monke
 def test_pdf_extraction_failure_keeps_the_source_hash_and_diagnostic_path(tmp_path, monkeypatch):
     web = WebTools(tmp_path, Config().tools)
     monkeypatch.setattr(web, "download", lambda *a, **kw: (b"%PDF-fixture", "https://example.org/p.pdf", "application/pdf"))
-    monkeypatch.setattr("mathlottery.literature.python_exec", lambda *a: {"status": "TIMEOUT", "stdout": ""})
+    monkeypatch.setattr("mathlottery.verify.literature.python_exec", lambda *a: {"status": "TIMEOUT", "stdout": ""})
     result = snapshot(web, "https://example.org/p.pdf", ["Theorem"], tmp_path)
     assert result["status"] == "UNAVAILABLE"
     assert result["sha256"] == digest("%PDF-fixture")

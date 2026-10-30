@@ -8,9 +8,9 @@ from test_web import SIGNED_IN, serving
 
 from mathlottery.config import Config
 from mathlottery.models import CandidateInput, Level, Problem, Run, State, Workflow
-from mathlottery.native_workspace import NativeWorkspace
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.review_evidence import project
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.runtime.workspace import NativeWorkspace
+from mathlottery.verify.evidence import project
 from mathlottery.web.jobs import BusyError
 from mathlottery.web.service import StartRequest, WebService
 

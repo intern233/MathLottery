@@ -13,10 +13,12 @@ from urllib.parse import parse_qs, quote, urlsplit
 
 from pydantic import ValidationError
 
-from mathlottery.model_catalog import ModelCatalog
 from mathlottery.models import Model
+from mathlottery.providers.agent_roster import AgentRoster
+from mathlottery.providers.catalog import ModelCatalog
+from mathlottery.verify.artifacts import read_formal_artifact
 from mathlottery.web.account import AccountChangeRequest, CodexAccount
-from mathlottery.web.artifacts import read_formal_artifact
+from mathlottery.web.agent_roster import AgentConnections
 from mathlottery.web.jobs import BusyError
 from mathlottery.web.model_directory import codex_models
 from mathlottery.web.network import LocalAccess
@@ -24,14 +26,24 @@ from mathlottery.web.service import ResumeRequest, StartRequest, workspace_key
 
 ASSETS = {
     "/": ("index.html", "text/html; charset=utf-8"),
+    "/agents": ("agents.html", "text/html; charset=utf-8"),
+    "/agents.js": ("agents.js", "text/javascript; charset=utf-8"),
+    "/agents.css": ("agents.css", "text/css; charset=utf-8"),
+    "/agent-slots.js": ("agent-slots.js", "text/javascript; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/dom.js": ("dom.js", "text/javascript; charset=utf-8"),
+    "/i18n.js": ("i18n.js", "text/javascript; charset=utf-8"),
+    "/model-selector.js": ("model-selector.js", "text/javascript; charset=utf-8"),
+    "/account-panel.js": ("account-panel.js", "text/javascript; charset=utf-8"),
+    "/solve-teams.js": ("solve-teams.js", "text/javascript; charset=utf-8"),
     "/research-details.js": ("research-details.js", "text/javascript; charset=utf-8"),
     "/history.js": ("history.js", "text/javascript; charset=utf-8"),
     "/outcomes.js": ("outcomes.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/mark.svg": ("mark.svg", "image/svg+xml"),
 }
-RUN_ROUTE = re.compile(r"/api/runs/(run-[a-f0-9]{12})(?:/(resume|stop|report|artifact|organized|activity))?")
+RUN_ROUTE = re.compile(r"/api/runs/(run-[a-f0-9]{12})(?:/(resume|stop|report|artifact|organized|activity|solve-material))?")
+AGENT_ROUTE = re.compile(r"/api/agents/([a-z][a-z0-9_-]{0,63})/account(?:/(login|switch|logout|cancel))?")
 
 
 class LocalServer(ThreadingHTTPServer):
@@ -45,10 +57,15 @@ class LocalServer(ThreadingHTTPServer):
         self.account = CodexAccount(
             lambda: self.service.config().backend.codex_command,
             root=lambda: self.service.store.root,
+            excluded_env=lambda: self.agents.excluded_env(),
         )
+        self.agents = AgentConnections(lambda: self.service)
         self.catalog = ModelCatalog(
             lambda: self.service.config(),
-            lambda: codex_models(self.service.config().backend.codex_command, self.service.store.root),
+            lambda: codex_models(
+                self.service.config().backend.codex_command, self.service.store.root,
+                self.agents.excluded_env(),
+            ),
         )
         self.mutation_lock = threading.RLock()
         super().__init__((self.access.bind, port), Handler)
@@ -61,10 +78,21 @@ class LocalServer(ThreadingHTTPServer):
         try:
             self.account.close()
         finally:
-            super().server_close()
+            try:
+                self.agents.close()
+            finally:
+                super().server_close()
 
 
 class Handler(BaseHTTPRequestHandler):
+    def ensure_config_ready(self, config):
+        if config.backend.mode in {"codex", "work"} and config.backend.codex_auth == "api_key":
+            if config.budget.max_external_cost_usd == 0:
+                raise ValueError("Codex API-key research is blocked by max_external_cost_usd: 0")
+            self.server.agents.ensure_codex_api(config.backend, config)
+            return
+        self.ensure_backend_ready(config.backend.mode, config.backend.execution)
+
     def ensure_backend_ready(self, mode, execution):
         """Reject unready browser tasks before persisting inputs or launching workers."""
         if mode not in {"codex", "work"} or execution != "native":
@@ -174,9 +202,19 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(200, {**self.server.service.bootstrap(), "csrf_token": self.server.csrf_token})
         elif path == "/api/account":
             self.respond(200, self.server.account.status())
+        elif path == "/api/agents":
+            self.respond(200, {
+                **self.server.agents.store.public(), "csrf_token": self.server.csrf_token,
+            })
+        elif match := AGENT_ROUTE.fullmatch(path):
+            identifier, action = match.groups()
+            if action:
+                self.respond(405, {"error": "Use POST for agent account actions"})
+            else:
+                self.respond(200, self.server.agents.operate(self.server.agents.slot(identifier)))
         elif path == "/api/models":
             query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
-            if set(query) - {"provider", "refresh"} or any(len(v) != 1 for v in query.values()):
+            if set(query) - {"provider", "refresh", "codex_auth", "codex_api_key_env"} or any(len(v) != 1 for v in query.values()):
                 raise ValueError("Supply one provider and optional refresh=1")
             provider = query.get("provider", [None])[0]
             if provider is not None and (not provider or len(provider) > 100):
@@ -184,7 +222,11 @@ class Handler(BaseHTTPRequestHandler):
             refresh = query.get("refresh", ["0"])[0]
             if refresh not in {"0", "1"}:
                 raise ValueError("Use refresh=0 or refresh=1")
-            self.respond(200, self.server.catalog.get(provider, refresh=refresh == "1"))
+            self.respond(200, self.server.catalog.get(
+                provider, refresh=refresh == "1",
+                codex_auth=query.get("codex_auth", [None])[0],
+                codex_api_key_env=query.get("codex_api_key_env", [None])[0],
+            ))
         elif match := RUN_ROUTE.fullmatch(path):
             run_id, action = match.groups()
             if action is None:
@@ -204,7 +246,7 @@ class Handler(BaseHTTPRequestHandler):
                     Content_Disposition=f'attachment; filename="{run_id}.md"',
                 )
             elif action == "organized":
-                from mathlottery.organized_reports import read_report
+                from mathlottery.organize.downloads import read_report
 
                 query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
                 if ("format" not in query or set(query) - {"format", "language"}
@@ -224,6 +266,17 @@ class Handler(BaseHTTPRequestHandler):
                     suffix = "-public-text"
                 self.respond(200, data, content_type,
                              Content_Disposition=f'attachment; filename="{run_id}-expert-report{suffix}.{extension}"')
+            elif action == "solve-material":
+                from mathlottery.solve.board import SolveBoard
+
+                service = self.server.service
+                service.store.load(run_id)
+                query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+                if set(query) != {"sha256"} or len(query["sha256"]) != 1:
+                    raise ValueError("Supply one published Solve material hash")
+                self.respond(200, SolveBoard(service.store, run_id).material(query["sha256"][0]),
+                             "text/plain; charset=utf-8",
+                             Content_Disposition='attachment; filename="solve-material.txt"')
             elif action == "artifact":
                 service = self.server.service
                 service.store.load(run_id)
@@ -264,7 +317,28 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(202, self.server.service.start(
                     StartRequest.model_validate(data), ensure_backend=self.ensure_backend_ready,
                     validate_model=self.server.catalog.validate_selection,
+                    ensure_agent_slots=self.server.agents.ensure_ready,
+                    ensure_config=self.ensure_config_ready,
                 ))
+        elif path == "/api/agents":
+            roster = AgentRoster.model_validate(data)
+            with self.server.mutation_lock:
+                self.respond(200, {
+                    **self.server.agents.save(roster), "csrf_token": self.server.csrf_token,
+                })
+        elif match := AGENT_ROUTE.fullmatch(path):
+            identifier, action = match.groups()
+            if not action:
+                self.respond(405, {"error": "Specify an agent account action"})
+                return
+            if action in {"switch", "logout"}:
+                AccountChangeRequest.model_validate(data)
+            else:
+                Model.model_validate(data)
+            with self.server.mutation_lock:
+                slot = self.server.agents.slot(identifier)
+                self.server.service.ensure_account_change_allowed(slot.id)
+                self.respond(200, self.server.agents.operate(slot, action))
         elif path in {"/api/account/login", "/api/account/cancel"}:
             Model.model_validate(data)
             operation = self.server.account.start if path.endswith("/login") else self.server.account.cancel
@@ -286,6 +360,8 @@ class Handler(BaseHTTPRequestHandler):
                     self.respond(202, self.server.service.resume(
                         run_id, ResumeRequest.model_validate(data),
                         ensure_backend=self.ensure_backend_ready,
+                        ensure_agent_slots=self.server.agents.ensure_ready,
+                        ensure_config=self.ensure_config_ready,
                     ))
             elif action == "stop":
                 Model.model_validate(data)

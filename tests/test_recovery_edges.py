@@ -2,10 +2,10 @@ import json
 
 from conftest import response
 
-from mathlottery.demo import DemoBackend, demo_problem
 from mathlottery.models import Phase, State
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.sources import WebTools
+from mathlottery.providers.demo import DemoBackend, demo_problem
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.tooling.sources import WebTools
 
 
 def test_crash_during_report_generation_resumes_without_model_call(store, config, monkeypatch):

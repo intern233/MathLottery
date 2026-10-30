@@ -20,39 +20,77 @@ The CLI commands find, solve, verify and organize set an explicit Workflow on th
 
 Standalone Find stops at its shortlist so the user can choose a problem. The CLI's `run` command opts into automatic research-stage transitions and does not add this selection pause. The browser exposes Find, Solve, Verify and optional Organize as separate operations.
 
-Find records the original wording, the target's scope relative to that wording, known partial results and explicit statement risks. `statement_risks.py` projects missing evidence and ambiguities onto both shortlist cards and the Solve selection preview. These are selection disclosures, not semantic certification. Nonempty disclosures are bound into the frozen Find dossier; legacy records remain explicitly unassessed.
+Find records the original wording, the target's scope relative to that wording, known partial results and explicit statement risks. `find/risks.py` projects missing evidence and ambiguities onto both shortlist cards and the Solve selection preview. These are selection disclosures, not semantic certification. Nonempty disclosures are bound into the frozen Find dossier; legacy records remain explicitly unassessed.
+
+## Source layout and boundaries
+
+The top level contains package entry points, configuration and the public model exports. Implementations live in packages grouped by responsibility. Add behavior in the package that owns it, then connect it through the existing entry point.
+
+```text
+src/mathlottery/
+├── __init__.py           # Package identity and version
+├── __main__.py           # python -m mathlottery entry point
+├── config.py             # Shared configuration contracts and loading
+├── models.py             # Public exports of domain types
+├── cli/                  # Command registration, workspace, research, tasks and exports
+├── domain/               # Problems, literature, proofs, protocols, sessions and runs
+├── find/                 # User selection, frozen discovery context and statement risks
+├── solve/                # Group allocation, round coordination, attempts, prompts and board
+├── verify/               # Candidate integrity, proof/source assessments and formal checks
+├── organize/             # Frozen dossiers, expert handoff, downloads and PDF/assets
+├── runtime/              # Workflow lifecycle, native/structured loops, budgets and resources
+├── providers/            # Agent transports, isolated identity, metadata, network and catalog
+├── storage/              # SQLite checkpoints and confined artifact I/O
+├── tooling/              # Source adapters, tool registry and isolated Python worker
+├── telemetry/            # Activity, usage metrics, search traces and research reports
+└── web/                  # Local HTTP, service operations/queries, workers and static UI
+```
+
+`domain/` depends only on Python/Pydantic and other domain modules. CLI and HTTP code call the shared orchestrator; neither implements a second research loop. `WebService` composes query and operation objects: operations return saved runs, and queries format them for display. The Solve coordinator composes allocation, attempt, prompt and board components; transport threads return receipts while the coordinator owns checkpoint mutations.
+
+Proof-file access lives in `verify/artifacts.py`, shared by core review and the browser; verification does not import the Web layer. Package initializers remain lightweight so importing a utility does not initialize the research loop. Resources stay with their consumers: the trusted Lean inspector is in `verify/lean_inspector.lean`, KaTeX assets are in `organize/assets/`, and the isolated Python worker is beside its launcher in `tooling/`.
+
+The browser loads explicitly allowlisted scripts without a build step. `app.js` connects workflow forms and history to the API; `i18n.js` owns translations, `dom.js` owns safe DOM helpers, and account/model controllers keep their own state behind small callback interfaces. `solve-teams.js` renders a supplied run without owning task execution.
+
+The separate `/agents` page edits local connection profiles through `web/agent_roster.py` and `providers/agent_roster.py`. Selecting the roster for Solve copies it into the run configuration. `solve/routes.py` binds each researcher to that snapshot, independently of group allocation; per-attempt transport metadata controls session continuation, recovery and event-file selection. Account RPC and Codex research use the same named identity. Responses credentials are read from environment variables, never from the roster or browser.
+
+The CLI entry point remains `mathlottery.cli:app`; commands, configuration and saved JSON retain their contracts. `mathlottery.models` remains the public model export, and the `mathlottery.storage` package exports `Store` and its existing file helpers. Internal Python imports use the new implementation paths, such as `mathlottery.runtime.orchestrator` and `mathlottery.providers.identity`; integrations importing moved modules must update those paths. Solve exports are available from `mathlottery.solve` and `mathlottery.solve.board`, without extra top-level forwarding files. New domain fields still require explicit checkpoint compatibility handling.
 
 ## Components
 
 | Module | Responsibility |
 | --- | --- |
+| cli/ | Command registration, shared options, workspace setup, workflow commands and exports |
 | web/server.py, web/static/ | Local HTTP boundary, packaged browser interface and polling |
-| web/service.py | Validated browser inputs and projections over shared research state |
+| web/service.py | Composes browser operations and queries behind the public service API |
+| web/requests.py, web/settings.py | Validated inputs, configuration overrides and browser-safe settings |
+| web/operations.py, web/queries.py | Workflow commands and read-only research-state projections |
 | web/jobs.py, web/worker.py | Detached execution, worker ownership locks and stop propagation |
 | web/startup.py, web/network.py | Workspace discovery, port reuse/fallback, Windows reservations and explicit WSL access policy |
 | web/account.py | Official Codex account RPC over private stdio, masked status, device-code sign-in and explicit account changes |
-| model_catalog.py, web/model_directory.py | Provider metadata, bounded model discovery, capability validation and isolated Codex model-list RPC |
-| codex_identity.py | Workspace-specific Codex home, child environment and file credential storage |
-| workflows.py | Function-specific instructions and ranked discovery results |
-| agent_backend.py | Common research transport interface and backend selection |
-| chat_backend.py | Automatic Responses API calls, hosted tools, context continuation, polling and cancellation |
-| native_backend.py | Official Codex CLI, exact session continuation, native tools and event logs |
-| codex_metadata.py | Whitelisted runtime metadata and reconciliation of cumulative token counters |
-| native.py | Native research loop and find/solve/review/organize transitions |
-| native_attempts.py | Invocation journal, durable receipts, session IDs, accounting and recovery |
-| native_workspace.py | Research/review/organization workspaces, prompt preparation and complete imported answers |
-| milestones.py | Transport-independent milestone parsing and validation |
-| candidates.py | Immutable candidate artifacts, integrity checks and separate review projections |
-| organization.py | Frozen source dossiers, editorial report acceptance and reproducible exports |
-| organized_reports.py, report_pdf.py | Safe report download projections and optional local PDF rendering |
-| native_prompts.py | Research objectives and milestone registration, without a per-action protocol |
-| orchestrator.py | Run lifecycle, execution dispatch, pause/resume and stop |
-| structured.py | Legacy JSON/tool loop, accepted-response replay and manual submissions |
-| metrics.py | Measured stage returns, handoff failures, timings and review outcomes |
-| storage.py, budget.py, reporting.py | Checkpoints, limits, per-workflow results and evidence |
-| models.py, auditor.py | Domain types, immutable candidates and conservative verification levels |
-| backends.py, prompts.py, tools.py | Legacy structured execution and manual handoff |
-| sources.py | Source adapters and evidence checks for open status |
+| providers/catalog.py, web/model_directory.py | Provider metadata, bounded model discovery, capability validation and isolated Codex model-list RPC |
+| providers/identity.py | Workspace-specific Codex home, child environment and file credential storage |
+| runtime/workflows.py | Function-specific instructions and ranked discovery results |
+| providers/registry.py | Common research transport interface and backend selection |
+| providers/chat.py | Automatic Responses API calls, hosted tools, context continuation, polling and cancellation |
+| providers/codex.py | Official Codex CLI, exact session continuation, native tools and event logs |
+| providers/metadata.py | Whitelisted runtime metadata and reconciliation of cumulative token counters |
+| runtime/native.py | Native research loop and find/solve/review/organize transitions |
+| solve/ | Optional bounded research groups, supervision, shared board and durable recovery |
+| runtime/attempts.py | Invocation journal, durable receipts, session IDs, accounting and recovery |
+| runtime/workspace.py | Research/review/organization workspaces, prompt preparation and complete imported answers |
+| runtime/milestones.py | Transport-independent milestone parsing and validation |
+| verify/candidates.py | Immutable candidate artifacts, integrity checks and separate review projections |
+| organize/workflow.py | Frozen source dossiers, editorial report acceptance and reproducible exports |
+| organize/downloads.py, organize/pdf.py | Safe report download projections and optional local PDF rendering |
+| runtime/prompts.py | Research objectives and milestone registration, without a per-action protocol |
+| runtime/orchestrator.py | Run lifecycle, execution dispatch, pause/resume and stop |
+| runtime/structured.py | Legacy JSON/tool loop, accepted-response replay and manual submissions |
+| telemetry/metrics.py | Measured stage returns, handoff failures, timings and review outcomes |
+| storage/core.py, runtime/budget.py, telemetry/reporting.py | Checkpoints, limits, per-workflow results and evidence |
+| domain/, models.py, verify/auditor.py | Domain contracts, compatibility exports and conservative verification levels |
+| providers/base.py, runtime/structured_prompts.py, tooling/registry.py | Legacy structured execution and manual handoff |
+| tooling/sources.py | Source adapters and evidence checks for open status |
 
 ## Code flow
 
@@ -88,6 +126,8 @@ flowchart TD
 
 `Store` is shared infrastructure; it does not decide research strategy. `CandidateStore` owns candidate integrity and review artifacts, while `NativeAttempts` owns transport recovery. Neither module selects mathematical methods for the researcher.
 
+When standalone native Solve explicitly enables multiple researchers, `NativeRunner` delegates rounds to `solve.SolveCoordinator`. A supervisor proposes bounded groups; researchers retain individual sessions and publish through the shared board. The coordinator persists and accounts for their receipts before returning milestones to the same native loop. The [Solve teams guide](solve-teams.md) explains concurrency, group limits and recovery.
+
 For automatic turns, a missing milestone is a recoverable handoff error: the next prompt requests registration of the saved result, rather than silently treating an unregistered answer as ordinary progress. Codex primarily submits a workspace JSON file; if it omits that file, one explicit fenced `mathlottery` block in the answer is also accepted. Both routes validate current task IDs and payloads. An invalid existing file is never bypassed by choosing an answer block. Manual answers may still omit milestones.
 
 ## Local browser execution
@@ -98,7 +138,7 @@ The browser uses JSON endpoints for task creation, stop, resume and status. The 
 
 `web/account.py` opens a bounded, private stdio RPC connection to official `codex app-server`. Separate account endpoints read status, start device-code authorization, cancel a pending login, switch accounts and sign out. Account operations never create a research thread or start a model turn. Status reads and ordinary sign-in reuse an authenticated MathLottery account without automatic switching. Explicit switch and sign-out requests require `confirm_account_change: true`, in addition to the usual browser write checks; the UI explains the change applies to the current MathLottery workspace.
 
-Every MathLottery Codex child process receives a dedicated `CODEX_HOME` at `<workspace>/.mathlottery/codex-home` and an explicit `cli_auth_credentials_store="file"` override. Account RPC, native research, structured compatibility calls, metadata reads and background workers use this same workspace identity. The home is Git-ignored and created with owner-only permissions on POSIX. The parent's environment is not mutated; personal Codex credentials, configuration and sessions are never copied or selected as a fallback. Ordinary Codex CLI / IDE clients and ChatGPT website sessions retain their own login state. See the official [environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables), [authentication](https://learn.chatgpt.com/docs/auth) and [app-server](https://learn.chatgpt.com/docs/app-server) documentation.
+Every MathLottery Codex child process receives a dedicated `CODEX_HOME` and an explicit `cli_auth_credentials_store="file"` override. Default subscription calls use `.mathlottery/codex-home`; named subscription slots use `.mathlottery/codex-accounts/<slot-id>`. API authentication has separate homes described under Agent transports. Research, metadata reads and recovery use the exact selected identity. Homes are Git-ignored and created with owner-only permissions on POSIX. The parent's environment is not mutated; personal Codex credentials, configuration and sessions are never copied or selected as a fallback. Ordinary Codex CLI / IDE clients and ChatGPT website sessions retain their own login state. See the official [environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables), [authentication](https://learn.chatgpt.com/docs/auth) and [app-server](https://learn.chatgpt.com/docs/app-server) documentation.
 
 Switching calls official `account/logout` before starting new device-code authorization. Cancelling or failing that authorization leaves the MathLottery home signed out. MathLottery neither backs up credentials nor silently restores the old account. Sign-out clears only this workspace's login without changing personal Codex storage or browser cookies. A user may sign in with the same ChatGPT account in multiple places; separate login storage does not create separate subscription quotas.
 
@@ -108,9 +148,9 @@ Official Codex owns credentials in the dedicated ignored home. Account responses
 
 `WebService` validates inputs with Pydantic, snapshots configuration through `Orchestrator.create`, and uses `CandidateStore.check` before importing a candidate for independent review. A `web.worker` process executes `drive` or `resume`; it does not add a second research loop. SQLite remains authoritative, and CLI runs are visible in the same UI.
 
-`review_evidence.py` captures explicitly selected proof sources while holding the idle source run's ownership lock: Lean files and supported small proof texts, certificates and scripts. The browser binds its request to the displayed candidate ID and SHA256. The new review checkpoint stores the bounded source contents, provenance and hashes separately from the immutable candidate; polling exposes only the manifest. Native Codex projects this evidence through directory descriptors without following symbolic links, and resumes restore the checkpointed bytes. Native Chat receives the same source contents inline under a smaller size limit. Neither attachment path includes solver history or prior verdicts. Attaching a file alone does not execute it or promote the proof level; see [attachment scope and independent Lean checks](evidence.md#independent-lean-receipts).
+`verify/evidence.py` captures explicitly selected proof sources while holding the idle source run's ownership lock: Lean files and supported small proof texts, certificates and scripts. The browser binds its request to the displayed candidate ID and SHA256. The new review checkpoint stores the bounded source contents, provenance and hashes separately from the immutable candidate; polling exposes only the manifest. Native Codex projects this evidence through directory descriptors without following symbolic links, and resumes restore the checkpointed bytes. Native Chat receives the same source contents inline under a smaller size limit. Neither attachment path includes solver history or prior verdicts. Attaching a file alone does not execute it or promote the proof level; see [attachment scope and independent Lean checks](evidence.md#independent-lean-receipts).
 
-The browser groups Solve/Verify/Organize attempts by problem and keeps Find shortlists separate. Search and task-status filters help navigate history; older attempts are expandable. A finished process is distinct from a correct proof: results expose proof checks, original-problem coverage and novelty separately. Polling preserves expanded sections and the current form choices.
+The browser groups Solve/Verify/Organize attempts by problem. A Find run joins the selected problem's history through its explicit discovery linkage; an unselected shortlist remains separate. When several problems share a Find run, history marks the shared source and global counts still count that run once. Search and task-status filters help navigate history; older attempts are expandable. A finished process is distinct from a correct proof: results expose the solver's claimed scope, proof checks, original-problem coverage and novelty separately. Polling preserves expanded sections and the current form choices.
 
 Each worker inherits an OS ownership lock held across startup and execution. It survives server restarts, rejects duplicate browser resumes, and also respects the core run lock used by the CLI. Stop markers are propagated during startup/resume so a queued resume cannot discard a browser stop request. Worker status and logs live in the ignored run directory. Closing the UI leaves workers running; explicit stop preserves the normal recovery path. A dead worker is never automatically relaunched.
 
@@ -118,13 +158,15 @@ Each worker inherits an OS ownership lock held across startup and execution. It 
 
 A provider profile is separate from the research workflow and transport. The built-in `codex` profile uses official Codex sessions; `chat` uses the existing Responses configuration. Optional `model_providers` profiles select the Responses transport with an explicit endpoint, API-key environment-variable name, tools and optional model-capability declarations. `backend.provider` records the chosen ID. Find, Solve, Verify and Organize use the same selection mechanism.
 
-`GET /api/models?provider=<id>` returns a public directory projection: provider labels and transport types, model IDs, descriptions and declared reasoning options. `refresh=1` bypasses the short-lived cache. Codex discovery calls official `model/list` through the workspace's isolated app-server; Responses discovery calls the selected endpoint's `/models`. Neither creates a research thread or an inference request. A custom profile with configured model entries uses that directory without remote discovery; unknown model IDs remain usable. Missing capability metadata stays unknown; it is not converted into an unsupported capability. The directory is not an account-entitlement, quota or tool-compatibility check.
+`GET /api/models?provider=<id>` returns a public directory projection: provider labels and transport types, model IDs, descriptions and declared reasoning options. `refresh=1` bypasses the short-lived cache. Codex subscription discovery calls official `model/list` through the workspace's isolated app-server; Codex API authentication uses configured/manual model IDs without a subscription lookup. Responses discovery calls the selected endpoint's `/models`. Neither creates a research thread or an inference request. A custom profile with configured model entries uses that directory without remote discovery; unknown model IDs remain usable. Missing capability metadata stays unknown; it is not converted into an unsupported capability. The directory is not an account-entitlement, quota or tool-compatibility check.
 
 The browser submits only the selected profile ID and task overrides. The server resolves the profile, validates declared capabilities and snapshots the effective settings in the new run before launching the existing worker. Endpoints and key-variable configuration are server-side; API-key values are read from the environment and never saved in task configuration. Browser continuation retains the saved settings, so a later profile edit cannot silently redirect an existing remote conversation. Selection does not mutate global configuration or any Codex login.
 
 Catalog adapters expose model information; research transports own calls, tools, continuity, cancellation and recovery. Adding a provider with the existing Responses contract only requires configuration. A different protocol requires an explicit transport adapter and directory adapter. A generic `/chat/completions` endpoint is not equivalent to the current Responses lifecycle, and native Anthropic/Gemini support is not implemented. Provider failures do not trigger an automatic change of model, effort, tools, authentication or billing.
 
 ## Agent transports
+
+`backend.codex_auth` selects `chatgpt` or `api_key` without changing the native Codex execution loop. API mode reads `codex_api_key_env`, validates it without disclosing its value, and injects `CODEX_API_KEY` only into execution, never CLI probes or device login. It pins the official OpenAI endpoint and clears known credential values from generated shell commands while preserving other shell policies. Its sessions use separate `.mathlottery/codex-api-home` / `.mathlottery/codex-api-accounts/<slot-id>` storage; subscription homes are preserved. Missing credentials never fall back to another authentication method. New configuration fields default to subscription auth, and route hashing preserves legacy snapshots that lacked those fields. Codex API model selection accepts manual IDs rather than borrowing a subscription account's model catalog.
 
 Codex starts with codex exec and continues the exact session using codex exec resume in the dedicated MathLottery home. It uses that home's model/tool defaults, with explicit authentication, sandbox and network settings, plus optional agent/memory overrides. The researcher controls methods and tool use. No per-action output schema or legacy tool registry is imposed on native research.
 
@@ -140,11 +182,11 @@ Manual handoff is an explicitly named compatibility backend. work aliases codex,
 
 A selection milestone contains the recommended Problem and an ordered shortlist. Each problem records its statement, source, status assessment, difficulty, verification feasibility and selection reason. Discovery saves the ranking and raw agent assessment in literature/selection.json and saves reusable problems in the local problem library.
 
-`literature.py` independently downloads cited passages with bounded retrieval and durable source receipts. `evidence_policy.py` matches excerpts, checks source roles, observed search queries and unresolved gaps; it does not use a domain-count heuristic. Unsupported assertions remain UNKNOWN with reasons; checked contradictory open/solution claims become DISPUTED. The raw proposal remains in the selection artifact. Even supported status is an agent assessment, not certification. See [evidence policy](evidence.md).
+`verify/literature.py` independently downloads cited passages with bounded retrieval and durable source receipts. `verify/policy.py` matches excerpts, checks source roles, observed search queries and unresolved gaps; it does not use a domain-count heuristic. Unsupported assertions remain UNKNOWN with reasons; checked contradictory open/solution claims become DISPUTED. The raw proposal remains in the selection artifact. Even supported status is an agent assessment, not certification. See [evidence policy](evidence.md).
 
 ## Review
 
-`proof_coverage.py` validates the declared dependency graph, named checks and original-statement alignment; `literature_obstacles.py` preserves specific questions across attempts and checks receipt-backed resolutions and theorem comparisons. `CandidateStore.review` supplies the exact original statement and inherited literature tasks. Fresh reviews receive these tasks without prior verdicts. Selection carries earlier literature barriers for matching registered problems, including a problem temporarily removed from a shortlist. These are structural/evidence checks, not semantic proof certification.
+`verify/coverage.py` validates the declared dependency graph, named checks and original-statement alignment; `verify/obstacles.py` preserves specific questions across attempts and checks receipt-backed resolutions and theorem comparisons. `CandidateStore.review` supplies the exact original statement and inherited literature tasks. Fresh reviews receive these tasks without prior verdicts. Selection carries earlier literature barriers for matching registered problems, including a problem temporarily removed from a shortlist. These are structural/evidence checks, not semantic proof certification.
 
 Every candidate gets a fresh reviewer context and a separate writable workspace. Only the problem, candidate content and references enter the initial review prompt; solver history and prior reviews are excluded. Codex reviewer memories are disabled. Instructions prohibit reading solver files, but workspace-write is not a complete read boundary.
 
@@ -152,15 +194,15 @@ Independent verify tasks end after any verdict, including INCONCLUSIVE. The pipe
 
 Candidates retain their claim, assumptions and references when imported for a new audit. The historical checksum still covers claim and proof; integrity checks additionally compare all immutable candidate fields against the authoritative checkpoint, including assumptions, references and identity. Both the review prompt and its `candidate.json` exclude prior verdicts and verification levels. Reviews are written separately, leaving the original candidate file unchanged. Model approval and finite experiments never become FORMALLY_VERIFIED or EXPERT_REVIEWED.
 
-Candidate scope and remaining obligations are immutable too. `auditor.py` gates positive verdicts on explicit proof checks and separates original-problem coverage from correctness and novelty. Both runners use the accepted verdict when choosing whether to return to solving. `native_formal.py` checks explicitly attached frozen sources in bubblewrap, with bounded compilation, submitted-module kernel replay and a trusted declaration/axiom inspector. It never runs submitted Lake hooks or substitutes a self-reported compiler result. Receipts bind source bytes to the candidate and original problem; they do not certify statement equivalence. Missing new fields in historical records default to unassessed, with no retroactive reclassification.
+Candidate scope and remaining obligations are immutable too. `verify/auditor.py` gates positive verdicts on explicit proof checks and separates original-problem coverage from correctness and novelty. Both runners use the accepted verdict when choosing whether to return to solving. `verify/native_formal.py` checks explicitly attached frozen sources in bubblewrap, with bounded compilation, submitted-module kernel replay and a trusted declaration/axiom inspector. It never runs submitted Lake hooks or substitutes a self-reported compiler result. Receipts bind source bytes to the candidate and original problem; they do not certify statement equivalence. Missing new fields in historical records default to unassessed, with no retroactive reclassification.
 
 ## Expert report organization
 
-`expert_brief.py` produces a deterministic bilingual report prefix from the hash-checked frozen dossier: exact problem and claim, declared proof map, alignment, historical failed checks, formal receipt scope, novelty barriers and prioritized expert questions. Material links resolve within the captured bundle. The manifest binds the prefix hash and its source; exports preserve old report text rather than retroactively inserting new content.
+`organize/brief.py` produces a deterministic bilingual report prefix from the hash-checked frozen dossier: exact problem and claim, declared proof map, alignment, historical failed checks, formal receipt scope, novelty barriers and prioritized expert questions. Material links resolve within the captured bundle. The manifest binds the prefix hash and its source; exports preserve old report text rather than retroactively inserting new content.
 
 Organize is a standalone native workflow with a fresh session and `organization-workspace/`. Codex memories are disabled for this session. It accepts any recorded review verdict, including unresolved or negative findings, and preserves the original problem, candidate versions, reviews and verification levels. Selecting a source only prepares the form; creating the task is an explicit model invocation using its own configuration snapshot and budget.
 
-`organization.py` captures an idle source under its ownership lock, records its revision and hash, and freezes the exact problem/candidate/review dossier plus supported visible answers, notes, proof sources and literature receipts. An earlier Solve run is included only through persisted review provenance or attachment provenance with a matching candidate; historical records without this link are not matched by title. Full Find workspaces, binary dependencies and caches are not copied. The manifest records limitations and omitted files.
+`organize/workflow.py` captures an idle source under its ownership lock, records its revision and hash, and freezes the exact problem/candidate/review dossier plus supported visible answers, notes, proof sources and literature receipts. An earlier Solve run is included only through persisted review provenance or attachment provenance with a matching candidate; historical records without this link are not matched by title. Full Find workspaces, binary dependencies and caches are not copied. The manifest records limitations and omitted files.
 
 The snapshot allows up to 150 files, 1,000,000 bytes per ordinary file and 16,000,000 bytes in total. The required exact dossier may be up to 4,000,000 bytes. Chat's complete inline snapshot is limited to 512,000 bytes; essential proofs are rejected if they do not fit, rather than silently truncated. File hashes are checked when restoring source copies. The organizer writes explanatory prose from visible evidence; it does not expose hidden reasoning or overwrite a source run.
 
@@ -168,7 +210,7 @@ Both language versions use the same frozen source and retain the same mathematic
 
 ## Persistence and recovery
 
-`resources.py` uses OS-held leases and a persistent FIFO queue to coordinate CLI and browser executors in one workspace. Admission precedes active research accounting. Independent formal checks use their own gate within the active budget. Dead local workers are reconciled without restarting model calls; identified orphan Codex children use the existing identity checks before termination. Memory sampling covers the local process tree and may request a cooperative stop. `activity.py` projects bounded tool categories and statuses from native events, excluding tool arguments and raw command/output text. The browser exposes these projections separately from checkpoint history. See [resource scope and limits](resources.md).
+`runtime/resources.py` uses OS-held leases and a persistent FIFO queue to coordinate CLI and browser executors in one workspace. Admission precedes active research accounting. Independent formal checks use their own gate within the active budget. Dead local workers are reconciled without restarting model calls; identified orphan Codex children use the existing identity checks before termination. Memory sampling covers the local process tree and may request a cooperative stop. `telemetry/activity.py` projects bounded tool categories and statuses from native events, excluding tool arguments and raw command/output text. The browser exposes these projections separately from checkpoint history. See [resource scope and limits](resources.md).
 
 SQLite is authoritative. Runs snapshot their workflow, backend, strategy, settings, problems, candidates and separate Codex session / Chat response identifiers. Reports and other artifacts are projections.
 
@@ -190,7 +232,7 @@ Codex can report cumulative session usage at the end of a turn. For resumed call
 
 Each report projects `metrics.json` from the saved state: returns and completed turns by phase, missing/invalid milestones, measured invocation time, candidates and latest review verdicts. Historical records without phase or timing stay unknown. Pending/recovered calls can have multiple returns, so returns are not a billable-call count. These measurements expose workflow failures; they do not measure proof correctness or novelty.
 
-API dollar costs, subscription balance and third-party services are not metered. A legacy max_external_cost_usd value of zero blocks Chat API calls; null delegates spending control to the provider account. No backend fallback bypasses this setting.
+API dollar costs, subscription balance and third-party services are not metered. A legacy max_external_cost_usd value of zero blocks all API-key billing, including Codex API and paid Solve slots; null delegates spending control to the provider account. No backend fallback bypasses this setting.
 
 Contract tests use a mock Responses transport and a scripted Codex executable. They verify orchestration and recovery, not mathematical ability. Real model evaluations require configured credentials and a separately chosen research budget.
 
@@ -198,6 +240,6 @@ For setup and commands, see [installation and usage](usage.md). The [validation 
 
 ## User selection and discovery context
 
-Standalone Find finishes with a ranked shortlist; its recommended `problem` is not a user selection. The browser binds the chosen entry to the Find run and a fingerprint. `Orchestrator.solve_discovered` locks the source, validates membership and version, and creates a new Solve run with a frozen `DiscoveryContext`. `discovery.py` captures supported notes, full visible answers and sources within configurable limits. `artifact_io.py` reads and projects files without following symlinks. SQLite retains the manifest; hashes detect later snapshot changes. Source and solver sessions remain independent. Review workspaces never receive this dossier. The explicit CLI `run` workflow retains automatic selection.
+Standalone Find finishes with a ranked shortlist; its recommended `problem` is not a user selection. The browser binds the chosen entry to the Find run and a fingerprint. `Orchestrator.solve_discovered` locks the source, validates membership and version, and creates a new Solve run with a frozen `DiscoveryContext`. `find/discovery.py` captures supported notes, full visible answers and sources within configurable limits. `storage/artifacts.py` reads and projects files without following symlinks. SQLite retains the manifest; hashes detect later snapshot changes. Source and solver sessions remain independent. Review workspaces never receive this dossier. The explicit CLI `run` workflow retains automatic selection.
 
-`native_multi_agent` and `native_memories` are nullable overrides; absent overrides preserve the isolated Codex defaults, while review memories are always disabled. `search_trace.py` records completed native web and identifiable MCP search inputs without inferring queries from generated answers. This observation does not certify source claims; independent retrieval still checks cited excerpts. Arbitrary shell scripts are not parsed as search receipts.
+`native_multi_agent` and `native_memories` are nullable overrides; absent overrides preserve the isolated Codex defaults, while review memories are always disabled. `telemetry/search.py` records completed native web and identifiable MCP search inputs without inferring queries from generated answers. This observation does not certify source claims; independent retrieval still checks cited excerpts. Arbitrary shell scripts are not parsed as search receipts.

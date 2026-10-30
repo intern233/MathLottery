@@ -3,11 +3,11 @@
 import pytest
 
 from mathlottery.config import Config
-from mathlottery.demo import demo_problem
 from mathlottery.models import CandidateInput, Review, Workflow
-from mathlottery.native_prompts import build_native_prompt
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.prompts import build_prompt
+from mathlottery.providers.demo import demo_problem
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.runtime.prompts import build_native_prompt
+from mathlottery.runtime.structured_prompts import build_prompt
 
 
 @pytest.mark.parametrize("native", [True, False])

@@ -13,11 +13,12 @@ from test_organization_bilingual import bilingual as bilingual
 from test_web import serving
 from typer.testing import CliRunner
 
-from mathlottery import expert_delivery, organization
 from mathlottery.cli import app
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.organized_reports import read_report, summary
-from mathlottery.storage import atomic_write, json_text
+from mathlottery.organize import delivery as expert_delivery
+from mathlottery.organize import workflow as organization
+from mathlottery.organize.downloads import read_report, summary
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import atomic_write, json_text
 from mathlottery.web.service import WebService
 
 

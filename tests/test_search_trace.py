@@ -1,6 +1,6 @@
 import pytest
 
-from mathlottery.search_trace import queries_from_call
+from mathlottery.telemetry.search import queries_from_call
 
 
 def test_mcp_search_queries_come_from_completed_inputs_not_output():

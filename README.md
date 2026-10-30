@@ -78,7 +78,7 @@ We want to preserve as much of GPT's native agent capability as possible, leavin
 
 The code provides four independent workflows: **`find`, `solve`, `verify`, and `organize`**. The `run` workflow connects finding, solving and verification; organizing is an explicit, optional follow-up. Finding produces reusable problem statements, solving saves candidate proofs, verification produces a separate review, and organizing prepares matching Chinese and English expert reports, each in Markdown and PDF.
 
-Choose an entry point independently of the agent connection: use the **browser** or **terminal** with either **`codex`** (official Codex sessions and native tools) or **`chat`** (the Responses API with persistent context and configured hosted tools). API connections require their own credentials. Compatible Responses providers can be configured separately; other native protocols require an adapter. See [backend and model configuration](docs/configuration.md).
+Choose an entry point independently of the agent engine: use the **browser** or **terminal** with **Codex agent** (`codex`, native tools and sessions, authenticated by ChatGPT login or OpenAI API key) or **API agent** (`chat`, an independent Responses harness with persistent context and hosted tools). Configure each Solve slot separately on the [Agents page](docs/agents.md). Compatible Responses providers can be configured separately; other protocols require an adapter. See [backend and model configuration](docs/configuration.md).
 
 Contributions to the harness are welcome: improve problem selection, reduce repeated exploration, strengthen reviews, or try your own research strategy.
 

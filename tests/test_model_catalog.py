@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from mathlottery.cli import Mode, apply_options
 from mathlottery.config import Config, load_config
-from mathlottery.model_catalog import ModelCatalog, normalize_codex_models
+from mathlottery.providers.catalog import ModelCatalog, normalize_codex_models
 from mathlottery.web.service import (
     Overrides,
     ResumeRequest,
@@ -238,7 +238,7 @@ def test_configured_profiles_never_discover_or_expose_connection_secrets(monkeyp
 
 
 def mock_http(monkeypatch, handler):
-    monkeypatch.setattr("mathlottery.model_catalog.httpx.Client", lambda **kwargs: HTTPClient(
+    monkeypatch.setattr("mathlottery.providers.catalog.httpx.Client", lambda **kwargs: HTTPClient(
         **kwargs, transport=httpx.MockTransport(handler), trust_env=False,
     ))
 

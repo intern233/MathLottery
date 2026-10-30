@@ -7,13 +7,13 @@ import httpx
 import pytest
 from typer.testing import CliRunner
 
-from mathlottery.chat_backend import ChatBackend
 from mathlottery.cli import app
 from mathlottery.config import Config
-from mathlottery.demo import demo_problem
 from mathlottery.models import Level, OpenStatus, Run, State, Workflow
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.storage import Store
+from mathlottery.providers.chat import ChatBackend
+from mathlottery.providers.demo import demo_problem
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.storage.core import Store
 
 
 def milestone(prompt, verdict="NO_ISSUES_FOUND"):

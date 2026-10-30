@@ -11,10 +11,10 @@ from urllib.parse import urlsplit
 
 from pydantic import StrictBool, field_validator
 
-from mathlottery.backends import CodexCLIError, resolve_codex
-from mathlottery.codex_identity import CodexIdentity
-from mathlottery.local_network import NetworkConfigError
 from mathlottery.models import Model
+from mathlottery.providers.base import CodexCLIError, resolve_codex
+from mathlottery.providers.identity import CodexIdentity
+from mathlottery.providers.network import NetworkConfigError
 
 
 class AccountChangeRequest(Model):
@@ -45,8 +45,8 @@ class AccountTimeoutError(AccountError):
 class AccountRPC:
     """A private, bounded stdio connection, never a network RPC listener."""
 
-    def __init__(self, command, root=None):
-        identity = CodexIdentity(root)
+    def __init__(self, command, root=None, profile=None, excluded_env=()):
+        identity = CodexIdentity(root, profile=profile, excluded_env=excluded_env)
         environment = identity.environment()
         executable = resolve_codex(command, time.monotonic() + 10, env=environment)
         self.process = subprocess.Popen(
@@ -160,10 +160,12 @@ def public_account(account):
 
 
 class CodexAccount:
-    def __init__(self, command, root=None, rpc_factory=AccountRPC):
+    def __init__(self, command, root=None, rpc_factory=AccountRPC, profile=None, excluded_env=()):
         self.command = command
         self.root = root
         self.rpc_factory = rpc_factory
+        self.profile = profile
+        self.excluded_env = excluded_env
         self.rpc = None
         self.pending = None
         self.lock = threading.RLock()
@@ -171,7 +173,13 @@ class CodexAccount:
     def _connect(self):
         if self.rpc is None:
             root = self.root() if callable(self.root) else self.root
-            self.rpc = self.rpc_factory(self.command(), root=root)
+            options = {"root": root}
+            if self.profile is not None:
+                options["profile"] = self.profile
+            excluded = self.excluded_env() if callable(self.excluded_env) else self.excluded_env
+            if excluded:
+                options["excluded_env"] = excluded
+            self.rpc = self.rpc_factory(self.command(), **options)
 
     def _status(self):
         self._connect()
@@ -316,3 +324,9 @@ class CodexAccount:
     def close(self):
         with self.lock:
             self._close()
+
+    def release_idle(self):
+        """Release a status-only client without cancelling an active device login."""
+        with self.lock:
+            if self.pending is None:
+                self._close()

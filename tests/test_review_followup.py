@@ -3,15 +3,15 @@
 import threading
 import time
 
-from mathlottery.candidates import CandidateStore
 from mathlottery.config import Config
-from mathlottery.demo import demo_problem
 from mathlottery.models import CandidateInput, LiteratureSearch, NativeCheckpoint, Review, Workflow
-from mathlottery.native_prompts import build_native_prompt
-from mathlottery.orchestrator import Orchestrator
-from mathlottery.resources import Coordinator
+from mathlottery.providers.demo import demo_problem
+from mathlottery.runtime.orchestrator import Orchestrator
+from mathlottery.runtime.prompts import build_native_prompt
+from mathlottery.runtime.resources import Coordinator
+from mathlottery.runtime.workflows import record_selection
+from mathlottery.verify.candidates import CandidateStore
 from mathlottery.web.service import StartRequest, WebService
-from mathlottery.workflows import record_selection
 
 
 def gap():

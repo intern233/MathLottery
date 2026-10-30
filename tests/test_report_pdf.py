@@ -8,7 +8,7 @@ from urllib.parse import unquote
 import pytest
 from bs4 import BeautifulSoup
 
-from mathlottery import report_pdf
+from mathlottery.organize import pdf as report_pdf
 
 
 def test_math_delimiters_keep_equations_and_do_not_touch_code():
@@ -71,7 +71,7 @@ def test_math_assets_are_packaged_offline_and_have_a_license():
     assert len(script) > 100_000
     urls = re.findall(r"url\(([^)]+)\)", css)
     assert urls and all(url.startswith("data:font/woff2;base64,") for url in urls)
-    assets = report_pdf.files("mathlottery").joinpath("report_assets", "katex")
+    assets = report_pdf.files("mathlottery.organize").joinpath("assets", "katex")
     assert "Permission is hereby granted" in assets.joinpath("LICENSE").read_text()
 
 

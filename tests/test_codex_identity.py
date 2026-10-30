@@ -6,7 +6,7 @@ import tomllib
 
 import pytest
 
-from mathlottery.codex_identity import CodexIdentity
+from mathlottery.providers.identity import CodexIdentity
 
 
 @pytest.fixture

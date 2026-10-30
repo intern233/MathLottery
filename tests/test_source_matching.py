@@ -3,11 +3,11 @@
 import pytest
 
 from mathlottery.config import Config
-from mathlottery.evidence_policy import normalized
-from mathlottery.literature import snapshot
 from mathlottery.models import digest
-from mathlottery.source_matching import excerpt_match
-from mathlottery.sources import WebTools
+from mathlottery.tooling.sources import WebTools
+from mathlottery.verify.literature import snapshot
+from mathlottery.verify.matching import excerpt_match
+from mathlottery.verify.policy import normalized
 
 
 @pytest.mark.parametrize(("text", "quote"), [
@@ -58,7 +58,7 @@ def test_pdf_receipt_records_match_mode_only_after_independent_source_parse(tmp_
     web = WebTools(tmp_path, Config().tools)
     monkeypatch.setattr(web, "download", lambda *a, **k: (
         b"%PDF-test", "https://example.org/paper.pdf", "application/pdf"))
-    monkeypatch.setattr("mathlottery.literature.python_exec", lambda *a, **k: {
+    monkeypatch.setattr("mathlottery.verify.literature.python_exec", lambda *a, **k: {
         "status": "OK", "stdout": text})
     result = snapshot(web, "https://example.org/paper.pdf", [quote, "p ⩽q + 1"], tmp_path)
     expected = digest(normalized(quote))
