@@ -78,9 +78,11 @@ mathlottery serve
 
 请分开看**运行状态**与**研究结果**。“运行完成”只表示执行结束。Solve 展示求解者声称完整解决、部分解决或尚未解决；Verify 另列审查结论、原题覆盖和新颖性。部分结果审查未发现问题，不代表完整原题已解决。Organize 沿用这些结论。旧候选若依据明确自述展示范围，会注明依据，原记录及哈希不变。参见[证据说明](evidence.cn.md)和[成果样本](../showcase/README.cn.md)。
 
-原生 Solve 会保存部分结果或未解决的进展，在剩余累计预算内续接同一会话。默认情况下，求解者明确声称完整解决或给出反例，且没有剩余数学义务时，才可以提前结束，之后仍须 Verify。在**预算与 agent 设置**中勾选**用满求解时间预算**，声称完整解决后也会继续研究和自查；续接原生 Solve 任务时也可选择。其他限额、额度或错误可能提前中断，你也可以主动停止。[Solve 结束条件与预算规则](configuration.cn.md#budgets)
+明确填写**求解并行数**，并使用默认的 `solve.coordination: supervised` 后，新任务使用[监督式 Solve](solve-teams.cn.md)：监督者分配路线、复查证明留言板、审核完整解答声称，并按需重新派题。一个研究者也支持。到达时间预算后停止新派发，当前尝试继续，返回后由监督者整理；实际总时长可能超过预算。任务详情展示监督状态、研究信号与证明链，监督意见不替代 Verify。
 
-研究时间用尽时，原生 Solve 显示**快速收尾中**，在原会话执行一次收尾调用，默认最多**额外五分钟**保存现有结果和剩余问题。**已收尾**不等于已解决，请查看求解者声称的完成范围。若收尾调用失败，会保存并明确标注本地检查点摘要。可在新建任务前通过 `config.yaml` 的 `budget.finalize_minutes` 设置收尾时限（`0` 关闭）。
+未明确并行数，或旧任务采用 `allocation` 时，原生 Solve 会保存部分结果或未解决的进展，在剩余累计预算内续接同一会话。默认情况下，求解者明确声称完整解决或给出反例，且没有剩余数学义务时，才可以提前结束，之后仍须 Verify。在**预算与 agent 设置**中勾选**用满求解时间预算**，声称完整解决后也会继续研究和自查；续接原生 Solve 任务时也可选择。其他限额、额度或错误可能提前中断，你也可以主动停止。[Solve 结束条件与预算规则](configuration.cn.md#budgets)
+
+在上述原生/旧版模式中，研究时间用尽时，Solve 显示**快速收尾中**，在原会话执行一次收尾调用，默认最多**额外五分钟**保存现有结果和剩余问题。**已收尾**不等于已解决，请查看求解者声称的完成范围。若收尾调用失败，会保存并明确标注本地检查点摘要。可在新建任务前通过 `config.yaml` 的 `budget.finalize_minutes` 设置收尾时限（`0` 关闭）。
 
 关闭页面或 UI 服务**不会停止**后台研究。请使用**停止任务**或 `mathlottery stop <run-id>`。重新启动服务会连接已有记录，不会自动重启已停止的任务。
 
@@ -131,9 +133,29 @@ mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
 
 最后一条审查的是给定的示例证明。要审查刚才求解产生的候选，请用 `verify --from-run <solve-run-id>`。自行输入问题不代表它已被确认为开放问题或新成果。
 
-并行求解可在页面设置**求解并行数**和**最大研究组数**，或配置 `solve.parallel_agents`、
-`solve.max_groups`，也可以为 `solve` 添加 `--parallel-agents 6 --max-groups 2`。组数上限可选，
-所有组共用人数上限。跨组留言、监督分配、预算计数和恢复规则见 [Solve 多组研究](solve-teams.cn.md)。
+### 启用监督式 Solve
+
+在页面填写**求解并行数**（1–32），按需填写**最大研究组数**。
+终端使用时，将以下配置写入本地 `config.yaml`：
+
+```yaml
+solve:
+  coordination: supervised
+  parallel_agents: 4
+  max_groups: 2
+budget:
+  max_wall_time_minutes: 180
+  max_iterations: 100
+```
+
+随后仍使用 `mathlottery solve --problem <problem-id>`。并行数设为 `1`，就是一个研究者
+加独立监督会话；各研究者需要不同接入方式时，在 [Agent 配置页](agents.cn.md)设置。
+也可以选用 CLI 覆盖参数 `--parallel-agents` 和 `--max-groups`；所有组共用人数上限。
+
+部分成果或审核驳回后，监督者调整路线。时间到达后等待当前尝试返回并审核结果，不再
+启动新研究。研究和监督都消耗调用及 token 预算；三小时设置不会覆盖其他限额，也不
+保证解出问题。证明共享、槽位复用与恢复规则见[监督式 Solve](solve-teams.cn.md)。
+已有任务保留已存协议，更换协调模式需要新建 Solve。
 
 <a id="organize"></a>
 
@@ -181,6 +203,9 @@ mathlottery run
 ```
 
 不指定问题时，`run` 自动找题后继续执行；用 `run --problem <problem-id>` 或 `run --prompt '你的问题陈述'` 则直接从求解开始。需要继续研究时，审查意见会返回原研究会话。原生 `run` 可以先审查部分候选，再在剩余预算内继续求解。如果时间在 Solve 阶段用尽，也会执行上述有时限的收尾，然后结束执行，不自动审查最终收尾候选。其他限额或错误可能中断尝试，增加预算不保证解决问题。
+
+`run` 保留原调度器。需要新的监督者和证明留言板时，请分别运行各阶段，并明确配置
+独立的 `solve`。
 
 `run` 不会自动启动 Organize；查看结果后再明确选择整理。
 
@@ -291,6 +316,8 @@ mathlottery doctor
 | `runs/<run-id>/report.md` | 结果与证据摘要 |
 | `runs/<run-id>/candidates/` / `verification/` | 候选版本和审查记录 |
 | `runs/<run-id>/workspace/` | 研究文件和可见回答 |
+| `runs/<run-id>/solve/` | 监督式 Solve 总结、研究信号与监督决策 |
+| `runs/<run-id>/workspace/bulletin/` | 共享证明索引、依赖图、审核版本和冻结材料 |
 | `runs/<organize-run-id>/organized/` | 中英文专家报告、各版本 PDF 导出状态、来源清单和已收集材料 |
 | `.mathlottery/` | 本地状态、会话和独立 Codex 登录 |
 

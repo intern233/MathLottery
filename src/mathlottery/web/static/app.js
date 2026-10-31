@@ -32,7 +32,10 @@ function executionBadge(run) {
   return run.busy && (run.resources?.state === "queued" || run.worker_state === "queued")
     ? node("span", "badge warning", state.language === "zh" ? "排队中" : "Queued") : badge(run.state);
 }
-function finalizationBudgetHint(settings) {
+function finalizationBudgetHint(settings, parallel = settings?.solve_parallel_agents) {
+  if (settings?.solve_coordination === "supervised" && parallel) return state.language === "zh"
+    ? "监督模式：到时停止派发新尝试，当前研究继续，返回后由监督者审核整理；实际总时长可以超过预算。"
+    : "Supervised mode: the deadline stops new attempts; current research continues, followed by supervisor review. Total duration can exceed the budget.";
   const minutes = settings?.finalize_minutes ?? 5;
   if (!minutes) return state.language === "zh" ? "当前配置关闭到时收尾。" : "End-of-budget wrap-up is disabled in this configuration.";
   return state.language === "zh"
@@ -151,11 +154,13 @@ function newTaskBlock() {
 }
 function updateExecutionControls() {
   account.ensureLoaded();
+  text("#solve-full-budget-hint", `${t("fullSolveBudgetHint")} ${finalizationBudgetHint(state.settings, Number($("#solve-parallel").value) || state.settings?.solve_parallel_agents)}`);
   const block = newTaskBlock();
   $("#start").disabled = state.submitting || !state.csrf || !state.settings || Boolean(block);
   notice("#start-readiness", block);
   // Resume uses the saved run configuration, independently of the new-task form.
   const run = state.detail;
+  if (run) text("#resume-full-budget-hint", `${t("fullSolveBudgetHint")} ${finalizationBudgetHint(run.settings, Number($("#resume-parallel").value) || run.settings?.solve_parallel_agents)}`);
   const resumeGroupBlock = run?.workflow === "solve" && ($("#resume-groups").value || run.settings.solve_max_groups)
     && !($("#resume-parallel").value || run.settings.solve_parallel_agents) ? t("solveGroupsNeedParallel") : "";
   const subscriptionResume = run && !savedAgentSlots(run) && ["codex", "work"].includes(run.settings.backend || run.mode) && run.settings.codex_auth !== "api_key";

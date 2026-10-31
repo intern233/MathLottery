@@ -6,6 +6,10 @@ English | [简体中文](README.cn.md)
 
 The `ai4math` branch selects three mathematical results for manuscript development. Selection favors a substantive argument, an exact unbounded statement, and useful supporting evidence. It does not certify novelty, expert approval or journal acceptance. The previous general demonstration collection remains in `main` and Git history.
 
+These are historical Solve/Verify/Organize records. They were not regenerated as an
+evaluation of the new [supervised Solve workflow](../docs/solve-teams.md). Its supervisor
+opinions and proof-board reviews do not retrospectively strengthen the evidence below.
+
 | Result | Potential mathematical contribution | Saved verification | Manuscript role |
 | --- | --- | --- | --- |
 | [Sun beta polynomials](sun-beta-logconvexity/README.md) | Coefficientwise log-convexity for every row index; explicit positive certificates for weighted convolutions | Complete candidate; final AI review `NO_ISSUES_FOUND`, coverage `FULL`; main Lean declaration replayed; novelty `UNKNOWN` | First priority; main result of a certificate-method paper |

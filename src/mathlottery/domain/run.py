@@ -61,6 +61,12 @@ class Run(Model):
     @model_validator(mode="before")
     @classmethod
     def migrate_manual_chat(cls, value):
+        if isinstance(value, dict) and value.get("config"):
+            config = dict(value["config"])
+            solve = dict(config.get("solve", {}))
+            if "coordination" not in solve:
+                solve["coordination"] = "allocation"
+                value = dict(value, config=dict(config, solve=solve))
         # Old saved Chat runs were manual. Never turn a resume into a paid API request.
         if (
             isinstance(value, dict)

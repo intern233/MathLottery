@@ -17,7 +17,7 @@
       const team = run.solve_team, zh = language === "zh";
       const compact = value => MathLotteryI18n.compact(language, value);
       const date = value => MathLotteryI18n.date(language, value);
-      panel.hidden = !team || (!(team.parallel_agents > 1) && !team.rounds);
+      panel.hidden = !team || (!(team.parallel_agents > 1) && !team.rounds && !(team.parallel_agents && team.coordination === "supervised"));
       if (panel.hidden) return;
       const signature = JSON.stringify([run.id, run.busy, language, team, run.settings?.solve_agent_slots]);
       if (lastSignature === signature) return;
@@ -29,6 +29,23 @@
         ? `${zh ? "求解并行" : "Research concurrency"}: ${running} / ${team.parallel_agents ?? "—"}`
         : (zh ? "任务当前未运行；下方保留最后的分组与成果。" : "Task is idle; the saved groups and findings remain available.")));
       if (team.decision) panel.append(node("p", "", team.decision));
+      if (team.coordination === "supervised" && team.parallel_agents) {
+        const campaign = team.campaign || {};
+        const phase = zh ? ({planning: "监督者规划", researching: "自主研究", draining: "停止派发，等待当前研究返回", closing: "监督者审核与整理", completed: "研究已整理"}[campaign.phase] || campaign.phase) : campaign.phase;
+        panel.append(node("p", "field-hint", `${zh ? "研究阶段" : "Research phase"}: ${phase || "—"}`));
+        if (team.supervisor_running) panel.append(node("p", "field-hint", zh ? "全局监督者正在审查或规划。" : "The global supervisor is reviewing or planning."));
+        else if (campaign.review_requested) panel.append(node("p", "field-hint", zh ? "已请求监督复查；等待第一槽位空闲后执行，保留当前研究。" : "Supervision requested; waiting for slot 1 to become free without cancelling research."));
+        panel.append(node("p", "field-hint", zh ? "时间预算结束后不派发新尝试，当前尝试继续，实际总时长可能超过预算。" : "The time budget stops new attempts. Current attempts continue, so total duration may exceed the budget."));
+        const reviews = node("details", "evidence-block"); reviews.dataset.key = "solve-supervision";
+        reviews.append(node("summary", "", zh ? "监督者审核与研究总结" : "Supervisor reviews and synthesis"));
+        if (campaign.summary) reviews.append(node("pre", "", campaign.summary));
+        for (const review of campaign.candidate_reviews || []) {
+          const verdict = zh ? ({accepted: "监督者认可完整解答声称", rejected: "监督者否定", needs_work: "仍需补充"}[review.verdict] || review.verdict) : review.verdict;
+          reviews.append(node("p", "", `${review.candidate_id} · ${verdict}`), node("pre", "", review.rationale));
+          for (const check of review.checks || []) reviews.append(node("p", "field-hint", `${check.status} · ${check.claim}: ${check.reasoning}`));
+        }
+        reviews.open = open.has(reviews.dataset.key); panel.append(reviews);
+      }
       panel.append(node("p", "field-hint", `${zh ? "本轮分组" : "Groups in this round"}: ${(team.groups || []).length} · ${zh ? "组数上限" : "Group cap"}: ${team.max_groups ?? team.effective_max_groups ?? team.parallel_agents ?? "—"}`));
       for (const group of team.groups || []) {
         const mode = zh ? ({independent: "独立探索", peer: "同级协作", critique: "推导与质疑"}[group.mode] || group.mode) : group.mode;
@@ -54,10 +71,16 @@
       board.append(node("summary", "", `${zh ? "跨组留言" : "Cross-group messages"} · ${(team.messages || []).length}`));
       for (const message of [...(team.messages || [])].reverse()) {
         const entry = node("details", "evidence-block"); entry.dataset.key = message.key;
-        const status = zh ? ({unverified: "待核验", needs_recheck: "需重新检查", retracted: "已撤回"}[message.standing] || message.standing) : message.standing;
+        const status = zh ? ({unverified: "待核验", needs_recheck: "需重新检查", retracted: "已撤回", supervisor_accepted: "监督者认可（非 Verify）", supervisor_rejected: "监督者否定"}[message.standing] || message.standing) : message.standing;
         entry.append(node("summary", "", `${message.group} · ${status} · ${message.title}`), node("pre", "", message.body));
         if (message.assumptions.length) entry.append(node("p", "", `${zh ? "假设" : "Assumptions"}: ${message.assumptions.join("; ")}`));
         if (message.depends_on.length) entry.append(node("p", "", `${zh ? "依赖" : "Dependencies"}: ${message.depends_on.join(", ")}`));
+        if (message.theorem) {
+          entry.append(node("pre", "", message.theorem.statement));
+          for (const step of message.theorem.proof_steps) entry.append(node("p", "", `${step.id} ← ${step.premises.join(", ") || (zh ? "已声明前提" : "declared premises")}: ${step.statement}\n${step.justification}`));
+          if (message.theorem.remaining_obligations.length) entry.append(node("p", "field-hint", `${zh ? "未完成义务" : "Open obligations"}: ${message.theorem.remaining_obligations.join("; ")}`));
+        }
+        if (message.supervisor_review) entry.append(node("pre", "", message.supervisor_review.rationale));
         for (const artifact of message.artifacts) {
           const link = node("a", "text-button", `${zh ? "下载材料" : "Download material"}: ${artifact.source}`);
           link.href = `/api/runs/${encodeURIComponent(run.id)}/solve-material?sha256=${encodeURIComponent(artifact.sha256)}`;

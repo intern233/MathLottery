@@ -32,6 +32,24 @@ Novelty needs checked excerpts from the closest prior results, explicit comparis
 
 Use `ORIGINAL_STATEMENT` for a paper stating the conjecture, and `EXPLICIT_OPEN` for a source reporting that it remains open, in both Find and Verify. Matching an existing conjecture is not matching an existing proof. Reserve `PRIOR_RESULT` and `SOLUTION` for established results; an `EQUIVALENT` relation to those roles means the candidate has already been proved. Citation roles and their interpretations remain visible for review.
 
+## Supervisor opinions and the shared proof board
+
+[Supervised Solve](solve-teams.md) adds an internal review layer before independent Verify.
+The board stores exact theorem statements, assumptions, step-by-step derivations,
+dependencies and frozen material references. Structural validation rejects missing or
+cyclic prerequisites; it does not establish that an inference is mathematically valid.
+
+A supervisor opinion binds to a content hash, checked steps and prerequisite-review
+versions. Unresolved objections, retractions or changed prerequisite reviews require
+reinspection. `supervisor_accepted` is a fallible research judgment, not `FORMAL_VERIFIED`,
+expert certification or evidence of novelty. Complete candidate acceptance also checks
+the original-problem scope and remaining obligations, but stays outside `candidate.reviews`.
+Independent Verify still needs its own checks and attached evidence for the selected version.
+
+The final Solve synthesis records partial and unresolved outcomes as well as complete
+claims. It is not an Organize report and does not skip the separate Verify/Organize stages.
+Old showcase records do not acquire new supervisor evidence merely because the code changed.
+
 ## Proof coverage and actionable literature gaps
 
 New reviews include a `proof_steps` dependency graph. Each lemma, reduction, essential case and final conclusion has a stable ID and references named `checks`. The controller recomputes `proof_coverage`: missing dependencies, cycles, missing check IDs, finite tests alone and unresolved essential steps prevent a positive proof review. A `FORMAL` check names its `formal_declarations`; only matching declarations in an independent receipt bound to this candidate can support that step. This tests traceability of the submitted argument, not whether the reviewer identified every mathematically necessary step.

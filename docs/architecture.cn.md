@@ -11,7 +11,7 @@ MathLottery 将**使用入口**（浏览器或终端）、**研究功能**（找
 | 功能 | 输入 | 输出与结束条件 |
 | --- | --- | --- |
 | find | 选题条件、优先来源、候选数量 | 带来源和状态证据的可复用题目排序；求解前结束 |
-| solve | 已登记题目或直接研究请求 | 研究进展及不可变候选；最终候选结束求解，不自行认可证明 |
+| solve | 已登记题目或直接研究请求 | 不可变候选与研究进展；监督模式先审核研究信号，再继续或结束，不升级独立验证等级 |
 | verify | 题目及证明或候选 | 独立的真假、证明与新颖性判断；任何审查结论都结束本次验真 |
 | organize | 空闲任务及至少一份候选审查、可选要求 | 中英文专家阅读 Markdown、PDF 与材料快照清单；不提升证据等级 |
 | pipeline | 可选题目或直接请求 | 必要时找题，随后求解、独立审查，并将意见交回同一研究者 |
@@ -21,6 +21,8 @@ CLI 命令 find、solve、verify、organize 为运行设置明确的 Workflow，
 独立 Find 在候选列表处结束，由用户选择问题。CLI 的 `run` 命令表示自动串联研究阶段，不增加此选题停顿。浏览器分别提供 Find、Solve、Verify，以及可选的 Organize。
 
 Find 保存原文陈述、目标相对于原题的范围、已有部分结果和明确的题意风险。`find/risks.py` 在候选卡片和 Solve 选题预览中展示缺失材料及歧义。这些信息供选题参考，不构成题意等价认证。非空披露字段纳入冻结的 Find 资料校验；旧记录明确显示尚未评估。
+
+独立原生 Solve 配置 `solve.coordination: supervised` 并明确并行数（包括 1）时，进入 `solve/campaign.py`。`campaign_receipts.py` 负责只消费一次研究信号及绑定版本的监督审核；`contracts.py` 定义检查点证据，`board_reviews.py` 处理前提变化后的失效传播。时间到达后停止新派发，等待当前研究返回，再完成监督整理。`providers/response_tools.py` 为 `solve/board_tools.py` 的任务内留言板工具提供持久化函数续接。并行数为 `null` 时保留原生自主委派，旧任务保留 `allocation`；自动串联的 `run` 不使用此调度器。见[监督式 Solve](solve-teams.cn.md)。
 
 ## 源码组织与职责边界
 
@@ -35,7 +37,7 @@ src/mathlottery/
 ├── cli/                  # 命令注册、工作区、研究、任务管理与导出
 ├── domain/               # 题目、文献、证明、协议、会话与运行模型
 ├── find/                 # 用户选题、冻结找题资料与题意风险
-├── solve/                # 分组分配、轮次调度、调用、提示与留言板
+├── solve/                # 监督式调度、旧版分配、证明留言板、回执与提示
 ├── verify/               # 候选完整性、证明/来源评估与形式化检查
 ├── organize/             # 冻结资料、专家交接、下载与 PDF/资源
 ├── runtime/              # 工作流生命周期、原生/结构化循环、预算与资源
@@ -77,6 +79,9 @@ CLI 入口仍为 `mathlottery.cli:app`，命令、配置与保存的 JSON 保持
 | providers/metadata.py | 白名单运行元数据与会话累计 token 的核对 |
 | runtime/native.py | 原生研究循环及找题、求解、审查、整理之间的转换 |
 | solve/ | 可选的有界研究组、监督、共享留言板与持久化恢复 |
+| solve/campaign.py、solve/campaign_receipts.py | 按返回事件调度，消费研究信号与监督决策，回执只记账一次 |
+| solve/board.py、solve/board_reviews.py、solve/contracts.py | 不可变证明留言、依赖图、绑定版本的意见与结构校验 |
+| solve/board_tools.py、providers/response_tools.py | 任务内实时留言板工具与持久化 Responses 函数续接 |
 | runtime/attempts.py | 调用日志、持久化回执、会话 ID、记账与恢复 |
 | runtime/workspace.py | 研究/审查/整理工作区、提示准备及完整回答导入 |
 | runtime/milestones.py | 与后端无关的阶段成果解析和验证 |
@@ -102,7 +107,12 @@ flowchart TD
     CLI[CLI 与配置] --> Engine[Orchestrator: 创建、续接、驱动]
     Engine --> Native[NativeRunner]
     Engine --> Legacy[StructuredRunner: 兼容执行]
-    Native --> Workspace[NativeWorkspace: 准备上下文]
+    Native -->|原有工作流| Workspace[NativeWorkspace: 准备上下文]
+    Native -->|独立监督式 Solve| Campaign[SolveCampaign: 信号与调度]
+    Campaign <--> Supervisor[监督者: 规划与审核]
+    Campaign <--> Researchers[研究尝试: 持续会话]
+    Campaign <--> Board[SolveBoard: 证明及审核版本]
+    Campaign --> Report
     Workspace --> Journal[NativeAttempts: 记录待执行调用]
     Journal --> Backend[Codex 会话或 Chat 响应链]
     Backend --> Receipt[持久化并接收回执]
@@ -126,7 +136,9 @@ flowchart TD
 
 `Store` 是共享存储，不决定研究策略。`CandidateStore` 负责候选完整性与审查产物，`NativeAttempts` 负责后端恢复；它们都不替研究者选择数学方法。
 
-独立的原生 Solve 显式启用多个研究者时，`NativeRunner` 将轮次交给 `solve.SolveCoordinator`。监督者提出受限分组计划；研究者保留各自会话，通过共享留言板交流。协调器先持久化和记账回执，再将阶段成果交回同一个原生循环。并行数、组数与恢复规则见 [Solve 研究组说明](solve-teams.cn.md)。
+监督式 Solve 中，`SolveCampaign` 复用 `SolveCoordinator` 的路由、工作区和持久化调用组件，逐个处理研究者的完成回执。监督者读取原题、信号与证明留言板，审核完整声称，必要时提出新的任务。仍在工作的研究者保持会话和当前目标。监督调用等待主槽位空闲，可以与其他槽位的研究并行。调度器为最终监督预留调用次数，活动时间到达后停止新派发，不因时间到达而取消当前研究。未启用用满预算时，认可完整声称可提前结束；旧版 `allocation` 任务保留按轮调度。
+
+`SolveCampaign` 检查点保存已处理信号、待派发任务和具体候选审核。SQLite 留言板保存不可变发布与追加式审核记录，`bulletin/` 文件是可重建投影。证明依赖、审核版本和待回应质疑决定意见是否仍适用。`solve/summary.md`、`solve/supervision.json` 记录结果，监督意见不会写成独立 Verify 结论。协议及其边界见[监督式 Solve 说明](solve-teams.cn.md)。
 
 自动调用缺少阶段成果时，会记录可恢复的交接错误，在下一轮提示中要求登记已保存的结果，不再静默当成普通进展。Codex 首选写入工作区 JSON 文件；若没有写入，也接受回答中一条明确的 `mathlottery` 围栏代码块。两条路径都校验当前任务 ID 和负载。已有文件无效时，不会用回答代码块绕过错误。手动模式仍允许不附阶段成果的普通回答。
 
@@ -172,7 +184,7 @@ Codex 使用 codex exec 启动，通过 codex exec resume 在 MathLottery 独立
 
 Chat 使用配置的模型与托管工具创建 Responses API 后台请求。默认工具为 web_search 和 Code Interpreter；普通 Markdown 回答末尾可附一条机器可读的阶段成果记录。请求使用 previous_response_id 保留研究上下文，审查回答形成独立的上下文链，不涉及浏览器、提取 Cookie 或人工复制。
 
-Chat API 凭据从环境变量读取，绝不读取 Codex 登录存储或请求文件中的凭据。API 错误不会触发后端或计费方式切换。模型通过配置或命令行参数指定；只有内置 `chat` 配置还可以读取 `OPENAI_MODEL`，自定义提供方必须另行选择模型。API 原生工具在服务端运行，尚未实现需要客户端执行的自定义函数工具。
+Chat API 凭据从环境变量读取，绝不读取 Codex 登录存储或请求文件中的凭据。API 错误不会触发后端或计费方式切换。模型通过配置或命令行参数指定；只有内置 `chat` 配置还可以读取 `OPENAI_MODEL`，自定义提供方必须另行选择模型。配置的托管工具在服务端运行。监督式 Solve 还通过 `providers/response_tools.py` 提供一组固定的客户端留言板函数，保存每次工具调用回执并累计续接用量。能力绑定当前运行及作者，不开放任意文件访问或用户自定义函数。
 
 Python 框架在本地保存回答与响应元数据。托管容器和远端响应历史受服务商保留期限限制，本地检查点不能重建过期的远端上下文。Codex 的精确续接同样需要原始会话存储。保存在个人 Codex 目录中的旧原生会话不会迁移；已有 MathLottery 检查点与结果仍可读取，但缺少原始会话时可能需要新建任务。
 
@@ -226,7 +238,7 @@ Codex 已完成的可见消息也会保存到 `progress.md`。中断调用没有
 
 ## 预算与验证
 
-时间预算统计活跃研究时间，排除暂停与人工等待时间。轮数统计研究交接，不统计原生工具调用。Token 上限使用后端实际报告，在调用之间检查；单次调用可能超过阈值。
+时间预算统计活跃研究时间，排除暂停与人工等待时间。监督式 Solve 到时停止新派发，当前尝试返回后继续监督审核；原生自主委派及旧版 `allocation` 则使用有时限的收尾。监督模式的 `max_iterations` 同时统计研究者和监督者交接，不统计每次原生工具调用。Token 上限使用后端实际报告，在调用之间检查；并行调用返回时可能已超过阈值。
 
 Codex 可能在一轮结束时返回会话累计用量。续接调用会将返回值与同一会话的调用前后计数核对，只计本次增量；能够确认的逐轮报告也受支持。计数缺失或不一致时保留未知，不将累计数当作单轮用量相加。历史检查点保留原始数值，报告会标记尚未核对的旧记录，不静默修改历史。
 

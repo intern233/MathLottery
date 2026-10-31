@@ -30,9 +30,9 @@ export RESEARCH_API_KEY_A
 mathlottery serve
 ```
 
-Codex API authentication uses the official OpenAI endpoint and preserves the Codex harness. The independent API agent remains available for vendor extensions. Its endpoint must implement the Responses features MathLottery uses, including background responses, retrieval, cancellation and the configured tools. An API key or OpenAI-compatible Chat Completions endpoint alone is not enough; a future DeepSeek or other protocol integration needs the corresponding adapter. See [provider compatibility](configuration.md#providers).
+Codex API authentication uses the official OpenAI endpoint and preserves the Codex harness. The independent API agent remains available for vendor extensions. Its endpoint must implement the Responses features MathLottery uses, including background responses, retrieval, cancellation and the configured tools. Supervised Solve also requires function calls and `function_call_output` continuations for the live board. An API key or OpenAI-compatible Chat Completions endpoint alone is not enough; a future DeepSeek or other protocol integration needs the corresponding adapter. See [provider compatibility](configuration.md#providers).
 
-The supervisor uses slot 1 before the research round; wrap-up also uses slot 1 after the researchers stop. These calls count toward the task budget. They do not create a fifth simultaneous caller when four slots are configured. The supervisor may leave slots idle or change groups, but each researcher keeps its own connection and conversation. Nested Codex agent spawning is disabled when the harness enforces an explicit parallelism cap.
+The supervisor shares slot 1 sequentially with the primary researcher. New supervised tasks review researcher signals and periodically request board inspection; inspection waits for slot 1 to be free, while other researchers can continue. At the time budget, current attempts finish before final supervision. See [supervised Solve](solve-teams.md). These calls count toward the task budget. They do not create a fifth simultaneous caller when four slots are configured. The supervisor may leave slots idle or change groups, but each researcher keeps its own connection and conversation. Nested Codex agent spawning is disabled when the harness enforces an explicit parallelism cap.
 
 ## Saved tasks and privacy
 
@@ -54,6 +54,7 @@ The browser uses the saved Agents-page roster only when explicitly selected for 
 
 ```yaml
 solve:
+  coordination: supervised
   parallel_agents: 3
   max_groups: 2
   agent_slots:

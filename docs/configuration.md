@@ -123,7 +123,7 @@ Export `RESEARCH_API_KEY` in the starting terminal. Each profile must explicitly
 
 An optional nonempty `models` list supplies the local directory instead of requesting `/models`. Omit it for remote discovery. For each model, omitted/`null` `reasoning_efforts` means unknown; `[]` means no effort values are declared. To declare support, use, for example, `reasoning_efforts: [low, high]` and `default_reasoning_effort: high`. Declare `reasoning_modes` only if the provider implements the separate Responses mode field. Select a named profile in the browser or set `backend.provider` in configuration; there is no CLI `--provider` option.
 
-**Compatibility requires the full Responses lifecycle:** background requests, stored responses, retrieval, cancellation, `previous_response_id` continuation, and the configured tools. An endpoint offering only `/chat/completions` is insufficient. Native Anthropic/Gemini protocols and client-executed custom function tools are not implemented. A new protocol needs explicit research and model-directory adapters; failures never trigger a change of provider, authentication or billing. Hosted Code Interpreter cannot directly access local files or a locally installed Lean environment.
+**Compatibility requires the full Responses lifecycle:** background requests, stored responses, retrieval, cancellation, `previous_response_id` continuation, and the configured tools. An endpoint offering only `/chat/completions` is insufficient. Supervised Solve additionally requires function-call outputs and continuation for the built-in live board tools. Arbitrary user-configured local functions and native Anthropic/Gemini protocols are not implemented. A new protocol needs explicit research and model-directory adapters; failures never trigger a change of provider, authentication or billing. Hosted Code Interpreter cannot directly access local files or a locally installed Lean environment.
 
 <a id="account"></a>
 ## Codex account, isolation and native tools
@@ -202,6 +202,25 @@ Keep loopback traffic direct with `NO_PROXY`. **The proxy address is for outboun
 
 See the [troubleshooting checklist](usage.md#troubleshooting) for other startup errors.
 
+## Solve coordination
+
+These settings apply to **standalone native Solve**, not the automatic `run` pipeline.
+See [supervised Solve](solve-teams.md) for the research/review loop and proof board.
+
+| Setting | Default and behavior |
+| --- | --- |
+| `solve.coordination` | `supervised` for new configurations; `allocation` preserves the old round-based scheduler. Old checkpoints without this field retain `allocation`. |
+| `solve.parallel_agents` | `null` keeps native delegation; explicitly set 1–32 to enable managed research. With `supervised`, even 1 has a separate supervisor session. |
+| `solve.max_groups` | Optional active-group cap; requires explicit parallelism and cannot create more researchers than the total cap. |
+| `solve.board_review_interval_seconds` | `300`; request inspection of new/changed theorem evidence. The request waits for slot 1 to be free. |
+| `solve.supervisor_timeout_seconds` | `600`; timeout for one supervision call, independent of the research admission deadline. |
+| `solve.agent_slots` | Optional pinned connections; their count must equal parallelism. Configure on the [Agents page](agents.md) or in local YAML. |
+
+Create a new task to change coordination or pinned slot routes. Resuming an old task
+keeps its protocol. Explicit parallelism disables nested native agent spawning;
+researchers retain their native tools, files, memory settings and sessions. Supervision
+shares slot 1 sequentially and never adds an extra concurrent caller.
+
 <a id="budgets"></a>
 ## Budgets and usage
 
@@ -221,15 +240,21 @@ backend:
 | Control | What it means |
 | --- | --- |
 | Active-time budget | Includes research and independent evidence checks; excludes paused time. Resume values replace the total limit, not add more time. |
-| `max_iterations` | Research handoffs, not each native tool call or an entire attempt to solve the problem. |
+| `max_iterations` | Research handoffs; supervised Solve counts both researcher and supervisor calls, not individual native tool calls. Final supervision needs a remaining call. |
 | `solve_until_budget_exhausted` | Native standalone Solve only. When `true`, save every candidate and continue research and self-checking until the active-time limit, including after a complete claim. Defaults to `false`. |
-| `finalize_minutes` | At the time limit, native Solve gets one final call in the same research session, with up to this many extra minutes. Defaults to `5`; `0` disables it. Also applies when native `run` reaches its time limit in the Solve phase. |
+| `finalize_minutes` | Original native/`allocation` Solve and the Solve phase of `run`: one final call with up to this many extra minutes (`5` by default; `0` disables it). Does not apply to supervised Solve. |
 | Input/output token limits | Use actual backend reports, checked between calls. A call can exceed the threshold; unreported usage remains unknown. |
-| `native_turn_timeout_seconds: null` | A native call may use the remaining overall time budget. |
+| `native_turn_timeout_seconds: null` | Supervised researchers have no per-attempt deadline; original native/`allocation` calls use the remaining overall time. An explicit value limits a research call in either mode. |
 | `chat.request_timeout_seconds` | Timeout for one HTTP request, not the total time the remote model may think. |
 | `max_external_cost_usd` | Only `null` or legacy `0`; `0` blocks API-funded calls, including Codex API and paid Solve slots. `null` delegates spending controls to the provider account and does not mean free usage. |
 
-In native Solve, a `PARTIAL` or `UNKNOWN` candidate, or one with unresolved mathematical obligations, is a saved checkpoint: research continues in the same session while budget remains. By default, a candidate can finish standalone Solve early only with `conclude: true`, an explicit `COMPLETE` or `COUNTEREXAMPLE` scope, and an empty `remaining_obligations` list. This records the solver's claim; correctness, original-problem coverage and novelty still require Verify. In `run`, partial candidates can receive independent reviews, but even a positive review does not end research as a full solution.
+### Supervised deadline
+
+With `solve.coordination: supervised` and explicit `solve.parallel_agents` (including 1), use the [supervised Solve budget rules](solve-teams.md): the wall-time budget stops new attempts, running research continues to its next return, and the supervisor reviews and summarizes afterward. `finalize_minutes` does not apply; total duration can exceed the research budget. `native_turn_timeout_seconds: null` imposes no per-attempt deadline in this mode. Set `solve.board_review_interval_seconds` for periodic review requests and `solve.supervisor_timeout_seconds` for individual supervisor calls. Both researcher and supervisor tokens count; only a supervisor-reviewed complete claim can end early.
+
+### Original native and legacy allocation
+
+The following paragraphs describe the original native workflow (`parallel_agents: null`) and legacy `allocation` tasks. In that mode, a `PARTIAL` or `UNKNOWN` candidate, or one with unresolved mathematical obligations, is a saved checkpoint: research continues in the same session while budget remains. By default, a candidate can finish standalone Solve early only with `conclude: true`, an explicit `COMPLETE` or `COUNTEREXAMPLE` scope, and an empty `remaining_obligations` list. This records the solver's claim; correctness, original-problem coverage and novelty still require Verify. In `run`, partial candidates can receive independent reviews, but even a positive review does not end research as a full solution.
 
 Enable **Use full Solve time budget** in the browser's budget settings or Resume form to keep standalone Solve researching and checking its own candidate after a complete claim. It reuses the saved research session and immutable candidate history; it does not launch Verify or Organize. Other limits and interruptions below still apply. Resume preserves this setting when omitted, and its time value remains a cumulative total: `360` minutes means six hours including previously recorded active time.
 

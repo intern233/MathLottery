@@ -59,6 +59,8 @@ def attempt_config(config: Config, attempt: dict) -> Config:
 
 def validate_resume_routes(previous: Config, requested: Config, mode: str | None = None):
     """A continuation may change budgets/groups but never move a session across identities."""
+    if previous.solve.coordination != requested.solve.coordination:
+        raise ValueError("A saved Solve keeps its coordination protocol; start a new task to change it")
     old = previous.solve.agent_slots
     new = requested.solve.agent_slots
     if not (old or new):

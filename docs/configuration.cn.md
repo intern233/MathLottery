@@ -123,7 +123,7 @@ model_providers:
 
 非空的可选 `models` 列表用于本地目录，代替请求 `/models`；省略后可在线获取目录。每个模型的 `reasoning_efforts` 省略或为 `null` 表示未知，`[]` 表示未声明支持任何强度。要声明支持，可以设置 `reasoning_efforts: [low, high]` 和 `default_reasoning_effort: high`。只有提供方支持独立的 Responses mode 字段时才声明 `reasoning_modes`。在网页中选择命名配置，或在文件中设置 `backend.provider`；CLI 没有 `--provider` 参数。
 
-**兼容需要完整的 Responses 生命周期：**后台请求、保存响应、查询、取消、`previous_response_id` 续接，以及配置的工具。只有 `/chat/completions` 的接口不够。尚未实现 Anthropic/Gemini 原生协议，以及需要客户端执行的自定义函数工具。新协议需显式增加研究调用和模型目录适配器；失败不会触发提供方、认证或计费方式切换。托管 Code Interpreter 无法直接访问本地文件或本机安装的 Lean 环境。
+**兼容需要完整的 Responses 生命周期：**后台请求、保存响应、查询、取消、`previous_response_id` 续接，以及配置的工具。只有 `/chat/completions` 的接口不够。监督式 Solve 还要求支持函数调用结果及其续接，供内置实时留言板使用。尚未实现任意用户配置的本地函数，以及 Anthropic/Gemini 原生协议。新协议需显式增加研究调用和模型目录适配器；失败不会触发提供方、认证或计费方式切换。托管 Code Interpreter 无法直接访问本地文件或本机安装的 Lean 环境。
 
 <a id="account"></a>
 ## Codex 账号隔离与原生工具
@@ -202,6 +202,24 @@ CLI、服务与后台进程启动时加载默认值，只影响各自进程，�
 
 其他启动错误见[排障清单](usage.cn.md#troubleshooting)。
 
+## Solve 协调模式
+
+以下设置用于**独立原生 Solve**，不改变自动串联的 `run`。
+研究、审核循环与证明留言板见[监督式 Solve](solve-teams.cn.md)。
+
+| 设置 | 默认值与行为 |
+| --- | --- |
+| `solve.coordination` | 新配置默认 `supervised`；`allocation` 保留旧版按轮调度。缺少该字段的旧检查点继续使用 `allocation`。 |
+| `solve.parallel_agents` | `null` 保留原生自主委派；显式填写 1–32 启用托管研究。配合 `supervised` 时，1 个研究者也有独立监督会话。 |
+| `solve.max_groups` | 可选活动组数上限，要求明确并行数；不会使研究者总数超过人数上限。 |
+| `solve.board_review_interval_seconds` | `300` 秒，请求复查新增或变化的定理证据；请求等待槽位 1 空闲。 |
+| `solve.supervisor_timeout_seconds` | `600` 秒，单次监督调用的时限，独立于停止新研究派发的时间。 |
+| `solve.agent_slots` | 可选的固定接入配置，数量须等于并行数；通过 [Agent 页面](agents.cn.md)或本地 YAML 设置。 |
+
+改变协调协议或固定槽位路由需要新建任务，旧任务续接保留原协议。明确并行数时禁用
+原生内部再创建 agent；研究者仍保留原生工具、文件、记忆设置和会话。监督顺序复用
+槽位 1，不额外增加同时调用者。
+
 <a id="budgets"></a>
 ## 预算与用量
 
@@ -221,15 +239,21 @@ backend:
 | 控制项 | 含义 |
 | --- | --- |
 | 活跃时间预算 | 包括研究及独立证据检查，不计暂停时间。续接时替换总上限，不是追加时间。 |
-| `max_iterations` | 研究交接次数，不是每次原生工具调用，也不是完整解题尝试次数。 |
+| `max_iterations` | 研究交接次数；监督式 Solve 同时统计研究者与监督者调用，不统计每次原生工具调用。最终监督也需要剩余次数。 |
 | `solve_until_budget_exhausted` | 只适用于原生独立 Solve。设为 `true` 后，每次保存候选并持续研究和自查至活动时间上限，声称完整解决后也继续。默认 `false`。 |
-| `finalize_minutes` | 原生 Solve 到达时间上限后，在原研究会话执行一次收尾调用，最多额外使用这些分钟。默认 `5`，设为 `0` 关闭。原生 `run` 在 Solve 阶段到达时间上限时同样适用。 |
+| `finalize_minutes` | 原生自主委派/`allocation` 的 Solve，以及 `run` 的 Solve 阶段：一次收尾调用最多额外使用这些分钟（默认 `5`，`0` 关闭）。不用于监督式 Solve。 |
 | 输入/输出 token 上限 | 依据后端真实返回，在调用之间检查。一次调用可能超过阈值，未报告用量保持未知。 |
-| `native_turn_timeout_seconds: null` | 一次原生调用可以使用剩余总时间预算。 |
+| `native_turn_timeout_seconds: null` | 监督式研究没有单次尝试时限；原生自主委派/`allocation` 使用剩余总时间。明确填写秒数时，两种模式的研究调用都受该时限约束。 |
 | `chat.request_timeout_seconds` | 单次 HTTP 请求超时，不是远端模型的总思考时限。 |
 | `max_external_cost_usd` | 只接受 `null` 或旧版 `0`；`0` 阻止 API 计费调用，包括 Codex API 和付费 Solve 槽位；`null` 交给服务商账号控制支出，不代表免费。 |
 
-原生 Solve 收到 `PARTIAL`、`UNKNOWN`，或仍有数学义务未完成的候选时，会保存检查点，在剩余预算内续接同一研究会话。默认只有候选同时声明 `conclude: true`、范围为 `COMPLETE` 或 `COUNTEREXAMPLE`，且 `remaining_obligations` 为空，才可提前结束独立 Solve。这只记录求解者的声称；正确性、原题覆盖和新颖性仍由 Verify 审查。`run` 可以独立审查部分候选，但即使审查通过，也不会把部分结果当作完整解答而结束研究。
+### 监督式时间边界
+
+配置 `solve.coordination: supervised` 并明确 `solve.parallel_agents`（包括 1）时，使用[监督式 Solve 预算规则](solve-teams.cn.md)：时间到达后停止派发新尝试，当前研究继续到返回，再由监督者审核整理。此时 `finalize_minutes` 不生效，总时长可能超过研究预算，`native_turn_timeout_seconds: null` 不强制限制单次尝试时长。`solve.board_review_interval_seconds` 设置周期复查请求间隔，`solve.supervisor_timeout_seconds` 限制每次监督调用。研究和监督都计入用量，完整声称也需监督审核后才可提前结束。
+
+### 原生自主委派与旧版 allocation
+
+下面各段说明原来的原生流程（`parallel_agents: null`）和旧版 `allocation` 任务。在这些模式中，Solve 收到 `PARTIAL`、`UNKNOWN`，或仍有数学义务未完成的候选时，会保存检查点，在剩余预算内续接同一研究会话。默认只有候选同时声明 `conclude: true`、范围为 `COMPLETE` 或 `COUNTEREXAMPLE`，且 `remaining_obligations` 为空，才可提前结束独立 Solve。这只记录求解者的声称；正确性、原题覆盖和新颖性仍由 Verify 审查。`run` 可以独立审查部分候选，但即使审查通过，也不会把部分结果当作完整解答而结束研究。
 
 在页面的预算设置或续接表单中勾选**用满求解时间预算**，独立 Solve 声称完整解决后也会继续研究和自查。它复用已保存的研究会话并保留不可变的候选历史，不会启动 Verify 或 Organize。下述其他限额和中断条件仍然有效。续接请求不指定此选项时保留原值；时间仍是累计总上限：填写 `360` 分钟表示包含此前活动耗时在内的六小时。
 

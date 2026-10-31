@@ -1,105 +1,148 @@
-# Solve research teams
+# Supervised Solve
 
-[中文](solve-teams.cn.md) · [Usage](usage.md)
+[中文](solve-teams.cn.md) · [Usage](usage.md) · [Agent connections](agents.md)
 
-In the browser, open **Solve → Budget & agent settings** and set **Solve parallelism**
-and optionally **Maximum research groups**. Parallelism caps simultaneous researchers
-across all groups, including peer checks; the group limit caps active groups. For example,
-6 researchers and 2 groups allows two groups of 3, or one group of up to 6. Neither cap
-must be filled. Supervision is separate overhead and uses no research-group slot.
-The settings apply to this task; Resume can change them at the next invocation when using a shared backend.
+Solve can run as a global supervisor, autonomous researchers and a shared proof board.
+In the browser, open **Solve → Budget & agent settings** and enter **Solve parallelism**
+(1–32), plus an optional **Maximum research groups**. With the default
+`solve.coordination: supervised`, even one researcher has a separate supervisor session.
+Leave parallelism `null` to retain the original native delegation workflow.
 
-To give each researcher its own Codex login, Codex API key or independent Responses API connection, open the separate **Agent configuration** page (`/agents`), then enable **Use configured agent slots** in Solve. [Configure slots](agents.md). Each slot keeps its connection and session across regrouping. The first slot also supplies supervision before the round and wrap-up after it. A task with explicit slots keeps its saved roster on resume; changing its size or connections requires a new task.
-
-For new CLI tasks, set the project configuration:
+For CLI tasks, configure:
 
 ```yaml
 solve:
-  parallel_agents: 6
+  coordination: supervised
+  parallel_agents: 4
   max_groups: 2
-  supervisor_timeout_seconds: 120
+  board_review_interval_seconds: 300
+  supervisor_timeout_seconds: 600
+budget:
+  max_wall_time_minutes: 180
+  max_iterations: 100
 ```
 
-Or use `mathlottery solve --problem <problem-id> --parallel-agents 6 --max-groups 2`.
-For an existing task: `mathlottery resume <run-id> --max-groups 1`.
+Then run `mathlottery solve --problem <problem-id>`. The parallelism cap covers all
+researchers across all groups; neither cap has to be filled. `max_groups` requires
+explicit parallelism, and each active group needs at least one researcher.
+These settings apply to standalone native Solve, using Codex or Responses API.
+Find, Verify, Organize, the composed `run` workflow and structured/manual execution
+keep their existing protocols.
 
-`max_groups` accepts 1–32 and requires an explicit `parallel_agents` setting. When
-`max_groups` is `null`, groups are limited only by the total researcher count. Each
-active group needs at least one researcher, so the effective limit is the smaller
-of the two caps. This is an active-group limit, not a lifetime limit on saved groups;
-inactive sessions and findings remain available after reducing it. Blank browser
-fields keep the applicable configuration or saved task values.
+For separate accounts/models, configure `/agents` and select **Use configured agent
+slots**. Each slot retains its account, transport and conversation across regrouping
+and recovery. The supervisor uses slot 1 **sequentially** with the primary researcher;
+it never adds an overlapping invocation on that slot. Explicit slot rosters are frozen
+in the run; changing identities or roster size requires a new task.
 
-For `parallel_agents`:
+## Research and review loop
 
-- `null` (the compatibility default) preserves existing native delegation settings.
-- `1` uses the original continuous researcher, without an additional supervisor.
-- `2`–`32` enables supervised groups. This is a ceiling, not a promise to fill every slot.
-- This release supports standalone native `solve` through Codex or Chat/Responses.
-  Other workflows, the composed `run` workflow, and manual/structured execution do
-  not gain this scheduler. The browser rejects Solve overrides on other workflows.
+```mermaid
+flowchart TD
+    P[Original problem] --> S[Global supervisor]
+    S -->|Original problem + route| R[Autonomous researchers]
+    R -->|Theorem + proof chain| B[Shared proof graph]
+    B -->|Read relevant evidence| R
+    B -->|Periodic review request| S
+    R -->|Complete / partial / stalled signal| S
+    S -->|Unsolved, time remains: revise route| R
+    S -->|Accepted claim, or research drained| E[Review and research summary]
+```
 
-## Scheduling and context
+The supervisor proposes concrete routes and bounded groups. Researchers keep their
+native tools, persistent conversations, local notes and self-checks. They return at
+meaningful checkpoints. A return is a signal, not automatic completion of Solve.
+A stalled or partial attempt prompts the supervisor to inspect available evidence,
+record a synthesis on the board and assign another route while time remains.
 
-At natural round boundaries, a persistent supervisor reads the original problem,
-recorded research claims, obstacles and usage. It proposes group sizes, stable group
-IDs, objectives and a collaboration mode: independent exploration, peer cooperation,
-or derivation with criticism. Modes guide native researchers; they do not prescribe
-every tool call or require fixed specialist roles. A continuous primary research
-session is preserved, while inactive group sessions and files remain available.
+A complete claim must receive a supervisor review tied to its candidate ID and hash.
+The review covers the original statement, proof steps, hypotheses, boundary cases
+and remaining obligations. Rejected or incomplete claims return to research. Missing
+or malformed reviews pause execution; they never silently approve a proof. Approved
+claims may end early unless `budget.solve_until_budget_exhausted` is enabled.
+Supervisor opinions are part of Solve and **do not replace independent Verify**, Lean
+checking, expert review or novelty assessment.
 
-The host validates both allocation limits. An invalid plan cannot raise either cap;
-a planning timeout retains the saved allocation subject to both current limits, including
-after reducing the group limit on resume.
-Reallocation waits for the current researchers' natural checkpoints or the existing
-time/stop limits. It does **not** currently resize groups during an in-flight native
-turn. The supervisor does not provide a calibrated mathematical completion percentage.
+`board_review_interval_seconds` requests periodic inspection of unreviewed or
+challenged theorems. A request waits for slot 1 to be free. Other researchers may keep
+working during supervision; a long primary turn is not killed to make room. Research
+prompts encourage natural checkpoints near this interval, without a forced turn timer.
+This is a scheduling interval, not a guaranteed review-completion deadline.
 
-With an explicit cap, nested native agent spawning is disabled. Extra researchers must
-be requested through this scheduler, so they cannot bypass the cap. Shell, search,
-configured research memory, native conversation continuity and compaction remain with
-the backend. Claims, self-checks and peer checks remain Solve evidence, not independent
-verification or novelty certification.
+Nested native agent spawning is disabled when an explicit cap is set. Researchers
+request extra help through the supervisor; native search, shell, memory and conversation
+compaction remain available. The host enforces researcher and active-group ceilings.
 
-## Cross-group bulletin board
+## Proof board and dependency graph
 
-Researchers may publish results, questions, objections, failed routes, intentions and
-retractions as `outbox/<unique-id>.json`, following `board-message.schema.json` in their
-workspace. Messages include assumptions, dependency keys and optional local proof/source
-paths. The coordinator records messages in the workspace SQLite database, freezes cited
-UTF-8 files, and projects an index and materials into each researcher's `bulletin/`.
-Workers browse the index and open relevant material as needed. Authors may retract
-their own messages; another author's claim can be challenged with an objection.
-Affected dependent messages are marked for rechecking, never silently deleted.
+Codex researchers publish `outbox/<unique-id>.json` using the provided
+`board-message.schema.json`. Messages can be results, questions, objections, failed
+routes, intentions or retractions. A reusable theorem carries:
 
-Messages are immutable. Correct a publication using a new ID and explicit references.
-`author_checked` is the author's assertion; no message becomes certified by being posted.
-Materials are limited to 2 MB each and message files to 100 KB. Build products and large
-datasets should stay in the researcher's local workspace. Rejected posts are explained
-in `bulletin/publication-errors.json`.
+- `theorem.statement`: the exact mathematical statement; `assumptions` on the message.
+- `theorem.proof_steps`: unique step IDs, conclusions, earlier premise IDs and justifications.
+- `theorem.conclusion_step`, source `references` and `remaining_obligations`.
+- `depends_on`: already-published theorem message keys; optional frozen UTF-8 proof files.
 
-Codex workers see new posts during execution. Chat's hosted tools cannot read these local
-files: messages and a bounded set of frozen source texts are sent inline at checkpoints;
-omitted materials are listed explicitly. Chat sharing is therefore at checkpoint
-boundaries, not live. The original full answers and sources remain saved locally.
+The controller rejects cyclic or forward proof-step dependencies and missing message
+dependencies. This checks structure, not mathematical truth. `bulletin/index.json`
+indexes messages; `bulletin/graph.json` points from prerequisite nodes to derived nodes.
+Open the linked message/material files on demand instead of inserting every proof
+into context. This is a dependency graph and lexical index, not a universal mathematical
+equivalence engine or guaranteed duplicate-proof prevention.
 
-## Budgets, recovery and observations
+Publications and cited material bytes are immutable. Corrections use new IDs. A
+supervisor opinion binds to the content hash, checked proof steps and dependency-review
+versions. To accept a theorem it must have no open obligations and all its steps and
+prerequisites must be covered. Retractions and unresolved objections invalidate
+dependent claims. Objections must be explicitly addressed before reacceptance; changes
+to prerequisite reviews invalidate downstream acceptance until rechecked.
+`supervisor_accepted` and `author_checked` remain fallible research opinions.
 
-All research and supervision calls count toward the existing total time, token and call
-budgets. Supervisor usage is also broken out in the browser. The call limit is reserved
-before dispatch, including each researcher in a parallel round. Expand **Researcher activity**
-to see each worker's last visible action and output; full activity downloads include active
-parallel attempts. This displays observed activity, not hidden reasoning or a success percentage.
+Responses agents have live `solve_board_search`, `solve_board_read`,
+`solve_board_material`, `solve_board_publish` and `solve_board_status` functions,
+alongside their configured hosted tools. They can publish inline proof chains and read
+published materials during the same attempt, without general access to local files.
+The function loop follows the [official Responses function-calling protocol](https://developers.openai.com/api/docs/guides/function-calling).
 
-Token usage is checked between calls; in-flight parallel calls can exceed a token threshold before they return.
-Unknown usage remains unknown. Agent count is not a CPU, RAM or monetary limit; use the
-existing workspace resource controls and provider spending limits too.
+Message JSON is limited to 100 KB and each frozen artifact to 2 MB. Keep large datasets
+and build products outside the shared board. Codex publication errors appear in
+`bulletin/publication-errors.json`; API tools return explicit publication errors.
 
-Stopping or interrupting waits for local workers to terminate. Each worker has a durable
-attempt, receipt and session reference. Completed receipts are applied once after recovery;
-unresolved hosted responses must be recovered before new work begins. The existing bounded
-closing turn can gather the saved results after time expires. A complete candidate remains
-a solver claim. Find, independent Verify and Organize retain their existing behavior.
+## Time, recovery and results
 
-Run `pytest -q tests/test_solve_team.py` for deterministic scheduler and recovery tests.
-They exercise scripted native agents, not mathematical ability or paid-model quality.
+The wall-time budget is an **admission deadline**. For a 3-hour task, after 3 hours:
+
+1. No new research attempt is launched.
+2. Already-running attempts continue until they return, even if they are still unsolved.
+3. The supervisor reviews returned claims and organizes the final partial/unsolved or
+   accepted-claim summary. No unsuccessful researcher is relaunched.
+
+Total duration can therefore exceed 3 hours; there is no automatic tail-time cutoff.
+Explicit user stop, per-turn timeout settings, provider failures and non-time limits
+still apply. Supervision has its own timeout. Token thresholds are checked between
+attempts, so parallel in-flight work can overshoot them. Calls reserve space for a final
+supervisor review; an explicit hard limit can still prevent closing, which is reported
+as a pause with saved evidence. `budget.finalize_minutes` belongs to the original
+native/legacy closing protocol, not this supervised deadline behavior.
+
+The browser shows planning, research, draining and closing, along with supervisor
+opinions, derivations and researcher activity. Each run keeps:
+
+- `solve/summary.md`: original target, synthesis, attempts and evidence locations.
+- `solve/supervision.json`: signals, exact candidate reviews, decisions and outcome.
+- `workspace/bulletin/`: message index, graph, reviews and frozen materials.
+- `tasks/`: durable invocation receipts and session references.
+
+All research and supervision usage counts toward totals. API function continuations
+sum usage across their responses. Recovery consumes completed receipts once, resumes
+saved conversations and retrieves pending API responses. An unknown paid POST outcome
+is not automatically resubmitted. Authentication/quota errors never rotate accounts.
+
+Existing saved tasks retain `coordination: allocation`, the previous round-based
+scheduler and deadline semantics. Resume does not silently change protocols. Start a
+new Solve to use supervised coordination; `allocation` remains an explicit compatibility
+option. A null parallelism setting also retains the original native workflow.
+
+Run `pytest -q tests/test_solve_campaign.py tests/test_solve_board_tools.py` for controlled
+scheduler and transport tests. These test orchestration, not mathematical ability.

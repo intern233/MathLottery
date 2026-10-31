@@ -11,7 +11,7 @@ MathLottery separates the **entry point** (browser or terminal), **workflow** (F
 | Workflow | Input | Output and termination |
 | --- | --- | --- |
 | find | Selection criteria, preferred sources, shortlist target | Ranked reusable problems with provenance and status evidence; stops before solving |
-| solve | A registered problem or direct research request | Research progress and immutable candidates; a final candidate ends solving without self-approval |
+| solve | A registered problem or direct research request | Immutable candidates and progress; supervised mode reviews researcher signals before continuing or closing, without upgrading independent verification |
 | verify | A problem and a proof or candidate | Independent truth, proof and novelty assessments; every review verdict ends the audit |
 | organize | An idle run with at least one recorded candidate review and optional instructions | Chinese and English expert reports in Markdown and PDF, with a frozen material manifest; no evidence upgrade |
 | pipeline | Optional problem or direct request | Find when needed, solve, independently review, return feedback to the same researcher |
@@ -21,6 +21,8 @@ The CLI commands find, solve, verify and organize set an explicit Workflow on th
 Standalone Find stops at its shortlist so the user can choose a problem. The CLI's `run` command opts into automatic research-stage transitions and does not add this selection pause. The browser exposes Find, Solve, Verify and optional Organize as separate operations.
 
 Find records the original wording, the target's scope relative to that wording, known partial results and explicit statement risks. `find/risks.py` projects missing evidence and ambiguities onto both shortlist cards and the Solve selection preview. These are selection disclosures, not semantic certification. Nonempty disclosures are bound into the frozen Find dossier; legacy records remain explicitly unassessed.
+
+Standalone native Solve with `solve.coordination: supervised` and explicit parallelism (including 1) dispatches to `solve/campaign.py`. `campaign_receipts.py` applies signals and exact-version supervisor reviews once; `contracts.py` defines milestone evidence, and `board_reviews.py` invalidates dependent opinions. The scheduler closes admissions at its time budget and drains in-flight research before final supervision. `providers/response_tools.py` provides durable function continuations for the run-scoped `solve/board_tools.py` capabilities. Null parallelism retains native delegation; old checkpoints retain `allocation`. The composed `run` does not enter this scheduler. See [supervised Solve](solve-teams.md).
 
 ## Source layout and boundaries
 
@@ -35,7 +37,7 @@ src/mathlottery/
 ├── cli/                  # Command registration, workspace, research, tasks and exports
 ├── domain/               # Problems, literature, proofs, protocols, sessions and runs
 ├── find/                 # User selection, frozen discovery context and statement risks
-├── solve/                # Group allocation, round coordination, attempts, prompts and board
+├── solve/                # Supervised lifecycle, legacy allocation, proof board, receipts and prompts
 ├── verify/               # Candidate integrity, proof/source assessments and formal checks
 ├── organize/             # Frozen dossiers, expert handoff, downloads and PDF/assets
 ├── runtime/              # Workflow lifecycle, native/structured loops, budgets and resources
@@ -77,6 +79,9 @@ The CLI entry point remains `mathlottery.cli:app`; commands, configuration and s
 | providers/metadata.py | Whitelisted runtime metadata and reconciliation of cumulative token counters |
 | runtime/native.py | Native research loop and find/solve/review/organize transitions |
 | solve/ | Optional bounded research groups, supervision, shared board and durable recovery |
+| solve/campaign.py, solve/campaign_receipts.py | Event-driven scheduling, researcher signals, supervisor decisions and once-only receipt consumption |
+| solve/board.py, solve/board_reviews.py, solve/contracts.py | Immutable proof publications, dependency graph, version-bound opinions and structural validation |
+| solve/board_tools.py, providers/response_tools.py | Scoped live board functions and durable Responses function continuations |
 | runtime/attempts.py | Invocation journal, durable receipts, session IDs, accounting and recovery |
 | runtime/workspace.py | Research/review/organization workspaces, prompt preparation and complete imported answers |
 | runtime/milestones.py | Transport-independent milestone parsing and validation |
@@ -102,7 +107,12 @@ flowchart TD
     CLI[CLI + configuration] --> Engine[Orchestrator: create / resume / drive]
     Engine --> Native[NativeRunner]
     Engine --> Legacy[StructuredRunner: compatibility]
-    Native --> Workspace[NativeWorkspace: prepare context]
+    Native -->|Original workflows| Workspace[NativeWorkspace: prepare context]
+    Native -->|Supervised standalone Solve| Campaign[SolveCampaign: signals and scheduling]
+    Campaign <--> Supervisor[Supervisor: plan and review]
+    Campaign <--> Researchers[Research attempts: persistent sessions]
+    Campaign <--> Board[SolveBoard: proofs and review versions]
+    Campaign --> Report
     Workspace --> Journal[NativeAttempts: persist active attempt]
     Journal --> Backend[Codex session or Chat response chain]
     Backend --> Receipt[Persist and queue receipt]
@@ -126,7 +136,9 @@ flowchart TD
 
 `Store` is shared infrastructure; it does not decide research strategy. `CandidateStore` owns candidate integrity and review artifacts, while `NativeAttempts` owns transport recovery. Neither module selects mathematical methods for the researcher.
 
-When standalone native Solve explicitly enables multiple researchers, `NativeRunner` delegates rounds to `solve.SolveCoordinator`. A supervisor proposes bounded groups; researchers retain individual sessions and publish through the shared board. The coordinator persists and accounts for their receipts before returning milestones to the same native loop. The [Solve teams guide](solve-teams.md) explains concurrency, group limits and recovery.
+For supervised Solve, `SolveCampaign` reuses `SolveCoordinator` for routes, workspaces and durable attempts, but handles each completed researcher receipt as an event. The supervisor sees the original target, signals and proof board, audits complete claims and proposes another assignment when needed. Running peers keep their sessions and objectives. Supervision waits for the primary slot to be idle and can then run alongside other peers. The scheduler reserves call capacity for final supervision and closes admissions at the active-time deadline; it does not cancel researchers to meet that deadline. Accepted complete claims may close early unless full-budget exploration is enabled. Legacy `allocation` tasks retain their round-based scheduler.
+
+`SolveCampaign` checkpoints preserve acknowledged signals, planned dispatches and exact candidate reviews. The SQLite board stores immutable publications and append-only review records; `bulletin/` files are projections. Proof dependencies, review versions and outstanding objections determine whether an opinion is still applicable. `solve/summary.md` and `solve/supervision.json` record the outcome; supervisor opinions never populate independent Verify reviews. The [Solve guide](solve-teams.md) details the protocol and its limits.
 
 For automatic turns, a missing milestone is a recoverable handoff error: the next prompt requests registration of the saved result, rather than silently treating an unregistered answer as ordinary progress. Codex primarily submits a workspace JSON file; if it omits that file, one explicit fenced `mathlottery` block in the answer is also accepted. Both routes validate current task IDs and payloads. An invalid existing file is never bypassed by choosing an answer block. Manual answers may still omit milestones.
 
@@ -172,7 +184,7 @@ Codex starts with codex exec and continues the exact session using codex exec re
 
 Chat creates background Responses API requests with a configured model and hosted tools. The default tools are web_search and Code Interpreter; ordinary Markdown answers may contain a single machine-readable milestone at the end. Requests use previous_response_id to retain the research context. Reviewer responses form a different chain. No browser, cookie extraction or manual copying is involved.
 
-Chat API credentials are read from an environment variable, never from Codex login storage or request files. API errors do not trigger a switch of backend or billing. Set the model in configuration or a CLI option; only the built-in `chat` profile may also use `OPENAI_MODEL`. Custom providers require their own model selection. API-native tool execution is server-hosted; client-executed custom function tools are not implemented.
+Chat API credentials are read from an environment variable, never from Codex login storage or request files. API errors do not trigger a switch of backend or billing. Set the model in configuration or a CLI option; only the built-in `chat` profile may also use `OPENAI_MODEL`. Custom providers require their own model selection. Configured hosted tools run server-side. Supervised Solve additionally exposes a fixed set of client-executed board functions through `providers/response_tools.py`, with per-call journals and usage accumulated across continuations. These capabilities are scoped to the current run and author; they do not expose arbitrary files or user-configured functions.
 
 The Python harness saves answers and response metadata locally. Hosted containers and remote response history have provider retention limits; local checkpoints do not recreate expired remote contexts. Codex similarly needs its original session storage for exact continuation. Old native sessions stored in a personal Codex home are not migrated; existing MathLottery checkpoints and results remain readable, but a missing original session can require a new run.
 
@@ -226,7 +238,7 @@ Switching transports while an invocation is pending is rejected. Otherwise each 
 
 ## Budgets and verification
 
-Time budgets count active research time; paused and manual waiting time is excluded. Rounds count research handoffs, not native tool calls. Token limits use actual backend reports and are checked between calls; a single call may exceed a threshold.
+Time budgets count active research time; paused and manual waiting time is excluded. In supervised Solve, they stop new assignments while active attempts finish, followed by supervisor review. The original native/`allocation` workflow instead uses bounded wrap-up. `max_iterations` counts researcher and supervisor handoffs in supervised mode, not individual native tool calls. Token limits use actual backend reports and are checked between calls; concurrent calls can exceed a threshold before returning.
 
 Codex can report cumulative session usage at the end of a turn. For resumed calls, the transport compares that report with the same session's before/after counters and charges only the increment. Confirmed per-turn reports are also supported. Missing or inconsistent counters remain unknown, rather than being added as if they were per-turn measurements. Historical checkpoints keep their recorded totals; reports flag unreconciled old records instead of silently rewriting them.
 

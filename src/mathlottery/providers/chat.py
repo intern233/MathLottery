@@ -19,6 +19,7 @@ from mathlottery.telemetry.search import queries_from_call
 class ChatBackend:
     def __init__(self, config: BackendConfig):
         self.config = config
+        self.local_tools = None
 
     def capabilities(self):
         return {
@@ -160,6 +161,13 @@ class ChatBackend:
         )
 
     def _poll(self, client, response, directory, deadline, cancelled, on_session):
+        if self.local_tools is not None:
+            from mathlottery.providers.response_tools import run_tools
+
+            return run_tools(self, client, response, directory, deadline, cancelled, on_session)
+        return self._poll_response(client, response, directory, deadline, cancelled, on_session)
+
+    def _poll_response(self, client, response, directory, deadline, cancelled, on_session):
         identifier = self._response_id(response)
         activity = ActivityReporter(directory)
         activity.response(response)
@@ -255,7 +263,9 @@ class ChatBackend:
                         "input": prompt,
                         "background": True,
                         "store": True,
-                        "tools": self.config.chat.tools,
+                        "tools": self.config.chat.tools + (
+                            self.local_tools.definitions if self.local_tools is not None else []
+                        ),
                     }
                     if session_id:
                         self._response_id({"id": session_id})

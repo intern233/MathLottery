@@ -14,7 +14,7 @@ from mathlottery.web.service import Overrides, ResumeRequest, StartRequest, WebS
 
 def group_config(parallel=4, groups=2, calls=3):
     config = Config()
-    config.solve = SolveConfig(parallel_agents=parallel, max_groups=groups)
+    config.solve = SolveConfig(coordination="allocation", parallel_agents=parallel, max_groups=groups)
     config.budget.max_iterations = calls
     config.budget.finalize_minutes = 0
     return config
@@ -124,6 +124,7 @@ def test_web_start_and_resume_preserve_or_override_group_limit_per_task(store, m
 
 def test_cli_start_and_resume_pass_both_limits_to_execution(store, monkeypatch):
     backend = TeamBackend(complete=False)
+    (store.root / "config.yaml").write_text("solve:\n  coordination: allocation\n")
 
     def factory(*args):
         return Orchestrator(store, backend)

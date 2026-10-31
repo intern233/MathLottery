@@ -25,11 +25,13 @@ backend:
   execution: native
   codex_command: codex
   codex_profile: null
-  # null uses the remaining total budget for a native turn.
+  # null leaves supervised researchers without a per-attempt deadline.
+  # Original native/allocation turns use the remaining total budget.
   native_turn_timeout_seconds: null
   native_web_search: live
   native_network_access: true
-  # null inherits the isolated Codex configuration/runtime defaults; false keeps one agent.
+  # null inherits the isolated Codex defaults. Explicit Solve parallelism disables
+  # nested spawning; extra researchers are managed by the supervisor instead.
   native_multi_agent: null
   # Research only; independent reviewers always disable memories.
   native_memories: null
@@ -38,6 +40,9 @@ backend:
   timeout_seconds: 300
   max_retries: 2
 solve:
+  # Explicit parallelism enables the supervisor/researcher/board workflow.
+  # allocation retains the old round-based scheduler for compatibility.
+  coordination: supervised
   # Standalone native Solve only: simultaneous researchers across all groups (1–32).
   # null preserves historical native delegation. An explicit cap routes all extra
   # researchers through MathLottery; nested Codex spawning is disabled to enforce it.
@@ -45,9 +50,10 @@ solve:
   # Optional cap on active research groups (1–32), across which the above agents
   # are shared. Requires parallel_agents; null follows the total researcher cap.
   max_groups: null
-  # Supervisor is separate overhead, charged to total time/tokens/call limits.
-  # Reallocation happens at natural checkpoints; existing sessions are preserved.
-  supervisor_timeout_seconds: 120
+  # Supervision shares slot 1 sequentially. Review requests wait for that slot;
+  # in-flight research is not cancelled to free it.
+  supervisor_timeout_seconds: 600
+  board_review_interval_seconds: 300
   # Optional per-researcher connections (native standalone Solve only).
   # Use the /agents page for browser tasks, or configure slots here for CLI Solve.
   # With slots, parallel_agents must equal their count. See docs/agents.md.
@@ -71,7 +77,7 @@ resources:
   sample_interval_seconds: 2
 budget:
   max_wall_time_minutes: 180
-  finalize_minutes: 5  # Extra bounded native Solve closing time; 0 disables the agent closing turn.
+  finalize_minutes: 5  # Original native/allocation wrap-up; not used by supervised Solve.
   # Native standalone Solve: keep checking/improving even after a complete claim.
   solve_until_budget_exhausted: false
   max_iterations: 50

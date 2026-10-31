@@ -6,6 +6,10 @@
 
 > 本文描述 legacy structured 协议，仅适用于 `--execution structured`、旧检查点和离线 Demo。默认 native 模式使用普通 Markdown 与阶段成果登记，见[安装与使用](usage.cn.md)。
 
+新的[监督式 Solve](solve-teams.cn.md)使用原生研究会话、研究者阶段成果、
+`solve-supervision` 决策检查点，以及独立的证明留言板 schema，不使用下文逐动作的
+兼容协议。它要求独立原生 Solve 和明确的并行数；structured/manual 保留原行为。
+
 此兼容协议用于明确命名的 manual 后端，或使用 `--execution structured` 的 Codex，不是 Chat API 的协议。每个任务在 `tasks/<task-id>/response.schema.json` 中提供完整 JSON Schema。两个旧版后端由同一 Pydantic 协议校验；Codex 还会把该 Schema 传给官方 CLI 的结构化输出选项。
 
 最小手动响应如下：

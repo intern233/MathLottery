@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import time
+from copy import copy
 from dataclasses import asdict
 
 from mathlottery.config import Config
@@ -20,6 +21,8 @@ from mathlottery.runtime.milestones import read_milestone
 from mathlottery.runtime.prompts import milestone_schema
 from mathlottery.solve.allocation import Allocation
 from mathlottery.solve.board import Message
+from mathlottery.solve.contracts import Supervision
+from mathlottery.solve.lifecycle import supervised
 from mathlottery.solve.routes import attempt_config, route_metadata
 from mathlottery.storage.core import atomic_write, json_text, safe_path
 
@@ -40,6 +43,9 @@ class SolveAttempts:
         return safe_path(self.store.run_dir(run.id), relative)
 
     def cancelled(self, run, config):
+        if supervised(run, config):
+            # The research deadline closes admissions, never an in-flight turn.
+            return self.abort.is_set() or self.engine._stop_file(run).exists()
         return self.abort.is_set() or self.engine._cancelled(run, config)
 
     def prepare(self, run, worker=None):
@@ -76,6 +82,9 @@ class SolveAttempts:
         )
         atomic_write(
             safe_path(root, "allocation.schema.json"), json_text(Allocation.model_json_schema())
+        )
+        atomic_write(
+            safe_path(root, "supervision.schema.json"), json_text(Supervision.model_json_schema())
         )
         run.native.solve_team.active_attempts.append(attempt)
         if worker:
@@ -115,7 +124,17 @@ class SolveAttempts:
         atomic_write(directory / "turn.json", json_text(attempt))
         selected_config = attempt_config(config, attempt)
         backend = bounded_backend(selected_config, self.engine)
-        timeout = budget.remaining(run, config)
+        if supervised(run, config) and hasattr(backend, "local_tools"):
+            from mathlottery.solve.board import SolveBoard
+            from mathlottery.solve.board_tools import BoardTools
+
+            # Even an injected/shared transport gets attempt-local capabilities;
+            # concurrent workers must not overwrite each other's board identity.
+            backend = copy(backend)
+            backend.local_tools = BoardTools(
+                SolveBoard(self.store, run.id), attempt["worker_id"], attempt["group"], workspace,
+            )
+        timeout = float("inf") if supervised(run, config) else budget.remaining(run, config)
         if attempt["role"] == "supervision":
             timeout = min(timeout, config.solve.supervisor_timeout_seconds)
         elif selected_config.backend.native_turn_timeout_seconds is not None:

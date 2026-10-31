@@ -35,6 +35,30 @@ Tests cover both native and structured execution, including:
 
 Automated backend tests use explicitly identified fake CLIs and `httpx.MockTransport`; they do not consume real model usage. Isolation tests do run real subprocesses. Manual handoff tests cover only the `manual` compatibility backend and do not describe how `chat` works. Use the current command output for test counts and timings. Save any raw test output in ignored directories such as `.mathlottery/`.
 
+## Supervised Solve checks
+
+Run the focused scheduler, live-board and browser component tests:
+
+```bash
+pytest -q tests/test_solve_campaign.py tests/test_solve_board_tools.py tests/test_web_frontend_modules.py
+```
+
+They cover planning, partial/rejected signals followed by new routes, exact-version
+claim review, theorem dependencies and objections, soft-deadline draining, slot-1
+exclusion, explicit stop, pinned mixed transports, quota failure and receipt recovery.
+Responses tests check live function results, continuation accounting and uncertain POST
+outcomes without retrying paid work. These use deterministic agents and fake transports;
+they do not demonstrate mathematical ability or a successful real multi-hour experiment.
+
+For an optional real check, use a known educational problem with explicit parallelism
+and a small budget, after configuring the chosen connections. Check that the supervisor
+assigns routes, researchers can exchange theorem evidence and completed attempts trigger
+review. Confirm that a partial result can lead to another route before the deadline,
+while after it no new researcher starts and the current ones are allowed to return.
+The actual duration may exceed the setting. Inspect `solve/summary.md`,
+`solve/supervision.json` and `workspace/bulletin/` under the run; a supervisor opinion must
+not appear as an independent Verify approval. Review requests may wait for slot 1.
+
 ## Browser checks
 
 Run the focused suites for HTTP, accounts, model selection, proof attachments and worker integration:
@@ -54,7 +78,7 @@ When using WSL, request the printed Windows `localhost` address from an actual W
 
 For the **MathLottery account** panel, check signed-out, pending, authenticated, cancelled and unavailable states, masked identity fields, official-link validation and the absence of credentials or device codes in browser localStorage. Confirm account errors do not block research history, and that status requests and ordinary sign-in never start research or replace an existing MathLottery login.
 
-Check that Codex submission and continuation require an available ChatGPT login, including after a status refresh fails. The HTTP preflight must reject unsigned, pending, unavailable, API-key-only and unsupported accounts before saving a problem, creating a run or launching a worker. Exercise per-task backend overrides, continuation with a saved backend that differs from current defaults, and a login that disappears between rendering and submission. Chat API tasks must not query Codex authentication. A rejected submission should retain its error, refresh account status and never automatically repeat the request. Existing task records and personal Codex credentials must remain unchanged.
+Check authentication for the selected route: subscription-authenticated Codex requires its isolated ChatGPT login, whereas Codex API authentication uses the chosen environment key. API authentication must not require or replace a subscription login. Reject unavailable credentials before saving a problem, creating a run or launching a worker. Exercise per-task backend overrides, pinned Solve slots, continuation with saved settings that differ from defaults, and credentials disappearing between rendering and submission. Independent Chat API tasks must not query Codex authentication. A rejected submission should retain its error and never automatically repeat the request. Existing task records and personal Codex credentials must remain unchanged.
 
 Create synthetic `.lean`, `lean-toolchain` and `lakefile.toml` files under a research or review workspace and verify they appear in **Results** and download as plain text. Include `.md`, `.txt`, `.json`, `.csv` and `.py` files inside that workspace's `proof/` or `formal/` directory; the same extensions elsewhere must not be downloadable. Check the 1 MB read limit, bounded listing, UTF-8 validation, and rejection of hidden/cache/build paths, traversal, symbolic links and hard links. Swap a parent directory for a symlink between validation and opening to verify that the reader still refuses access. Downloads must not execute scripts, expose arbitrary run files or change proof levels. Source presence alone is not a Lean result or a certificate of statement equivalence or novelty; a real mathematical audit must separately record the exact formal statement, compiler outcome and trust assumptions.
 

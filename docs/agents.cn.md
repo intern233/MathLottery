@@ -30,9 +30,9 @@ export RESEARCH_API_KEY_A
 mathlottery serve
 ```
 
-Codex API 鉴权连接 OpenAI 官方端点，保留原生 Codex harness。独立 API agent 继续用于厂商扩展：端点需要支持 MathLottery 使用的 Responses 功能，包括后台响应、查询、取消及配置的工具。只有 API Key 或兼容 OpenAI 的 Chat Completions 接口还不够；未来接入 DeepSeek 等其他协议时需要相应适配器。见[提供方兼容要求](configuration.cn.md#providers)。
+Codex API 鉴权连接 OpenAI 官方端点，保留原生 Codex harness。独立 API agent 继续用于厂商扩展：端点需要支持 MathLottery 使用的 Responses 功能，包括后台响应、查询、取消及配置的工具。监督式 Solve 还需要函数调用及 `function_call_output` 续接，供实时留言板使用。只有 API Key 或兼容 OpenAI 的 Chat Completions 接口还不够；未来接入 DeepSeek 等其他协议时需要相应适配器。见[提供方兼容要求](configuration.cn.md#providers)。
 
-监督 agent 在研究轮次开始前使用槽位 1，收尾也在研究者停止后使用槽位 1。这些调用计入任务预算；配置 4 个槽位时，不会因为监督再增加第 5 个同时调用者。监督可以让槽位闲置或重新分组，但每个研究者保留自己的接入和会话。显式限制并行数时，禁用 Codex 内部再启动额外 agent，避免绕过上限。
+监督者与主研究者顺序复用槽位 1。新监督式任务会审核研究信号并定期请求复查留言板；复查等待槽位 1 空闲，其他研究者可以继续。时间到达后等待当前尝试返回，再监督整理。见[监督式 Solve](solve-teams.cn.md)。这些调用计入任务预算；配置 4 个槽位时，不会因为监督再增加第 5 个同时调用者。监督可以让槽位闲置或重新分组，但每个研究者保留自己的接入和会话。显式限制并行数时，禁用 Codex 内部再启动额外 agent，避免绕过上限。
 
 ## 已有任务与隐私
 
@@ -54,6 +54,7 @@ Codex API 鉴权连接 OpenAI 官方端点，保留原生 Codex harness。独立
 
 ```yaml
 solve:
+  coordination: supervised
   parallel_agents: 3
   max_groups: 2
   agent_slots:

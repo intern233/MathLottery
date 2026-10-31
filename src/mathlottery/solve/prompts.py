@@ -6,6 +6,7 @@ from mathlottery.find.discovery import project as project_discovery
 from mathlottery.runtime import budget
 from mathlottery.runtime.prompts import build_native_prompt
 from mathlottery.solve.board import SolveBoard
+from mathlottery.solve.lifecycle import supervised
 from mathlottery.storage.core import json_text, safe_path
 
 
@@ -152,9 +153,15 @@ class SolvePrompts:
                         + "\n\n".join(earlier)
                     )
             prompt += (
+                "Use solve_board_search/read/material/publish/status tools for live board access "
+                "during this turn. Local workspace paths are not readable through hosted tools. "
+                "Publish theorem proof_steps inline through solve_board_publish; it enforces "
+                "your run and author identity. Results are research claims, not verification.\n"
+                + json_text(board.graph()) if supervised(run, config) else (
                 "Hosted tools cannot read local workspace paths. The following board snapshot is "
                 "included inline; share new findings in your ordinary answer/milestone summary. "
                 "Other groups receive them at the next checkpoint, not live.\n"
                 + board.context(hosted=True)
+                )
             )
         return prompt

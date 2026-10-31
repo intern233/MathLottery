@@ -19,6 +19,7 @@ def test_http_saved_slots_drive_and_resume_through_exact_original_routes(
 ):
     service = WebService(tmp_path)
     defaults = Config()
+    defaults.solve.coordination = "allocation"  # Keep the historical round protocol covered.
     defaults.budget.finalize_minutes = 0
     monkeypatch.setattr(service, "config", lambda: defaults.model_copy(deep=True))
     scripted = TeamBackend(complete=False, plans=[
@@ -95,6 +96,9 @@ def test_http_saved_slots_drive_and_resume_through_exact_original_routes(
             pass
 
     with serving(service) as (client, server):
+        # This fixture executes whole rounds inside HTTP instead of the normal
+        # detached queue; allow their durable fsyncs on slower local filesystems.
+        client.timeout = 30
         server.agents.account_factory = Account
 
         def wrong_account():

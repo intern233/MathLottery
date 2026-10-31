@@ -6,6 +6,11 @@ English | [简体中文](protocol.cn.md)
 
 > This document describes the legacy structured protocol for `--execution structured`, old checkpoints, and offline demos. The default native mode uses ordinary Markdown and milestone registration; see [installation and usage](usage.md).
 
+The new [supervised Solve](solve-teams.md) uses native research sessions, researcher
+milestones, `solve-supervision` decision checkpoints and a separate proof-board schema.
+It does not use the per-action compatibility protocol below. It requires standalone
+native Solve with explicit parallelism; structured/manual tasks keep their existing behavior.
+
 This compatibility protocol uses the explicitly named manual backend or Codex with `--execution structured`. It is not the Chat API protocol. Every task includes a complete JSON Schema in `tasks/<task-id>/response.schema.json`. The same Pydantic protocol validates both legacy transports. Codex also passes that schema to the official CLI's structured-output option.
 
 The minimum manual response is:

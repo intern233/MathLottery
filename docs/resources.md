@@ -84,6 +84,21 @@ Kernel replay is a separate workload. For the already built mesh showcase projec
 
 For agent-driven work, put the desired toolchain, cache location and concurrency policy in **Task instructions**. For example: “Reuse the pinned Lean/mathlib environment; run one compiler at a time with `-j 1 -M 2048`; record peak RSS, exit status and any limit failure before attempting a larger build.” These instructions do not impose OS resource limits on native agent commands. The independent attached-source checker has the separate limits below.
 
+## Resources during supervised Solve
+
+The [supervised workflow](solve-teams.md) has one research run with several callers inside
+it. `resources.max_concurrent_runs: 1` therefore does **not** mean one researcher or one
+Lean compiler. `solve.parallel_agents` bounds simultaneous agent calls across groups;
+the supervisor shares the primary slot sequentially. Each Codex researcher may launch
+local tools, whose combined memory and CPU use must fit the machine. The independent
+formal-check queue does not intercept those native commands.
+
+Measure one researcher before increasing parallelism. A 3-hour budget stops new research
+assignments, but active attempts and final supervision may continue afterward, consuming
+resources and reported tokens. Supervisor calls count too. Explicit stop, memory-stop
+requests, per-call timeouts and provider failures still apply. The board limits individual
+messages and artifacts, not total run storage; sessions, logs and research files can keep growing.
+
 ## What the configuration actually limits
 
 | Setting or control | Scope and limitation |
@@ -99,7 +114,7 @@ For agent-driven work, put the desired toolchain, cache location and concurrency
 | `verification.formal_max_object_mb: 16` / `formal_max_total_object_mb: 960` | Independent checker compiler output: per-file size limit and monitored total size, in MiB. Proof objects can greatly exceed source size. Temporary compiled objects are deleted after checking; limits, sizes and hashes remain in the receipt. Not a quota on native research artifacts or the whole disk. |
 | `verification.max_sources`, `source_timeout_seconds` | Independent citation retrieval: defaults to 12 URLs and a 60-second collection budget per milestone; in-flight requests use `tools.web_timeout_seconds`. PDFs use a 512 MB isolated parser. See [evidence configuration](evidence.md). |
 | `budget.max_wall_time_minutes` / `backend.native_turn_timeout_seconds` | Active research time / individual native-turn duration, not RAM, CPU-thread or disk limits. |
-| `budget.max_iterations` | Research handoffs, not the number of tool calls or child processes inside a turn. |
+| `budget.max_iterations` | Research handoffs, including supervision in supervised Solve; not the number of tool calls or child processes inside a turn. |
 | `backend.native_max_log_bytes` | Limit checked against a native Codex call's event/stdout and stderr logs; not a quota for downloads, artifacts, all runs or Chat responses. |
 | Lean `-M`, `-j`, and `LEAN_NUM_THREADS` | Controls on the invoked Lean runtime; not a hard limit on all tasks together. |
 

@@ -253,4 +253,11 @@ class RunQueries:
             "workers": workers,
             "supervisor_usage": team.supervisor_usage.model_dump(mode="json"),
             "messages": SolveBoard(self.store, run.id).messages(),
+            "graph": SolveBoard(self.store, run.id).graph(),
+            "coordination": settings.coordination,
+            "campaign": team.campaign.model_dump(mode="json", include={
+                "phase", "review_requested", "last_review_elapsed", "candidate_reviews",
+                "summary", "summary_path", "accepted_candidate_id", "closed", "signals",
+            }),
+            "supervisor_running": any(a["role"] == "supervision" for a in team.active_attempts),
         }

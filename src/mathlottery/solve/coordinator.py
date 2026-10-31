@@ -142,6 +142,7 @@ class SolveCoordinator:
         )
         target = self.path(run, f"workspace/research-history/{receipt['task_id']}.md")
         atomic_write(target, result.text)
+        return f"{worker.id}:{publication_id}"
 
     def stage(self, run, receipts, board):
         team = run.native.solve_team

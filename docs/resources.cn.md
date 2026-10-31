@@ -84,6 +84,19 @@ env LEAN_NUM_THREADS=1 lake env lean -j 1 -M 2048 Proof.lean
 
 让 agent 操作时，可以在「任务补充说明」里写清楚工具链、缓存位置与并发要求，例如：“复用固定版本的 Lean/mathlib 环境；一次只启动一个编译器，使用 `-j 1 -M 2048`；尝试更大构建前记录峰值 RSS、退出码和上限失败情况。”这属于研究指令，不会自动给原生 agent 命令施加操作系统资源限制；独立附件检查器使用下文介绍的单独限额。
 
+## 监督式 Solve 的资源使用
+
+[监督式流程](solve-teams.cn.md)在一条研究任务内部运行多个调用者，因此
+`resources.max_concurrent_runs: 1` **不代表只有一个研究者或一个 Lean 编译器**。
+`solve.parallel_agents` 限制跨组同时运行的 agent 调用数，监督者与主研究者顺序复用
+槽位。每个 Codex 研究者都可能启动本地工具，合计内存与 CPU 用量需要适合当前机器；
+独立形式化检查队列不会拦截这些原生命令。
+
+增加并行数前先测一个研究者。三小时预算只停止新研究派发，当前尝试及最终监督可以
+继续消耗时间、资源与 token，监督调用也计入用量。主动停止、内存停止请求、单次调用
+超时和提供方错误仍然有效。留言板限制单条消息和单份材料，不限制整次运行大小；
+会话、日志和研究文件仍可能增长。
+
 ## 配置究竟限制了什么
 
 | 配置或控制方式 | 生效范围与限制 |
@@ -99,7 +112,7 @@ env LEAN_NUM_THREADS=1 lake env lean -j 1 -M 2048 Proof.lean
 | `verification.formal_max_object_mb: 16` / `formal_max_total_object_mb: 960` | 独立检查器生成对象的单文件大小限制与监测总量，单位 MiB。证明对象可能远大于源码；检查后删除临时编译对象，回执保留限额、大小与哈希。不限制原生研究产物或整个磁盘。 |
 | `verification.max_sources`、`source_timeout_seconds` | 独立引用抓取：每次阶段成果默认最多 12 个网址、60 秒收集预算；正在等待的请求使用 `tools.web_timeout_seconds`。PDF 解析沙箱限额 512 MB，详见[证据配置](evidence.cn.md)。 |
 | `budget.max_wall_time_minutes` / `backend.native_turn_timeout_seconds` | 研究的活跃时间 / 单次原生调用时长，不是内存、CPU 线程数或磁盘上限。 |
-| `budget.max_iterations` | 研究交接次数，不是一轮内的工具调用数或子进程数量。 |
+| `budget.max_iterations` | 研究交接次数，监督式 Solve 还包括监督调用；不是一轮内的工具调用数或子进程数量。 |
 | `backend.native_max_log_bytes` | 对单次原生 Codex 调用的事件/stdout 与 stderr 日志检查大小；不限制下载、产物、全部运行记录或 Chat 响应的总大小。 |
 | Lean `-M`、`-j` 与 `LEAN_NUM_THREADS` | 对所调用 Lean 运行时的控制，不是所有任务合计的硬上限。 |
 

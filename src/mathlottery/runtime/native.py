@@ -293,6 +293,12 @@ class NativeRunner:
             raise ValueError("API usage is blocked by max_external_cost_usd: 0")
         budget.settle(run)
         run.active_since = now()
+        from mathlottery.solve.lifecycle import supervised
+
+        if supervised(run, config):
+            from mathlottery.solve.campaign import SolveCampaign
+
+            return SolveCampaign(self).drive(run, config)
         self.recover(run)
         if not self.team.recover(run, config):
             return run

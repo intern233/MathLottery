@@ -109,6 +109,21 @@ def task_instructions(run: Run) -> str:
             "Find ends with the list and waits for the user to choose; do not launch Solve."
         )
     if run.phase == Phase.SOLVE:
+        from mathlottery.config import Config
+        from mathlottery.solve.lifecycle import supervised
+
+        if supervised(run, Config.model_validate(run.config)):
+            return (
+                "Task: SOLVE the original mathematical problem along the supervisor's research route. "
+                "Choose your own methods, tools and self-checks. Return a meaningful progress/stop "
+                "milestone if this attempt stalls, or a candidate with exact proof and scope if it "
+                "succeeds. Each return signals the supervisor, which reviews and may reassign you. "
+                "A complete claim does not finish Solve until the supervisor reviews that exact proof. "
+                "The wall-time budget is an admission deadline: finish your CURRENT attempt even "
+                "after it expires and report honestly. Do not repeat work merely to fill time. "
+                "Keep intermediate theorems and their proof chains on the shared board. "
+                "Solve supervision and peer checks are not independent Verify or novelty certification."
+            )
         ending = (
             "This standalone SOLVE uses the full active-time budget. All candidates, including "
             "COMPLETE or COUNTEREXAMPLE with conclude: true, are saved as checkpoints; they "

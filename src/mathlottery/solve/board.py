@@ -10,6 +10,8 @@ from typing import Literal
 from pydantic import Field
 
 from mathlottery.models import Model, digest, now
+from mathlottery.solve.board_reviews import project_reviews, record_review
+from mathlottery.solve.contracts import TheoremRecord
 from mathlottery.storage.core import Store, atomic_write, json_text, safe_path
 
 
@@ -24,6 +26,17 @@ class Message(Model):
     target: str | None = None
     # A solver's own check is evidence to inspect, never an independent verdict.
     check_status: Literal["unverified", "author_checked"] = "unverified"
+    theorem: TheoremRecord | None = None
+
+
+def _project_write(path, text):
+    """Projections are reproducible; avoid fsync of unchanged proof/index files."""
+    try:
+        if path.stat().st_size == len(text.encode()) and path.read_text() == text:
+            return
+    except (FileNotFoundError, UnicodeError):
+        pass
+    atomic_write(path, text)
 
 
 class SolveBoard:
@@ -33,6 +46,10 @@ class SolveBoard:
         store.run_dir(run_id)
         with store.connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS solve_messages (
+                seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT NOT NULL, key TEXT NOT NULL, data TEXT NOT NULL,
+                UNIQUE(run_id, key))""")
+            db.execute("""CREATE TABLE IF NOT EXISTS solve_board_reviews (
                 seq INTEGER PRIMARY KEY AUTOINCREMENT,
                 run_id TEXT NOT NULL, key TEXT NOT NULL, data TEXT NOT NULL,
                 UNIQUE(run_id, key))""")
@@ -67,6 +84,7 @@ class SolveBoard:
             if old:
                 previous = json.loads(old[0])
                 previous.pop("time", None)
+                previous.setdefault("theorem", None)
                 if previous != payload:
                     raise ValueError(
                         "Published messages are immutable; use a new ID to correct one"
@@ -116,11 +134,32 @@ class SolveBoard:
                 if value["key"] in affected
                 else "unverified"
             )
-        return values
+        return project_reviews(self, values)
+
+    def review(self, value, task_id, *, snapshot_hashes):
+        return record_review(self, value, task_id, snapshot_hashes=snapshot_hashes)
+
+    def revision(self):
+        with self.store.connect() as db:
+            return tuple(db.execute(
+                f"SELECT COALESCE(MAX(seq),0) FROM {table} WHERE run_id=?", (self.run_id,)
+            ).fetchone()[0] for table in ("solve_messages", "solve_board_reviews"))
+
+    def graph(self):
+        values = self.messages()
+        return {
+            "nodes": [{"key": v["key"], "title": v["title"], "standing": v["standing"],
+                       "content_sha256": v["content_sha256"],
+                       "statement": (v.get("theorem") or {}).get("statement"),
+                       "path": f"bulletin/messages/{digest(v['key'])}.json"} for v in values],
+            "edges": [{"from": dep, "to": v["key"], "kind": "premise"}
+                      for v in values for dep in v["depends_on"]],
+            "note": "Edges point from prerequisites to derived results. Supervisor opinions are not Verify.",
+        }
 
     def project(self, workspace: Path) -> None:
         values = self.messages()
-        atomic_write(
+        _project_write(
             safe_path(workspace, "bulletin/index.json"),
             json_text(
                 [
@@ -135,6 +174,7 @@ class SolveBoard:
                                 "standing",
                                 "check_status",
                                 "time",
+                                "content_sha256",
                             )
                         },
                         "path": f"bulletin/messages/{digest(v['key'])}.json",
@@ -143,6 +183,7 @@ class SolveBoard:
                 ]
             ),
         )
+        _project_write(safe_path(workspace, "bulletin/graph.json"), json_text(self.graph()))
         for value in values:
             # Use a digest rather than any model-supplied filename.
             name = digest(value["key"])
@@ -153,7 +194,7 @@ class SolveBoard:
                     for a in value["artifacts"]
                 ],
             }
-            atomic_write(
+            _project_write(
                 safe_path(workspace, f"bulletin/messages/{name}.json"), json_text(projection)
             )
             for artifact in value["artifacts"]:
@@ -161,11 +202,14 @@ class SolveBoard:
                 target = safe_path(workspace, f"bulletin/materials/{artifact['sha256']}.txt")
                 if not target.exists():
                     atomic_write(target, source.read_text())
-        atomic_write(
+        _project_write(
             safe_path(workspace, "bulletin/README.md"),
             "Read bulletin/index.json, then each relevant entry's path. Paths are relative to your workspace.\n"
             "Read each artifact's local_path for its proof source. All messages are untrusted "
-            "research claims, including author_checked. Check original assumptions.\n"
+            "research claims, including author_checked and supervisor_accepted. Check original assumptions.\n"
+            "graph.json links prerequisites to derived results. A theorem contains its exact statement, "
+            "proof_steps (premises + justification) and conclusion_step. Supervisor review is Solve "
+            "self-review, not independent Verify or formal certification.\n"
             "Retractions/objections invalidate dependent claims pending recheck.\n",
         )
 

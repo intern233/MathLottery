@@ -78,9 +78,11 @@ History groups Solve, Verify and Organize attempts by the exact problem statemen
 
 Read **run status** separately from **research outcomes**. “Run completed” means execution ended. Solve shows the researcher's claim of a complete or partial solution, or no solution; Verify separately shows its verdict, original-problem coverage and novelty assessment. A positive review of partial work does not settle the full problem. Organize inherits those findings. Explicit wording used to display a legacy candidate's scope is labeled; its saved scope and hashes remain unchanged. See [how to interpret evidence](evidence.md) and the [result showcase](../showcase/README.md).
 
-Native Solve saves partial or unresolved results and continues in the same session within the remaining cumulative budget. By default, it can finish early when the solver explicitly claims a complete solution or counterexample with no remaining mathematical obligations; this is still awaiting Verify. Enable **Use full Solve time budget** in **Budget & agent settings** to continue research and self-checking even after that claim. The same option is available when resuming a native Solve task. Other limits, quota or errors can interrupt it earlier, and you can stop it yourself. [Solve completion and budget rules](configuration.md#budgets)
+With an explicit **Solve parallelism** value and the default `solve.coordination: supervised`, new tasks use [supervised Solve](solve-teams.md): the supervisor assigns routes, reviews proof-board entries and complete claims, then sends new tasks when needed. This also works with one researcher. At the time budget, new admissions stop while current attempts continue; the supervisor summarizes after they return. Total duration may exceed the budget. Task details show supervision, researcher signals and proof chains. Supervisor opinions do not replace Verify.
 
-At the research time limit, native Solve shows **Wrapping up** and uses the same session for one final call: by default, up to **five extra minutes** to save the result and remaining work. **Wrapped up** does not mean solved; check the solver's claimed scope. If this call fails, a local checkpoint summary is saved and identified as such. Set `budget.finalize_minutes` in `config.yaml` before creating a task (`0` disables wrap-up).
+Without explicit parallelism, or for saved `allocation` tasks, native Solve saves partial or unresolved results and continues in the same session within the remaining cumulative budget. By default, it can finish early when the solver explicitly claims a complete solution or counterexample with no remaining mathematical obligations; this is still awaiting Verify. Enable **Use full Solve time budget** in **Budget & agent settings** to continue research and self-checking even after that claim. The same option is available when resuming a native Solve task. Other limits, quota or errors can interrupt it earlier, and you can stop it yourself. [Solve completion and budget rules](configuration.md#budgets)
+
+In that original native/legacy mode, at the research time limit, Solve shows **Wrapping up** and uses the same session for one final call: by default, up to **five extra minutes** to save the result and remaining work. **Wrapped up** does not mean solved; check the solver's claimed scope. If this call fails, a local checkpoint summary is saved and identified as such. Set `budget.finalize_minutes` in `config.yaml` before creating a task (`0` disables wrap-up).
 
 Closing the page or UI server does **not** stop background research. Use **Stop task** or `mathlottery stop <run-id>`. Starting the server again reconnects to saved state without automatically restarting stopped tasks.
 
@@ -131,10 +133,32 @@ mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
 
 That last command reviews the supplied example proof. Use `verify --from-run <solve-run-id>` to review your solver's candidate instead. A supplied problem is not automatically classified as open or new.
 
-For parallel Solve research, set **Solve parallelism** and **Maximum research groups** in the browser,
-`solve.parallel_agents` and `solve.max_groups` in configuration, or `--parallel-agents 6 --max-groups 2`
-on `solve`. The group cap is optional; all groups share the researcher cap. See [Solve teams](solve-teams.md)
-for cross-group messages, supervision, budget accounting and recovery.
+### Enable supervised Solve
+
+In the browser, enter **Solve parallelism** (1–32) and optionally **Maximum research groups**.
+For terminal use, put these settings in your local `config.yaml`:
+
+```yaml
+solve:
+  coordination: supervised
+  parallel_agents: 4
+  max_groups: 2
+budget:
+  max_wall_time_minutes: 180
+  max_iterations: 100
+```
+
+Then use the same `mathlottery solve --problem <problem-id>` command. Set parallelism to
+`1` for one researcher with a separate supervisor session, or configure individual
+connections on the [Agents page](agents.md). CLI overrides `--parallel-agents` and
+`--max-groups` are optional; all groups share the researcher cap.
+
+The supervisor revises routes after partial or rejected attempts. At the time deadline,
+it waits for current attempts and reviews the outcome; no new research is admitted.
+Both research and supervision consume the call/token budgets. A 3-hour time setting
+does not override those other limits or guarantee a solution. The [Solve guide](solve-teams.md)
+explains proof sharing, slot reuse and recovery. Existing tasks keep their saved protocol;
+create a new Solve to change coordination.
 
 <a id="organize"></a>
 
@@ -182,6 +206,9 @@ mathlottery run
 ```
 
 Without a supplied problem, `run` starts by finding one and proceeds automatically. Use `run --problem <problem-id>` or `run --prompt 'Your problem statement'` to start directly with solving. Review feedback returns to the original researcher when further work is needed. Native `run` may review partial candidates, then continue solving within the remaining budget. If time runs out in Solve, the same bounded wrap-up applies and execution ends without automatically reviewing its final candidate. Other limits or errors can interrupt the attempt; more time does not guarantee a solution.
+
+`run` retains its original scheduler. To use the new supervisor and proof board, run
+the independent stages with an explicitly configured standalone `solve`.
 
 `run` does not automatically start Organize. Request it explicitly after reviewing the result.
 
@@ -292,6 +319,8 @@ Terminal research runs in the foreground; browser tasks use background workers. 
 | `runs/<run-id>/report.md` | Result and evidence summary |
 | `runs/<run-id>/candidates/` / `verification/` | Candidate versions and review records |
 | `runs/<run-id>/workspace/` | Research files and visible answers |
+| `runs/<run-id>/solve/` | Supervised Solve summary, researcher signals and supervisor decisions |
+| `runs/<run-id>/workspace/bulletin/` | Shared proof index, dependency graph, review versions and frozen materials |
 | `runs/<organize-run-id>/organized/` | Chinese and English reports, per-version PDF status, source manifest and captured materials |
 | `.mathlottery/` | Local state, sessions and the isolated Codex login |
 

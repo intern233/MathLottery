@@ -34,6 +34,8 @@ def config_summary(config: Config):
         "solve_until_budget_exhausted": config.budget.solve_until_budget_exhausted,
         "solve_parallel_agents": config.solve.parallel_agents,
         "solve_max_groups": config.solve.max_groups,
+        "solve_coordination": config.solve.coordination,
+        "solve_board_review_interval_seconds": config.solve.board_review_interval_seconds,
         "solve_agent_slots": [
             {"id": slot.id, "label": slot.label, "backend": slot.backend.mode,
              "provider": slot.backend.provider or slot.backend.mode,

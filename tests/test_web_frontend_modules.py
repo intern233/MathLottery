@@ -248,3 +248,34 @@ def test_solve_team_view_preserves_disclosures_and_keeps_untrusted_text_inert(pa
       MathLotterySolveTeams.create(panel).render(run, 'zh');
       return panel.textContent === document.querySelector('#solve-team').textContent;
     }""")
+
+
+def test_supervised_single_researcher_shows_drain_reviews_and_proof_chain(page):
+    data = {"id": "run-fixture", "busy": True, "solve_team": {
+        "parallel_agents": 1, "coordination": "supervised", "rounds": 0,
+        "workers": [], "groups": [], "supervisor_running": False,
+        "campaign": {"phase": "draining", "review_requested": True,
+                     "summary": "<script>untrusted()</script>", "candidate_reviews": [{
+                         "candidate_id": "candidate-fixture", "verdict": "needs_work",
+                         "rationale": "Check the boundary case", "checks": [{
+                             "status": "uncertain", "claim": "n=0", "reasoning": "Missing argument",
+                         }],
+                     }]},
+        "messages": [{"key": "researcher:lemma", "group": "algebra", "standing": "supervisor_accepted",
+                      "title": "Lemma", "body": "A proof", "assumptions": [], "depends_on": [], "artifacts": [],
+                      "theorem": {"statement": "n+0=n", "proof_steps": [{"id": "step", "statement": "n+0=n",
+                                  "justification": "By definition", "premises": []}], "remaining_obligations": []},
+                      "supervisor_review": {"rationale": "Definition checked"}}],
+    }}
+    page.evaluate("""run => {
+      document.querySelector('#run-detail').hidden = false;
+      window.teams = MathLotterySolveTeams.create(document.querySelector('#solve-team'));
+      teams.render(run, 'zh');
+    }""", data)
+    assert page.locator("#solve-team").is_visible()
+    text = page.locator("#solve-team").text_content()
+    assert "等待当前研究返回" in text and "第一槽位空闲" in text
+    assert "仍需补充" in text and "非 Verify" in text and "By definition" in text
+    assert page.locator("#solve-team script").count() == 0
+    page.evaluate("run => teams.render(run, 'en')", data)
+    assert "total duration may exceed the budget" in page.locator("#solve-team").text_content()

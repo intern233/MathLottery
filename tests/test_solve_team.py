@@ -72,6 +72,7 @@ class TeamBackend:
 
 def setup(store, backend, *, calls=3, parallel=2):
     config = Config()
+    config.solve.coordination = "allocation"  # Historical checkpoint protocol remains supported.
     config.solve.parallel_agents = parallel
     config.budget.max_iterations = calls
     config.budget.finalize_minutes = 0
@@ -175,6 +176,7 @@ def test_hosted_pending_response_recovers_without_resubmitting_or_losing_peer_re
     config.budget.max_external_cost_usd = None
     config.budget.max_iterations = 3
     config.solve.parallel_agents = 2
+    config.solve.coordination = "allocation"
     engine = Orchestrator(store, backend)
     run = engine.drive(engine.create(config, problem(), workflow=Workflow.SOLVE).id)
     assert run.state == State.PAUSED and run.iteration == 2
@@ -261,6 +263,7 @@ def test_every_new_researcher_receives_the_selected_problem_dossier(store, mode)
     config.budget.max_external_cost_usd = None
     config.budget.max_iterations = 3
     config.solve.parallel_agents = 2
+    config.solve.coordination = "allocation"
     backend = TeamBackend()
     engine = Orchestrator(store, backend)
     found = engine.create(config, workflow=Workflow.FIND)

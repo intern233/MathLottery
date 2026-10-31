@@ -225,7 +225,7 @@ def test_missing_api_key_never_uses_present_subscription_login(tmp_path, api_cod
 
 def test_api_exec_continues_native_session_and_never_saves_key(store, api_codex):
     slots = [AgentSlot(id="api-research", backend=api_codex)]
-    config = Config(solve=SolveConfig(parallel_agents=1, agent_slots=slots))
+    config = Config(solve=SolveConfig(coordination="allocation", parallel_agents=1, agent_slots=slots))
     config.budget.max_iterations = 2
     config.budget.finalize_minutes = 0
     # A declared but inactive Responses peer makes its key an explicit exclusion.

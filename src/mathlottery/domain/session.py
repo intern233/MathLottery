@@ -49,6 +49,24 @@ class SolveWorker(Model):
     turns: int = 0
 
 
+class SolveCampaign(Model):
+    """Checkpointed supervisor/researcher handshake, separate from Verify."""
+
+    phase: Literal["planning", "researching", "draining", "closing", "completed"] = "planning"
+    processed_tasks: list[str] = Field(default_factory=list)
+    signals: list[dict] = Field(default_factory=list)
+    acknowledged_signals: list[str] = Field(default_factory=list)
+    dispatch: list[str] = Field(default_factory=list)
+    candidate_reviews: list[dict] = Field(default_factory=list)
+    decisions: list[dict] = Field(default_factory=list)
+    last_review_elapsed: float = 0
+    review_requested: bool = False
+    accepted_candidate_id: str | None = None
+    summary: str = ""
+    summary_path: str | None = None
+    closed: bool = False
+
+
 class SolveTeam(Model):
     groups: list[SolveGroup] = Field(default_factory=list)
     workers: dict[str, SolveWorker] = Field(default_factory=dict)
@@ -59,6 +77,7 @@ class SolveTeam(Model):
     supervisor_usage: Usage = Field(default_factory=Usage)
     decision: str | None = None
     rounds: int = 0
+    campaign: SolveCampaign = Field(default_factory=SolveCampaign)
 
 
 class NativeSession(Model):

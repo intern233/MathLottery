@@ -114,11 +114,15 @@ class AgentSlot(Model):
 
 
 class SolveConfig(Model):
+    # Explicit researcher budgets use the supervised lifecycle. Old checkpoints
+    # are migrated to allocation mode, without changing their running protocol.
+    coordination: Literal["supervised", "allocation"] = "supervised"
     # None preserves historical native delegation; an explicit number is enforced.
     parallel_agents: int | None = Field(default=None, ge=1, le=32, strict=True)
     # None adds no group limit beyond the total researcher cap.
     max_groups: int | None = Field(default=None, ge=1, le=32, strict=True)
-    supervisor_timeout_seconds: float = Field(default=120, gt=0, le=600)
+    supervisor_timeout_seconds: float = Field(default=600, gt=0, le=600)
+    board_review_interval_seconds: float = Field(default=300, gt=0, le=86400)
     agent_slots: list[AgentSlot] = Field(default_factory=list, max_length=32)
 
     @model_validator(mode="after")

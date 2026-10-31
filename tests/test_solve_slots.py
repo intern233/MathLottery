@@ -29,7 +29,7 @@ def slot_config(*modes, calls=3):
             chat=ChatConfig(api_key_env=f"TEST_AGENT_{index}_KEY"),
         )) for index, mode in enumerate(modes or ("codex", "chat"), 1)
     ]
-    config = Config(solve=SolveConfig(parallel_agents=len(slots), agent_slots=slots))
+    config = Config(solve=SolveConfig(coordination="allocation", parallel_agents=len(slots), agent_slots=slots))
     config.budget.max_iterations = calls
     config.budget.finalize_minutes = 0
     return config
@@ -209,7 +209,7 @@ def test_saved_solve_rejects_identity_route_or_count_changes(store, monkeypatch)
     with pytest.raises(ValueError, match="primary transport"):
         engine.resume(run.id, mode="chat")
     config = Config.model_validate(run.config)
-    config.solve = SolveConfig(parallel_agents=1, agent_slots=config.solve.agent_slots[:1])
+    config.solve = SolveConfig(coordination="allocation", parallel_agents=1, agent_slots=config.solve.agent_slots[:1])
     with pytest.raises(ValueError, match="keeps its agent slots"):
         engine.resume(run.id, config=config)
 
