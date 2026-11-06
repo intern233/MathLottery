@@ -6,6 +6,9 @@ from pydantic import Field, field_validator, model_validator
 
 from mathlottery.models import Model
 
+DEFAULT_MODEL = "gpt-6-astra"
+DEFAULT_REASONING_EFFORT = "max"
+
 
 class ChatConfig(Model):
     api_key_env: str = Field(default="OPENAI_API_KEY", pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
@@ -44,8 +47,8 @@ class BackendConfig(Model):
     execution: Literal["native", "structured"] = "native"
     chat: ChatConfig = Field(default_factory=ChatConfig)
     codex_command: str = "codex"
-    model: str | None = None
-    reasoning_effort: str | None = None
+    model: str | None = DEFAULT_MODEL
+    reasoning_effort: str | None = DEFAULT_REASONING_EFFORT
     codex_profile: str | None = None
     # A workspace-local credential namespace, never a caller-provided filesystem path.
     codex_identity: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
@@ -60,6 +63,32 @@ class BackendConfig(Model):
     native_max_log_bytes: int = Field(default=100_000_000, ge=100000)
     timeout_seconds: int = Field(default=300, gt=0)
     max_retries: int = Field(default=2, ge=0, le=5)
+
+    @model_validator(mode="before")
+    @classmethod
+    def scope_model_defaults(cls, value):
+        """Default new OpenAI routes; retain explicit nulls in saved conversations."""
+        if not isinstance(value, dict):
+            return value
+        data = dict(value)
+        chat = data.get("chat") or {}
+        endpoint = (
+            chat.base_url if isinstance(chat, ChatConfig) else
+            chat.get("base_url", "https://api.openai.com/v1") if isinstance(chat, dict) else None
+        )
+        endpoint = endpoint.rstrip("/") if isinstance(endpoint, str) else endpoint
+        custom = (
+            data.get("provider") not in (None, "codex", "chat", "work")
+            or data.get("mode") == "manual"
+            or (data.get("mode") == "chat" and endpoint != "https://api.openai.com/v1")
+        )
+        if custom:
+            data.setdefault("model", None)
+            data.setdefault("reasoning_effort", None)
+        elif data.get("model", DEFAULT_MODEL) != DEFAULT_MODEL:
+            # An explicitly selected different model may not support max.
+            data.setdefault("reasoning_effort", None)
+        return data
 
     @property
     def uses_api_key(self) -> bool:
@@ -121,12 +150,18 @@ class SolveConfig(Model):
     parallel_agents: int | None = Field(default=None, ge=1, le=32, strict=True)
     # None adds no group limit beyond the total researcher cap.
     max_groups: int | None = Field(default=None, ge=1, le=32, strict=True)
-    supervisor_timeout_seconds: float = Field(default=600, gt=0, le=600)
+    # Preserve the historical default; null lets a long proof review finish naturally.
+    supervisor_timeout_seconds: float | None = Field(default=600, gt=0, le=86400)
     board_review_interval_seconds: float = Field(default=300, gt=0, le=86400)
+    adaptive_coordination: bool = Field(default=False, strict=True)
     agent_slots: list[AgentSlot] = Field(default_factory=list, max_length=32)
+    # Optional dedicated supervisor; null preserves sequential sharing of slot 1.
+    supervisor_backend: BackendConfig | None = None
 
     @model_validator(mode="after")
     def managed_groups(self):
+        if self.adaptive_coordination and (self.coordination != "supervised" or self.parallel_agents is None):
+            raise ValueError("Adaptive coordination requires supervised Solve with explicit parallelism")
         if self.max_groups is not None and self.parallel_agents is None:
             raise ValueError("Set solve.parallel_agents to enforce solve.max_groups")
         if self.agent_slots:
@@ -134,7 +169,34 @@ class SolveConfig(Model):
                 raise ValueError("solve.parallel_agents must match the number of configured agent slots")
             if len({slot.id for slot in self.agent_slots}) != len(self.agent_slots):
                 raise ValueError("Solve agent slot IDs must be unique")
+        if self.supervisor_backend is not None:
+            backend = self.supervisor_backend
+            if self.coordination != "supervised" or self.parallel_agents is None:
+                raise ValueError("A dedicated supervisor requires supervised Solve with explicit parallelism")
+            if not self.agent_slots:
+                raise ValueError("A dedicated supervisor requires configured researcher slots")
+            if backend.execution != "native" or backend.mode not in {"codex", "chat"}:
+                raise ValueError("The supervisor requires native Codex or Responses API execution")
+            if backend.mode == "chat" and backend.codex_identity is not None:
+                raise ValueError("A Responses API supervisor cannot select a Codex account identity")
+            if backend.mode == "codex" and any(
+                slot.backend.mode == "codex"
+                and (slot.backend.codex_auth, slot.backend.codex_identity)
+                == (backend.codex_auth, backend.codex_identity)
+                for slot in self.agent_slots
+            ):
+                raise ValueError("The dedicated supervisor must have a separate Codex account namespace")
         return self
+
+    @property
+    def configured_backends(self) -> list[BackendConfig]:
+        return [slot.backend for slot in self.agent_slots] + (
+            [self.supervisor_backend] if self.supervisor_backend is not None else []
+        )
+
+    @property
+    def invocation_limit(self) -> int:
+        return (self.parallel_agents or 1) + int(self.supervisor_backend is not None)
 
     @property
     def group_limit(self) -> int:
@@ -312,13 +374,15 @@ class Config(Model):
         was_solve_model = isinstance(solve, SolveConfig)
         if was_solve_model:
             solve = solve.model_dump(mode="json")
-        if isinstance(solve, dict) and solve.get("agent_slots"):
+        if isinstance(solve, dict):
             solve = dict(solve)
             slots = []
-            for slot in solve["agent_slots"]:
+            for slot in solve.get("agent_slots") or []:
                 slot = slot.model_dump(exclude_unset=True) if isinstance(slot, AgentSlot) else dict(slot)
                 slots.append({**slot, "backend": resolve(slot.get("backend"))})
             solve["agent_slots"] = slots
+            if solve.get("supervisor_backend") is not None:
+                solve["supervisor_backend"] = resolve(solve["supervisor_backend"])
             data["solve"] = SolveConfig.model_validate(solve) if was_solve_model else solve
         return data
 

@@ -287,7 +287,7 @@ class NativeRunner:
         if config.budget.max_external_cost_usd == 0 and (
             config.backend.model_copy(update={"mode": run.mode}).uses_api_key or (
                 run.workflow == Workflow.SOLVE
-                and any(slot.backend.uses_api_key for slot in config.solve.agent_slots)
+                and any(backend.uses_api_key for backend in config.solve.configured_backends)
             )
         ):
             raise ValueError("API usage is blocked by max_external_cost_usd: 0")

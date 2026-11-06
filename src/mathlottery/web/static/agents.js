@@ -12,7 +12,7 @@
       privacyTitle: "Local, separate sign-ins", privacy: "Codex subscription logins and API execution profiles stay separate from each other and your normal CLI / IDE. API keys remain in server environment variables. Account usage limits still apply; a limit never triggers an automatic account switch.",
       agent: "Agent", primary: "Supervision + wrap-up", label: "Label · optional", connection: "Agent engine", codex: "Codex agent", responses: "API agent · Responses",
       auth: "Authentication & billing", chatgptAuth: "ChatGPT sign-in · subscription usage", apiAuth: "API key · API billing", codexApiHint: "Runs the same native Codex agent with its tools. Uses an OpenAI API key and API billing, in a separate workspace profile; your ChatGPT login stays unchanged.",
-      model: "Model ID", modelPlaceholder: "Provider default", apiModelPlaceholder: "Model ID, or server OPENAI_MODEL", effort: "Reasoning effort", effortPlaceholder: "Provider default; e.g. max", modelHint: "Use a model ID and effort supported by this account or endpoint. Saving configuration does not test model access.",
+      model: "Model ID", modelPlaceholder: "MathLottery default", apiModelPlaceholder: "Model ID", effort: "Reasoning effort", effortPlaceholder: "MathLottery default", modelHint: "New OpenAI slots default to gpt-6-astra / max. You can choose another supported model and effort. Saving configuration does not test model access.",
       reasoningMode: "API reasoning mode", defaultMode: "Endpoint default", standardMode: "Standard", proMode: "Pro · supported models only",
       endpoint: "API base URL", env: "API key environment variable", envHint: "Enter a variable name, never the key itself. Set its value in the terminal that starts MathLottery, then restart the server. API connections use the selected key and API billing.",
       tools: "Hosted tools", toolsOpenAI: "Web search + code interpreter", toolsNone: "None", toolsCustom: "Preserve configured tools", toolsHint: "For another Responses-compatible provider, use only tools that its endpoint supports.",
@@ -33,7 +33,7 @@
       privacyTitle: "登录独立保存在本地", privacy: "Codex 的订阅登录与 API 执行状态分别保存，并与本地 CLI / IDE 隔离。API Key 只从服务端环境变量读取。账号使用限制仍然适用，触发限制后不会自动切换账号。",
       agent: "Agent", primary: "兼任监督与收尾", label: "备注名称 · 可选", connection: "Agent 执行方式", codex: "Codex agent", responses: "API agent · Responses",
       auth: "认证与计费", chatgptAuth: "ChatGPT 账号登录 · 订阅额度", apiAuth: "API Key · API 计费", codexApiHint: "运行同一个原生 Codex agent，保留其工具能力。使用 OpenAI API Key 和 API 计费，运行状态独立保存，不改变已有 ChatGPT 登录。",
-      model: "模型 ID", modelPlaceholder: "由接入方选择默认模型", apiModelPlaceholder: "模型 ID，或服务端 OPENAI_MODEL", effort: "推理强度", effortPlaceholder: "接入方默认，例如 max", modelHint: "填写该账号或接口支持的模型 ID 和推理强度。保存配置不代表模型权限已验证。",
+      model: "模型 ID", modelPlaceholder: "MathLottery 默认值", apiModelPlaceholder: "模型 ID", effort: "推理强度", effortPlaceholder: "MathLottery 默认值", modelHint: "新增 OpenAI 槽位默认使用 gpt-6-astra / max，也可以填写其他受支持的模型与强度。保存配置不代表模型权限已验证。",
       reasoningMode: "API 推理模式", defaultMode: "接口默认", standardMode: "Standard", proMode: "Pro · 仅限支持的模型",
       endpoint: "API 基础地址", env: "API Key 环境变量名", envHint: "这里只填变量名，不要填密钥。在启动 MathLottery 的终端中配置该变量的值，再重启服务。API 接入使用所选密钥，并按 API 计费。",
       tools: "托管工具", toolsOpenAI: "网络搜索 + 代码解释器", toolsNone: "不启用", toolsCustom: "保留已配置的工具", toolsHint: "使用其他兼容 Responses 的接口时，仅选择该接口支持的工具。",
@@ -51,11 +51,16 @@
   language = language || (navigator.language.startsWith("zh") ? "zh" : "en");
   if (!words[language]) language = "en";
   const t = key => words[language][key] || key;
-  const state = { slots: [], saved: [], cached: [], accounts: new Map(), keyConfigured: {}, csrf: "", busy: false, dirty: false };
+  const state = { slots: [], saved: [], cached: [], accounts: new Map(), keyConfigured: {}, modelDefaults: {}, csrf: "", busy: false, dirty: false };
   const defaultTools = () => [{ type: "web_search" }, { type: "code_interpreter", container: { type: "auto" } }];
   const clone = value => JSON.parse(JSON.stringify(value));
   const subscription = backend => backend?.mode === "codex" && (backend.codex_auth || "chatgpt") === "chatgpt";
   const keyEnv = backend => backend?.mode === "codex" ? backend.codex_api_key_env || "OPENAI_API_KEY" : backend?.chat?.api_key_env;
+  const defaultsFor = backend => {
+    if (backend.provider && !["codex", "chat"].includes(backend.provider)) return {};
+    if (backend.mode === "chat" && (backend.chat?.base_url || "https://api.openai.com/v1").replace(/\/+$/, "") !== "https://api.openai.com/v1") return {};
+    return state.modelDefaults;
+  };
 
   async function request(path, body) {
     let response;
@@ -127,8 +132,8 @@
         }
       }
       const models = node("div", "fields-row");
-      field(models, "model", input(slot, "model", backend.model, value => { backend.model = value.trim() || null; }, { placeholder: t(backend.mode === "chat" ? "apiModelPlaceholder" : "modelPlaceholder") }));
-      const effort = input(slot, "effort", backend.reasoning_effort, value => { backend.reasoning_effort = value.trim() || null; }, { placeholder: t("effortPlaceholder"), maxLength: 50 });
+      field(models, "model", input(slot, "model", backend.model, value => { backend.model = value.trim() || defaultsFor(backend).model || null; }, { placeholder: defaultsFor(backend).model || t(backend.mode === "chat" ? "apiModelPlaceholder" : "modelPlaceholder") }));
+      const effort = input(slot, "effort", backend.reasoning_effort, value => { backend.reasoning_effort = value.trim() || defaultsFor(backend).reasoning_effort || null; }, { placeholder: defaultsFor(backend).reasoning_effort || t("effortPlaceholder"), maxLength: 50 });
       effort.setAttribute("list", "reasoning-values"); field(models, "effort", effort);
       card.append(models, node("p", "field-hint", t("modelHint")));
       if (backend.mode === "chat") {
@@ -220,7 +225,7 @@
   function newSlot() {
     const ids = new Set([...state.slots, ...state.cached].map(slot => slot.id));
     let number = 1; while (ids.has(`agent-${number}`)) number += 1;
-    return { id: `agent-${number}`, label: null, backend: { mode: "codex", execution: "native", model: null, reasoning_effort: null, codex_identity: `agent-${number}` } };
+    return { id: `agent-${number}`, label: null, backend: { mode: "codex", execution: "native", ...state.modelDefaults, codex_identity: `agent-${number}` } };
   }
   function resize() {
     const count = Number($("#agent-count").value);
@@ -233,6 +238,7 @@
   async function load() {
     try {
       const data = await request("/api/agents");
+      state.modelDefaults = data.model_defaults || {};
       state.csrf = data.csrf_token || (await request("/api/bootstrap")).csrf_token;
       state.saved = clone(data.slots || []); state.slots = clone(state.saved); state.cached = []; state.accounts.clear();
       state.keyConfigured = data.key_configured || {};

@@ -117,6 +117,7 @@ def test_roster_http_csrf_and_account_scope(tmp_path):
     with serving(service) as (client, server):
         server.agents.account_factory = FakeAccount
         data = client.get("/api/agents").json()
+        assert data["model_defaults"] == {"model": "gpt-6-astra", "reasoning_effort": "max"}
         headers = {"X-MathLottery-Token": data["csrf_token"]}
         payload = {"slots": [slot(), slot("agent-b")]}
         assert client.post("/api/agents", json=payload).status_code == 403
@@ -221,12 +222,15 @@ def test_resume_uses_saved_pool_after_roster_edited_or_removed(tmp_path, monkeyp
         assert [item["id"] for item in launched[0][1]["config"]["solve"]["agent_slots"]] == ["api-first", "codex-second"]
 
 
-def test_browser_without_pool_selection_does_not_implicitly_use_yaml_slots(tmp_path, monkeypatch):
+@pytest.mark.parametrize("dedicated", [False, True])
+def test_browser_without_pool_selection_does_not_implicitly_use_yaml_slots(tmp_path, monkeypatch, dedicated):
     roster = AgentRoster.model_validate({"slots": [slot("api-slot", "chat")]})
     config = roster.apply(Config())
     # CLI's pool remains configured, but Web's visible default is a separate model.
     config.backend = Config().backend
     config.backend.model = "visible-default-model"
+    if dedicated:
+        config.solve.supervisor_backend = config.backend.model_copy(deep=True)
     (tmp_path / "config.yaml").write_text(yaml.safe_dump(config.model_dump(mode="json")))
     service = WebService(tmp_path)
     monkeypatch.setattr(service.jobs, "launch", lambda *a, **kw: None)
@@ -238,6 +242,7 @@ def test_browser_without_pool_selection_does_not_implicitly_use_yaml_slots(tmp_p
         assert response.status_code == 202, response.text
         run = service.store.load(response.json()["id"])
         assert not run.config["solve"]["agent_slots"]
+        assert run.config["solve"]["supervisor_backend"] is None
         assert run.config["backend"]["model"] == "visible-selection"
         assert run.mode == "codex"
     assert service.config().solve.agent_slots

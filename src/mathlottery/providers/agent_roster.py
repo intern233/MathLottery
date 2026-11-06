@@ -14,7 +14,7 @@ from pathlib import Path
 
 from pydantic import Field, model_validator
 
-from mathlottery.config import AgentSlot, Config
+from mathlottery.config import AgentSlot, BackendConfig, Config
 from mathlottery.models import Model
 from mathlottery.providers.catalog import validate_configured_selection
 
@@ -54,6 +54,7 @@ class AgentRoster(Model):
             data["backend"] = slot.backend.model_dump()
             # A roster is independent of whichever Solve pool is in config.yaml.
             data["solve"]["agent_slots"] = []
+            data["solve"]["supervisor_backend"] = None
             selection = Config.model_validate(data)
             validate_configured_selection(selection)
             backend = selection.backend.model_copy(deep=True)
@@ -115,6 +116,7 @@ class AgentRosterStore:
         roster = self.load()
         return {
             **json.loads(roster.model_dump_json()),
+            "model_defaults": BackendConfig().model_dump(include={"model", "reasoning_effort"}),
             "key_configured": {
                 slot.id: bool(os.environ.get(slot.backend.api_key_env_name))
                 for slot in roster.slots if slot.backend.uses_api_key

@@ -5,13 +5,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from mathlottery.config import Config
+from mathlottery.config import BackendConfig, Config
 from mathlottery.models import digest
 from mathlottery.providers.catalog import effective_provider
 
 
 def config_summary(config: Config):
     return {
+        "model_defaults": BackendConfig().model_dump(include={"model", "reasoning_effort"}),
         "backend": config.backend.mode,
         "provider": effective_provider(config),
         "model": config.backend.model,
@@ -35,6 +36,7 @@ def config_summary(config: Config):
         "solve_parallel_agents": config.solve.parallel_agents,
         "solve_max_groups": config.solve.max_groups,
         "solve_coordination": config.solve.coordination,
+        "solve_adaptive_coordination": config.solve.adaptive_coordination,
         "solve_board_review_interval_seconds": config.solve.board_review_interval_seconds,
         "solve_agent_slots": [
             {"id": slot.id, "label": slot.label, "backend": slot.backend.mode,

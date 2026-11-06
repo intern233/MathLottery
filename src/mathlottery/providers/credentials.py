@@ -81,6 +81,7 @@ def known_credential_env_names(root: Path, config=None) -> set[str]:
                 connection(provider)
         solve = value.get("solve") or {}
         if isinstance(solve, Mapping):
+            connection(solve.get("supervisor_backend"))
             for slot in solve.get("agent_slots") or []:
                 if isinstance(slot, Mapping):
                     connection(slot.get("backend"))

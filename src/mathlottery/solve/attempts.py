@@ -21,9 +21,10 @@ from mathlottery.runtime.milestones import read_milestone
 from mathlottery.runtime.prompts import milestone_schema
 from mathlottery.solve.allocation import Allocation
 from mathlottery.solve.board import Message
+from mathlottery.solve.bulletin.contracts import BoardEvent
 from mathlottery.solve.contracts import Supervision
 from mathlottery.solve.lifecycle import supervised
-from mathlottery.solve.routes import attempt_config, route_metadata
+from mathlottery.solve.routes import attempt_config, route_fingerprint, route_metadata
 from mathlottery.storage.core import atomic_write, json_text, safe_path
 
 
@@ -65,7 +66,15 @@ class SolveAttempts:
         slot_id = worker.slot_id if worker else (
             config.solve.agent_slots[0].id if config.solve.agent_slots else None
         )
-        if config.solve.agent_slots:
+        if worker is None and config.solve.supervisor_backend is not None:
+            backend = config.solve.supervisor_backend
+            attempt.update(
+                route_kind="supervisor", slot_id=None, mode=backend.mode, model=backend.model,
+                provider=backend.provider or backend.mode,
+                codex_auth=backend.codex_auth if backend.mode == "codex" else None,
+                route_sha256=route_fingerprint(backend),
+            )
+        elif config.solve.agent_slots:
             attempt.update(route_metadata(config, slot_id))
         else:
             # Historical runs can carry an explicit transport switch in run.mode.
@@ -74,12 +83,14 @@ class SolveAttempts:
         root = self.path(run, workspace)
         root.mkdir(parents=True, exist_ok=True)
         safe_path(root, "outbox").mkdir(exist_ok=True)
+        safe_path(root, "outbox-events").mkdir(exist_ok=True)
         safe_path(root, "submissions").mkdir(exist_ok=True)
         atomic_write(safe_path(root, "problem.json"), json_text(run.problem))
         atomic_write(safe_path(root, "milestone.schema.json"), json_text(milestone_schema()))
         atomic_write(
             safe_path(root, "board-message.schema.json"), json_text(Message.model_json_schema())
         )
+        atomic_write(safe_path(root, "board-event.schema.json"), json_text(BoardEvent.model_json_schema()))
         atomic_write(
             safe_path(root, "allocation.schema.json"), json_text(Allocation.model_json_schema())
         )
@@ -133,10 +144,12 @@ class SolveAttempts:
             backend = copy(backend)
             backend.local_tools = BoardTools(
                 SolveBoard(self.store, run.id), attempt["worker_id"], attempt["group"], workspace,
+                task_id=attempt["task_id"],
             )
         timeout = float("inf") if supervised(run, config) else budget.remaining(run, config)
         if attempt["role"] == "supervision":
-            timeout = min(timeout, config.solve.supervisor_timeout_seconds)
+            if config.solve.supervisor_timeout_seconds is not None:
+                timeout = min(timeout, config.solve.supervisor_timeout_seconds)
         elif selected_config.backend.native_turn_timeout_seconds is not None:
             timeout = min(timeout, selected_config.backend.native_turn_timeout_seconds)
         started = time.monotonic()
@@ -183,6 +196,10 @@ class SolveAttempts:
             "invocation_seconds": round(time.monotonic() - started, 3),
             "team_worker": True,
         }
+        if recover and result.runtime.get("creation_status") == "not_submitted":
+            # An older receipt conservatively marked a pre-connection failure as
+            # pending. Resolve it once; explicit resume may schedule new research.
+            receipt["recovered"] = True
         atomic_write(directory / "answer.md", result.text)
         atomic_write(directory / "receipt.json", json_text(receipt))
         return receipt

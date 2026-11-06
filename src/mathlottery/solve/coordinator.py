@@ -17,6 +17,7 @@ from mathlottery.runtime.workflows import claims_complete
 from mathlottery.solve.allocation import parse_allocation, selected_workers
 from mathlottery.solve.attempts import SolveAttempts
 from mathlottery.solve.board import Message, SolveBoard
+from mathlottery.solve.bulletin.projection import write as project_write
 from mathlottery.solve.prompts import SolvePrompts
 from mathlottery.storage.core import atomic_write, json_text, safe_path
 
@@ -102,16 +103,23 @@ class SolveCoordinator:
 
     def poll(self, run, attempts, board):
         changed = False
+        stamp = (str(run.state), tuple((a["task_id"], a["worker_id"]) for a in run.native.solve_team.active_attempts))
+        if getattr(self, "_board_registry_stamp", None) != stamp:
+            self._board_registry_stamp = stamp
+            changed = True
         for attempt in attempts:
             changed = self.attempts.remember(run, attempt) or changed
-            if attempt["role"] != "research":
-                continue
             workspace = self.path(run, attempt["workspace"])
-            published, errors = board.ingest(attempt["worker_id"], attempt["group"], workspace)
+            if attempt["role"] == "research":
+                published, errors = board.ingest(attempt["worker_id"], attempt["group"], workspace)
+                changed = published or changed
+                feedback_changed = project_write(safe_path(workspace, "bulletin/publication-errors.json"), json_text(errors))
+                changed = feedback_changed or changed
+            published, errors = board.ingest_events(attempt["worker_id"], attempt["group"], workspace,
+                                                    task_id=attempt["task_id"])
             changed = published or changed
-            atomic_write(
-                safe_path(workspace, "bulletin/publication-errors.json"), json_text(errors)
-            )
+            feedback_changed = project_write(safe_path(workspace, "bulletin/event-errors.json"), json_text(errors))
+            changed = feedback_changed or changed
         if changed:
             for attempt in attempts:
                 board.project(self.path(run, attempt["workspace"]))

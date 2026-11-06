@@ -6,6 +6,11 @@
 
 MathLottery 将**使用入口**（浏览器或终端）、**研究功能**（找题、求解、验真、整理或研究流程）和 **agent 接入方式**（Codex 或配置的 Responses 提供方）分开。两种入口共用同一套研究调度与工作区状态。实际安装和接入步骤见[使用指南](usage.cn.md)与[配置说明](configuration.cn.md)。
 
+`solve/bulletin/` 负责依赖图查询、档案投影、只追加的协作事件及可恢复的监督整理。SQLite 分别保存证明发布、审核、归档决策和同伴事件；`web/static/solve-board.js` 在展开条目时才加载完整证明与交流记录。 [证明图谱与协作说明](proof-board.cn.md)。
+
+
+`solve/dispatch.py` 负责既有容量内、审核前最多一轮的自主续研；`solve/bulletin/inbox.py` 生成个人邀请、精确已读位置及工作重叠提示；`validation.py` 提供原生发布前检查，控制器保留最终校验权。部分成果信号可合并审核，完整解答声称在审核前阻止新研究派发。
+
 ## 研究功能
 
 | 功能 | 输入 | 输出与结束条件 |
@@ -81,6 +86,8 @@ CLI 入口仍为 `mathlottery.cli:app`，命令、配置与保存的 JSON 保持
 | solve/ | 可选的有界研究组、监督、共享留言板与持久化恢复 |
 | solve/campaign.py、solve/campaign_receipts.py | 按返回事件调度，消费研究信号与监督决策，回执只记账一次 |
 | solve/board.py、solve/board_reviews.py、solve/contracts.py | 不可变证明留言、依赖图、绑定版本的意见与结构校验 |
+| solve/bulletin/ | 精简依赖图查询、证明档案、可恢复归档、活动登记和协作通道 |
+| solve/coordination_policy.py | 可选的任务内协作策略、证据与版本绑定、效果复盘及不阻塞研究的拒绝记录 |
 | solve/board_tools.py、providers/response_tools.py | 任务内实时留言板工具与持久化 Responses 函数续接 |
 | runtime/attempts.py | 调用日志、持久化回执、会话 ID、记账与恢复 |
 | runtime/workspace.py | 研究/审查/整理工作区、提示准备及完整回答导入 |
@@ -109,7 +116,7 @@ flowchart TD
     Engine --> Legacy[StructuredRunner: 兼容执行]
     Native -->|原有工作流| Workspace[NativeWorkspace: 准备上下文]
     Native -->|独立监督式 Solve| Campaign[SolveCampaign: 信号与调度]
-    Campaign <--> Supervisor[监督者: 规划与审核]
+    Campaign <--> Supervisor[监督者: 建议与审核]
     Campaign <--> Researchers[研究尝试: 持续会话]
     Campaign <--> Board[SolveBoard: 证明及审核版本]
     Campaign --> Report
@@ -136,7 +143,7 @@ flowchart TD
 
 `Store` 是共享存储，不决定研究策略。`CandidateStore` 负责候选完整性与审查产物，`NativeAttempts` 负责后端恢复；它们都不替研究者选择数学方法。
 
-监督式 Solve 中，`SolveCampaign` 复用 `SolveCoordinator` 的路由、工作区和持久化调用组件，逐个处理研究者的完成回执。监督者读取原题、信号与证明留言板，审核完整声称，必要时提出新的任务。仍在工作的研究者保持会话和当前目标。监督调用等待主槽位空闲，可以与其他槽位的研究并行。调度器为最终监督预留调用次数，活动时间到达后停止新派发，不因时间到达而取消当前研究。未启用用满预算时，认可完整声称可提前结束；旧版 `allocation` 任务保留按轮调度。
+监督式 Solve 中，`SolveCampaign` 复用 `SolveCoordinator` 的路由、工作区和持久化调用组件，逐个处理研究者的完成回执。监督者读取原题、信号与证明留言板，审核完整声称并提供可选思路。研究者自主选择方向、声明工作，组目标仅为建议，正在工作的研究者保留会话。默认监督调用等待主槽位空闲。显式配置 `solve.supervisor_backend` 后，监督者使用独立的固定接入和一个额外执行槽位，可与全部研究者同时工作；两种接入均保留相同的派发预算和恢复规则。调度器为最终监督预留调用次数，活动时间到达后停止新派发，不因时间到达而取消当前研究。未启用用满预算时，认可完整声称可提前结束；旧版 `allocation` 任务保留按轮调度。
 
 `SolveCampaign` 检查点保存已处理信号、待派发任务和具体候选审核。SQLite 留言板保存不可变发布与追加式审核记录，`bulletin/` 文件是可重建投影。证明依赖、审核版本和待回应质疑决定意见是否仍适用。`solve/summary.md`、`solve/supervision.json` 记录结果，监督意见不会写成独立 Verify 结论。协议及其边界见[监督式 Solve 说明](solve-teams.cn.md)。
 
@@ -178,13 +185,13 @@ flowchart TD
 
 ## Agent 调用后端
 
-Codex 使用 codex exec 启动，通过 codex exec resume 在 MathLottery 独立目录中精确续接同一会话。它使用该目录中的模型和工具默认配置，并显式设置认证、沙箱、网络，以及可选的子 agent 与记忆开关。研究者自主决定方法和工具使用，原生研究不受逐动作输出结构或旧工具注册表约束。
+Codex 使用 codex exec 启动，通过 codex exec resume 在 MathLottery 独立目录中精确续接同一会话。新建 OpenAI 接入默认显式请求 `gpt-6-astra` / `max`，已保存的设置（包括显式 null）保持原样。工具默认配置来自独立目录，并显式设置认证、沙箱、网络，以及可选的子 agent 与记忆开关。研究者自主决定方法和工具使用，原生研究不受逐动作输出结构或旧工具注册表约束。
 
 `backend.codex_auth` 选择 `chatgpt` 或 `api_key`，不改变原生执行循环。API 模式读取 `codex_api_key_env` 指定的变量，只在执行时注入 `CODEX_API_KEY`，不传入 CLI 探测或设备码登录，也不保存其值。执行固定到 OpenAI 官方端点，并清除模型启动的 shell 环境中的已知凭据值，保留其他 shell 策略。API 会话保存在独立的 `.mathlottery/codex-api-home` / `.mathlottery/codex-api-accounts/<slot-id>`，订阅目录保持独立。缺少凭据时不会切换鉴权。新字段默认订阅模式，接入哈希兼容旧快照中没有这些字段的情况。Codex API 模型使用手填 ID，不借用订阅账号的模型目录。
 
 Chat 使用配置的模型与托管工具创建 Responses API 后台请求。默认工具为 web_search 和 Code Interpreter；普通 Markdown 回答末尾可附一条机器可读的阶段成果记录。请求使用 previous_response_id 保留研究上下文，审查回答形成独立的上下文链，不涉及浏览器、提取 Cookie 或人工复制。
 
-Chat API 凭据从环境变量读取，绝不读取 Codex 登录存储或请求文件中的凭据。API 错误不会触发后端或计费方式切换。模型通过配置或命令行参数指定；只有内置 `chat` 配置还可以读取 `OPENAI_MODEL`，自定义提供方必须另行选择模型。配置的托管工具在服务端运行。监督式 Solve 还通过 `providers/response_tools.py` 提供一组固定的客户端留言板函数，保存每次工具调用回执并累计续接用量。能力绑定当前运行及作者，不开放任意文件访问或用户自定义函数。
+Chat API 凭据从环境变量读取，绝不读取 Codex 登录存储或请求文件中的凭据。API 错误不会触发后端或计费方式切换。模型通过配置或命令行参数指定；只有内置 `chat` 配置在模型显式为 null 时才读取 `OPENAI_MODEL`，自定义提供方必须另行选择模型。配置的托管工具在服务端运行。监督式 Solve 还通过 `providers/response_tools.py` 提供一组固定的客户端留言板函数，保存每次工具调用回执并累计续接用量。能力绑定当前运行及作者，不开放任意文件访问或用户自定义函数。
 
 Python 框架在本地保存回答与响应元数据。托管容器和远端响应历史受服务商保留期限限制，本地检查点不能重建过期的远端上下文。Codex 的精确续接同样需要原始会话存储。保存在个人 Codex 目录中的旧原生会话不会迁移；已有 MathLottery 检查点与结果仍可读取，但缺少原始会话时可能需要新建任务。
 

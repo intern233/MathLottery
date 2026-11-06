@@ -13,6 +13,9 @@ MathLottery has two entry points. Both use the same workspace, configuration, ac
 
 The entry point is separate from the agent engine: **Codex agent** uses the official CLI with either a dedicated ChatGPT login or an OpenAI API key; **API agent (Responses)** keeps an independent API harness (configuration name `chat`). [Compatible providers](configuration.md#providers) are also configurable.
 
+In a supervised Solve, open the task’s Proof graph & archive and Activity registry & collaboration channels panels to inspect prerequisites, optional archived results and peer discussions. These views do not start extra model calls. [Proof graph and collaboration guide](proof-board.md).
+
+
 ## Local browser workspace
 
 <a id="install"></a>
@@ -78,7 +81,7 @@ History groups Solve, Verify and Organize attempts by the exact problem statemen
 
 Read **run status** separately from **research outcomes**. “Run completed” means execution ended. Solve shows the researcher's claim of a complete or partial solution, or no solution; Verify separately shows its verdict, original-problem coverage and novelty assessment. A positive review of partial work does not settle the full problem. Organize inherits those findings. Explicit wording used to display a legacy candidate's scope is labeled; its saved scope and hashes remain unchanged. See [how to interpret evidence](evidence.md) and the [result showcase](../showcase/README.md).
 
-With an explicit **Solve parallelism** value and the default `solve.coordination: supervised`, new tasks use [supervised Solve](solve-teams.md): the supervisor assigns routes, reviews proof-board entries and complete claims, then sends new tasks when needed. This also works with one researcher. At the time budget, new admissions stop while current attempts continue; the supervisor summarizes after they return. Total duration may exceed the budget. Task details show supervision, researcher signals and proof chains. Supervisor opinions do not replace Verify.
+With an explicit **Solve parallelism** value and the default `solve.coordination: supervised`, new tasks use [supervised Solve](solve-teams.md): researchers choose directions and declare their work; the supervisor offers ideas and reviews proof-board entries and complete claims. Idle researchers may make one bounded continuation ahead of review. This also works with one researcher. At the time budget, new admissions stop while current attempts continue; the supervisor summarizes after they return. Total duration may exceed the budget. Task details show supervision, researcher signals and proof chains. Supervisor opinions do not replace Verify.
 
 Without explicit parallelism, or for saved `allocation` tasks, native Solve saves partial or unresolved results and continues in the same session within the remaining cumulative budget. By default, it can finish early when the solver explicitly claims a complete solution or counterexample with no remaining mathematical obligations; this is still awaiting Verify. Enable **Use full Solve time budget** in **Budget & agent settings** to continue research and self-checking even after that claim. The same option is available when resuming a native Solve task. Other limits, quota or errors can interrupt it earlier, and you can stop it yourself. [Solve completion and budget rules](configuration.md#budgets)
 
@@ -132,6 +135,8 @@ mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
 ```
 
 That last command reviews the supplied example proof. Use `verify --from-run <solve-run-id>` to review your solver's candidate instead. A supplied problem is not automatically classified as open or new.
+
+In **Budget & agent settings**, you may also enable **Let the supervisor improve coordination** (off by default). The idle-task continuation form has the same switch. Policy revisions and outcome assessments appear in task details; see [optional coordination adjustments](proof-board.md#optional-coordination-adjustments).
 
 ### Enable supervised Solve
 
@@ -227,17 +232,17 @@ Both entry points read the workspace's **`config.yaml` for new tasks**. Edit the
 
 ### Codex: use the same login for browser and terminal
 
-The configuration created by `init` uses Codex with its default model settings. This minimal backend section is enough:
+New configurations use `gpt-6-astra` with `max` reasoning for Codex subscription, Codex API-key and OpenAI Responses agents. This includes supervisor and researcher slots. `init` writes these defaults:
 
 ```yaml
 backend:
   mode: codex
   execution: native
-  model: null
-  reasoning_effort: null
+  model: gpt-6-astra
+  reasoning_effort: max
 ```
 
-`null` uses defaults from **MathLottery's isolated Codex home**, not your personal CLI / IDE configuration. To choose explicitly, set `model` and `reasoning_effort`, for example `gpt-6-astra` and `max` if available. You do not need long model flags on every command.
+Change these fields to use another supported model or effort. Omitting them uses MathLottery's defaults; an explicit `null` in an older configuration still opts into backend defaults. Saved tasks retain their original settings. You do not need long model flags on every command.
 
 Sign in through `mathlottery serve` once, then use the terminal commands with the same workspace. For login without the MathLottery page, use the [isolated terminal login instructions](configuration.md#account). Plain `codex login` signs into your ordinary Codex, not MathLottery.
 
@@ -251,7 +256,8 @@ backend:
   execution: native
   codex_auth: api_key
   codex_api_key_env: OPENAI_API_KEY
-  model: your-api-model-id
+  model: gpt-6-astra
+  reasoning_effort: max
 ```
 
 Set `OPENAI_API_KEY` using the secure input command below, then start the server or a terminal workflow. This keeps Codex's native tools and session handling. It uses OpenAI API billing, requires no device login, and leaves the subscription login untouched. [Authentication and isolation details](configuration.md#providers).
@@ -260,14 +266,14 @@ Set `OPENAI_API_KEY` using the secure input command below, then start the server
 
 ### Independent API agent: Responses
 
-Replace the backend section below with your chosen model ID. `your-model-id` is a placeholder. The default hosted tools are web search and Code Interpreter; the model and account must support them.
+Use the following backend section for OpenAI Responses, or select another supported model. The default hosted tools are web search and Code Interpreter; the model and account must support them.
 
 ```yaml
 backend:
   mode: chat
   execution: native
-  model: your-model-id
-  reasoning_effort: null
+  model: gpt-6-astra
+  reasoning_effort: max
   chat:
     reasoning_mode: null
     api_key_env: OPENAI_API_KEY

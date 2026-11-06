@@ -94,6 +94,74 @@ def test_unknown_tool_continuation_never_reposts_or_republishes(store, monkeypat
     assert len(calls) == 2 and len(board.messages()) == 1
 
 
+@pytest.mark.parametrize("resume_state", ["cancelled", "in_progress", "changed_route", "changed_output"])
+def test_resume_after_cancelled_tool_child_retains_outputs_without_reexecution(store, monkeypatch, resume_state):
+    backend, board, workspace, _ = backend_with_tools(store, monkeypatch)
+    root = store.run_dir(board.run_id)
+    first = root / "tasks/task-first/attempt-first"
+    second = root / "tasks/task-second/attempt-second"
+    turn = {"worker_id": "researcher", "slot_id": "agent-fixture", "route_sha256": "pinned"}
+    for directory in (first, second):
+        directory.mkdir(parents=True)
+        (directory / "turn.json").write_text(json.dumps(turn))
+    requests = []
+    sessions = []
+    executed = []
+    execute = backend.local_tools.execute
+
+    def counted(name, args):
+        executed.append(name)
+        return execute(name, args)
+
+    backend.local_tools.execute = counted
+
+    def serve(request):
+        requests.append(request)
+        if request.url.path.endswith("/cancel"):
+            return httpx.Response(200, json={"id": "resp_child", "status": "cancelled", "output": []})
+        data = json.loads(request.content)
+        if len(requests) == 1:
+            return httpx.Response(200, json=response("resp_parent", [publication_call()]))
+        if len(requests) == 2:
+            return httpx.Response(200, json={"id": "resp_child", "status": "queued", "output": []})
+        assert data["previous_response_id"] == "resp_parent"
+        assert data["input"][0]["type"] == "function_call_output"
+        assert data["input"][0]["call_id"] == "call_publish"
+        assert json.loads(data["input"][0]["output"])["key"] == "researcher:identity"
+        assert data["input"][1] == {"role": "user", "content": "Continue the same research"}
+        return httpx.Response(200, json=response("resp_final", [{"type": "message", "content": [
+            {"type": "output_text", "text": "Continued with the original tool results."}]}]))
+
+    monkeypatch.setattr(backend, "_client", lambda: httpx.Client(
+        transport=httpx.MockTransport(serve), base_url="https://api.example/"))
+    interrupted = backend.invoke_native("Research", first, workspace, 5,
+                                        cancelled=lambda: len(requests) >= 2, on_session=sessions.append)
+    assert interrupted.status == BackendStatus.INTERRUPTED and not interrupted.pending
+    assert sessions[-1] == "resp_parent"
+    assert executed == ["solve_board_publish"] and len(board.messages()) == 1
+    if resume_state == "changed_route":
+        (second / "turn.json").write_text(json.dumps({**turn, "route_sha256": "other-account"}))
+    elif resume_state == "in_progress":
+        saved = json.loads((first / "response.json").read_text())
+        saved["status"] = "in_progress"
+        (first / "response.json").write_text(json.dumps(saved))
+    elif resume_state == "changed_output":
+        path = first / "tool-continuations/resp_parent/request.json"
+        saved = json.loads(path.read_text())
+        saved["input"][0]["output"] = '{"forged": true}'
+        path.write_text(json.dumps(saved))
+    continued = backend.invoke_native("Continue the same research", second, workspace, 5,
+                                      session_id=sessions[-1])
+    assert executed == ["solve_board_publish"] and len(board.messages()) == 1
+    if resume_state == "cancelled":
+        assert continued.status == BackendStatus.COMPLETED and len(requests) == 4
+        replay = json.loads((second / "resumed-tool-context.json").read_text())
+        assert replay["tools_reexecuted"] is False
+    else:
+        assert continued.status == BackendStatus.FAILED and len(requests) == 3
+        assert not continued.invoked and not continued.pending
+
+
 def test_tools_are_run_scoped_and_cannot_read_arbitrary_files(store, monkeypatch):
     backend, board, workspace, directory = backend_with_tools(store, monkeypatch)
     bridge = backend.local_tools

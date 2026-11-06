@@ -13,6 +13,9 @@ MathLottery 提供两种运行入口，共用同一工作区的配置、账号�
 
 运行入口与 agent 引擎分别选择：**Codex agent** 使用官方 CLI，可以选择独立 ChatGPT 登录或 OpenAI API Key；**API agent（Responses）**保留独立 API harness，配置名称仍是 `chat`，也可以配置[兼容的提供方](configuration.cn.md#providers)。
 
+监督式 Solve 的任务详情中，可打开“定理依赖图与档案”和“活动登记与协作通道”，查看前提、归档结果及同伴交流。这些查看操作不会额外调用模型。 [证明图谱与协作说明](proof-board.cn.md)。
+
+
 ## 本地浏览器工作台
 
 <a id="install"></a>
@@ -78,7 +81,7 @@ mathlottery serve
 
 请分开看**运行状态**与**研究结果**。“运行完成”只表示执行结束。Solve 展示求解者声称完整解决、部分解决或尚未解决；Verify 另列审查结论、原题覆盖和新颖性。部分结果审查未发现问题，不代表完整原题已解决。Organize 沿用这些结论。旧候选若依据明确自述展示范围，会注明依据，原记录及哈希不变。参见[证据说明](evidence.cn.md)和[成果样本](../showcase/README.cn.md)。
 
-明确填写**求解并行数**，并使用默认的 `solve.coordination: supervised` 后，新任务使用[监督式 Solve](solve-teams.cn.md)：监督者分配路线、复查证明留言板、审核完整解答声称，并按需重新派题。一个研究者也支持。到达时间预算后停止新派发，当前尝试继续，返回后由监督者整理；实际总时长可能超过预算。任务详情展示监督状态、研究信号与证明链，监督意见不替代 Verify。
+明确填写**求解并行数**，并使用默认的 `solve.coordination: supervised` 后，新任务使用[监督式 Solve](solve-teams.cn.md)：研究者自主选择方向、声明工作；监督者提供建议、复查证明留言板并审核完整解答声称。空闲研究者可在审核前先有界续研一轮。一个研究者也支持。到达时间预算后停止新派发，当前尝试继续，返回后由监督者整理；实际总时长可能超过预算。任务详情展示监督状态、研究信号与证明链，监督意见不替代 Verify。
 
 未明确并行数，或旧任务采用 `allocation` 时，原生 Solve 会保存部分结果或未解决的进展，在剩余累计预算内续接同一会话。默认情况下，求解者明确声称完整解决或给出反例，且没有剩余数学义务时，才可以提前结束，之后仍须 Verify。在**预算与 agent 设置**中勾选**用满求解时间预算**，声称完整解决后也会继续研究和自查；续接原生 Solve 任务时也可选择。其他限额、额度或错误可能提前中断，你也可以主动停止。[Solve 结束条件与预算规则](configuration.cn.md#budgets)
 
@@ -132,6 +135,8 @@ mathlottery verify --problem odd-sum --proof examples/odd_sum.proof.md
 ```
 
 最后一条审查的是给定的示例证明。要审查刚才求解产生的候选，请用 `verify --from-run <solve-run-id>`。自行输入问题不代表它已被确认为开放问题或新成果。
+
+在**预算与 agent 设置**中，还可以勾选**允许监督者优化留言板与协作机制**（默认关闭）；任务空闲时，续跑表单也提供同一开关。任务详情可查看策略版本和效果复盘，详见[可选的监督机制优化](proof-board.cn.md#可选的监督机制优化)。
 
 ### 启用监督式 Solve
 
@@ -224,17 +229,17 @@ mathlottery run
 
 ### Codex：浏览器和终端共用工作区登录
 
-`init` 生成的配置默认使用 Codex 及其默认模型设置。最小后端配置如下：
+新配置的 Codex 订阅、Codex API Key 和 OpenAI Responses agent 均默认使用 `gpt-6-astra`、`max` 思考强度，监督者与研究者也适用。`init` 会写入以下默认值：
 
 ```yaml
 backend:
   mode: codex
   execution: native
-  model: null
-  reasoning_effort: null
+  model: gpt-6-astra
+  reasoning_effort: max
 ```
 
-`null` 使用 **MathLottery 独立 Codex 目录**中的默认设置，不继承个人 CLI / IDE 的配置。需要指定时，修改 `model` 和 `reasoning_effort`，例如账号支持的 `gpt-6-astra` 和 `max`；每次执行命令就不必带长串模型参数。
+需要其他模型或强度时，修改这两个字段即可。省略字段使用 MathLottery 默认值；旧配置中显式的 `null` 仍表示采用后端默认值，已保存任务保留原设置。每次执行命令不必带长串模型参数。
 
 先通过 `mathlottery serve` 登录一次，之后在同一工作区直接执行终端命令即可。不使用 MathLottery 页面时，参见[独立终端登录步骤](configuration.cn.md#account)。普通 `codex login` 登录的是个人 Codex，不是 MathLottery。
 
@@ -248,7 +253,8 @@ backend:
   execution: native
   codex_auth: api_key
   codex_api_key_env: OPENAI_API_KEY
-  model: your-api-model-id
+  model: gpt-6-astra
+  reasoning_effort: max
 ```
 
 按下方的安全输入命令设置 `OPENAI_API_KEY` 后，再启动服务或终端工作流。此方式保留 Codex 原生工具和会话管理，走 OpenAI API 计费，不需要设备码登录，也不会改变订阅登录。[鉴权与隔离说明](configuration.cn.md#providers)。
@@ -257,14 +263,14 @@ backend:
 
 ### 独立 API agent：Responses
 
-将后端段改为下例，并把 `your-model-id` 换成实际可用的模型 ID。默认托管工具是网页搜索和 Code Interpreter，模型和账号需要支持它们。
+OpenAI Responses 可使用以下配置，也可以另选受支持的模型。默认托管工具是网页搜索和 Code Interpreter，模型和账号需要支持它们。
 
 ```yaml
 backend:
   mode: chat
   execution: native
-  model: your-model-id
-  reasoning_effort: null
+  model: gpt-6-astra
+  reasoning_effort: max
   chat:
     reasoning_mode: null
     api_key_env: OPENAI_API_KEY

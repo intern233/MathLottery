@@ -11,7 +11,7 @@ Use this reference after the [browser quickstart](usage.md#local-browser-workspa
 <a id="models"></a>
 ## Models and configuration precedence
 
-For Codex, a model ID and reasoning effort are separate settings:
+Codex subscription, Codex API-key and OpenAI Responses agents default to `gpt-6-astra` / `max`, including new supervisor and researcher configurations. The model ID and reasoning effort are separate settings:
 
 ```yaml
 backend:
@@ -28,13 +28,13 @@ Use a model and effort supported by your account. This is a configuration exampl
 | `backend.codex_auth` | Codex only: `chatgpt` (default, subscription login) or `api_key` (OpenAI API billing). Both use the native Codex agent. |
 | `backend.codex_api_key_env` | Codex API only: environment variable **name**, default `OPENAI_API_KEY`. Never put a key value here. |
 | `backend.provider` | Optional profile ID: `codex`, `chat`, or a configured name such as `research-api`. Omit it or use `null` for the mode's built-in connection. |
-| `backend.model` | Exact model ID, without an appended effort such as ` max`. `null` uses Codex's dedicated-home default; built-in Chat may use `OPENAI_MODEL`. Custom API profiles require an explicit model. |
-| `backend.reasoning_effort` | Optional provider-supported value such as `max`; `null` leaves it to the backend. |
+| `backend.model` | Exact model ID; omitted OpenAI settings default to `gpt-6-astra`. Explicit `null` keeps Codex's dedicated-home default or built-in Chat's `OPENAI_MODEL` fallback. Custom API profiles require their own model. |
+| `backend.reasoning_effort` | `max` by default with the default OpenAI model. Explicit `null` leaves it to the backend. Another model/provider without a specified effort keeps its own default. |
 | `backend.chat.reasoning_mode` | Optional Responses setting: `pro`, `standard`, or `null` to omit it. Applies only to `chat`, and only when supported by that provider/model. |
 
 Do not put `pro` in `reasoning_effort` or infer a model ID by adding `-pro`. The API setting is not a promise of identical behavior to ChatGPT's web product. Unsupported combinations produce errors; MathLottery does not silently substitute another model or lower effort. Reports distinguish requested settings from backend-reported settings.
 
-**New tasks:** application defaults → `config.yaml` (or the file selected with global `--config`) → explicit CLI or browser task overrides. For example, `mathlottery --config alternate.yaml find` uses that file. `--backend`, `--model`, `--reasoning-effort` and `--reasoning-mode` override the relevant fields without editing it. When changing backends manually, clear old incompatible model/effort/mode settings; the browser resets these when switching providers.
+**New tasks:** application defaults → `config.yaml` (or the file selected with global `--config`) → explicit CLI or browser task overrides. For example, `mathlottery --config alternate.yaml find` uses that file. `--backend`, `--model`, `--reasoning-effort` and `--reasoning-mode` override the relevant fields without editing it. When changing backends manually, clear old incompatible model/effort/mode settings; the browser restores `gpt-6-astra` / `max` when switching to a built-in OpenAI provider and clears incompatible settings for custom providers.
 
 **Existing tasks:** `resume` starts from the saved configuration snapshot. Later edits to `config.yaml` or a provider profile do not redirect the saved conversation. Browser continuation preserves its model settings; CLI continuation accepts explicit model/backend overrides. Pending calls must be recovered first. See [recovery](#recovery).
 
@@ -53,8 +53,8 @@ backend:
   execution: native
   codex_auth: api_key
   codex_api_key_env: OPENAI_API_KEY
-  model: your-api-model-id
-  reasoning_effort: null
+  model: gpt-6-astra
+  reasoning_effort: max
 ```
 
 Set the named environment variable in the server/CLI's launching terminal using the key-entry command below. On the Agents page, choose **Codex agent**, then **API Key**. This selects official OpenAI API billing; it does not consume the ChatGPT subscription allowance. No device login is needed, and the key is not saved through `codex login`. MathLottery supplies it only to the Codex execution process and clears known credential values from its shell tools. Some ChatGPT workspace integrations may require subscription authentication even though native terminal/file tools remain available. See [official authentication](https://learn.chatgpt.com/docs/auth).
@@ -69,8 +69,8 @@ The built-in `chat` connection uses the OpenAI Responses API. It requires its ow
 backend:
   mode: chat
   provider: chat
-  model: your-api-model-id
-  reasoning_effort: null
+  model: gpt-6-astra
+  reasoning_effort: max
   chat:
     api_key_env: OPENAI_API_KEY
     base_url: https://api.openai.com/v1
@@ -83,7 +83,7 @@ backend:
         container: {type: auto}
 ```
 
-Replace `your-api-model-id` and choose tools your API model supports. In Bash, enter the key without placing it in command history, then start MathLottery from that terminal:
+Change the model if needed and choose tools your API model supports. In Bash, enter the key without placing it in command history, then start MathLottery from that terminal:
 
 ```bash
 read -rs -p 'OpenAI API key: ' OPENAI_API_KEY
@@ -91,7 +91,7 @@ export OPENAI_API_KEY
 mathlottery doctor
 ```
 
-`doctor` checks local configuration without a billable model call; it does not establish API entitlement. Keys are read from the environment and are not saved in configuration or reports. `.env` is Git-ignored but **is not automatically loaded**: use your shell or a trusted environment manager. For built-in `chat` only, `OPENAI_MODEL` is used when `backend.model` is unset.
+`doctor` checks local configuration without a billable model call; it does not establish API entitlement. Keys are read from the environment and are not saved in configuration or reports. `.env` is Git-ignored but **is not automatically loaded**: use your shell or a trusted environment manager. For built-in `chat` only, `OPENAI_MODEL` is used only when `backend.model` is explicitly `null`; omitting the field uses `gpt-6-astra`.
 
 For another provider, replace the following placeholders in your local configuration:
 
@@ -212,14 +212,17 @@ See [supervised Solve](solve-teams.md) for the research/review loop and proof bo
 | `solve.coordination` | `supervised` for new configurations; `allocation` preserves the old round-based scheduler. Old checkpoints without this field retain `allocation`. |
 | `solve.parallel_agents` | `null` keeps native delegation; explicitly set 1–32 to enable managed research. With `supervised`, even 1 has a separate supervisor session. |
 | `solve.max_groups` | Optional active-group cap; requires explicit parallelism and cannot create more researchers than the total cap. |
-| `solve.board_review_interval_seconds` | `300`; request inspection of new/changed theorem evidence. The request waits for slot 1 to be free. |
-| `solve.supervisor_timeout_seconds` | `600`; timeout for one supervision call, independent of the research admission deadline. |
+| `solve.board_review_interval_seconds` | `300`; request inspection of new/changed theorem evidence. Shared supervision waits for slot 1 to be free. |
+| `solve.adaptive_coordination` | `false`; opt in to run-local supervisor adjustments of review timing, archive suggestions and collaboration guidance. Requires supervised Solve and explicit parallelism. [Details](proof-board.md#optional-coordination-adjustments). |
+| `solve.supervisor_timeout_seconds` | `600` by default; positive seconds up to `86400`, or `null` to finish a review naturally. Separate from the research admission deadline. |
 | `solve.agent_slots` | Optional pinned connections; their count must equal parallelism. Configure on the [Agents page](agents.md) or in local YAML. |
+| `solve.supervisor_backend` | `null` shares slot 1; an explicit native connection adds one independent supervisor. Requires supervised coordination and configured researcher slots; see [configuration example](agents.md#dedicated-supervisor). |
 
 Create a new task to change coordination or pinned slot routes. Resuming an old task
 keeps its protocol. Explicit parallelism disables nested native agent spawning;
 researchers retain their native tools, files, memory settings and sessions. Supervision
-shares slot 1 sequentially and never adds an extra concurrent caller.
+shares slot 1 sequentially by default. A dedicated supervisor can add at most one
+concurrent caller; its time, tokens and calls still count toward the same task budget.
 
 <a id="budgets"></a>
 ## Budgets and usage

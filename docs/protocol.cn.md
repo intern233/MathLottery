@@ -66,3 +66,5 @@
 新版审查还提交 `proof_steps`（编号、依赖和检查编号）及六类 `statement_alignment`。`proof_coverage` 由控制器重算，不采信模型填写的评估结果。文献 `obstacles` 有固定编号，需要证据才能消除；`comparisons` 明确已有定理与候选的假设及结论。继承的 `review_literature` 将待核查事项带入新 Verify，不包含旧结论。缺失字段保证旧记录可读，但不能支持新提交的肯定审查。详见[逐项覆盖与文献障碍](evidence.cn.md#逐项覆盖与可跟进的文献障碍)。
 
 `examples/chat_response.template.json` 是可编辑的 SOLVE 阶段示例。完整 Schema 及全部嵌套字段应以任务生成的文件为准，无需手工重写协议。
+
+`solve-supervision` 中可选的 `board_curation` 管理可恢复的展示状态，与证明审核分开。绑定调用者身份的 `BoardEvent` 记录活动和自愿协作；原生 `outbox-events` 与 Responses 函数使用相同控制规则。 [证明图谱与协作说明](proof-board.cn.md)。

@@ -3,20 +3,25 @@
 from __future__ import annotations
 
 import re
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
 from mathlottery.domain.common import Model
 from mathlottery.domain.session import SolveGroup
+from mathlottery.solve.bulletin.contracts import Curation
 
 
 class DerivationStep(Model):
     id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,80}$")
     statement: str = Field(min_length=1, max_length=10000)
     justification: str = Field(min_length=1, max_length=20000)
-    # Earlier step IDs; external results go in the message's depends_on/references.
-    premises: list[str] = Field(default_factory=list, max_length=100)
+    premises: list[str] = Field(
+        default_factory=list, max_length=100,
+        description="IDs of earlier proof_steps in THIS theorem only. External board message keys "
+        "belong in the enclosing message's depends_on; explain their use in justification. "
+        "Other external citations belong in theorem.references.",
+    )
 
 
 class TheoremRecord(Model):
@@ -24,7 +29,12 @@ class TheoremRecord(Model):
     proof_steps: list[DerivationStep] = Field(min_length=1, max_length=100)
     conclusion_step: str
     references: list[str] = Field(default_factory=list, max_length=100)
-    remaining_obligations: list[str] = Field(default_factory=list, max_length=100)
+    remaining_obligations: list[str] = Field(
+        default_factory=list, max_length=100,
+        description="Unproved steps of THIS exact theorem. Put gaps between a proved limited theorem "
+        "and the original research target in the message body or candidate obligations instead. "
+        "Do not hide an actual proof gap by moving it out of this field.",
+    )
 
     @model_validator(mode="after")
     def ordered_derivation(self):
@@ -47,7 +57,10 @@ class ReviewCheck(Model):
 class BoardReview(Model):
     key: str
     content_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    verdict: Literal["accepted", "rejected", "needs_work"]
+    verdict: Literal["accepted", "rejected", "needs_work"] = Field(
+        description="accepted requires a proof chain with empty theorem.remaining_obligations, "
+        "all steps checked, and accepted prerequisites. Otherwise use needs_work or rejected."
+    )
     rationale: str = Field(min_length=1, max_length=20000)
     checked_steps: list[str] = Field(default_factory=list, max_length=100)
     addressed_objections: list[str] = Field(default_factory=list, max_length=100)
@@ -56,7 +69,10 @@ class BoardReview(Model):
 class SolutionReview(Model):
     candidate_id: str
     candidate_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    verdict: Literal["accepted", "rejected", "needs_work"]
+    verdict: Literal["accepted", "rejected", "needs_work"] = Field(
+        description="accepted means a complete solution of the ORIGINAL problem. Use needs_work "
+        "for a sound partial or conditional result; use board reviews to accept its limited lemmas."
+    )
     original_problem_coverage: Literal["full", "partial", "different", "uncertain"]
     rationale: str = Field(min_length=1, max_length=20000)
     checks: list[ReviewCheck] = Field(min_length=1, max_length=100)
@@ -79,6 +95,9 @@ class Supervision(Model):
     rationale: str = Field(min_length=1, max_length=20000)
     groups: list[SolveGroup] = Field(default_factory=list, max_length=32)
     board_reviews: list[BoardReview] = Field(default_factory=list, max_length=100)
+    board_curation: list[Curation] = Field(default_factory=list, max_length=100)
+    # Validate optional policy tuning separately, so bad tuning cannot abort a valid proof review.
+    coordination_update: Any = None
     solution_reviews: list[SolutionReview] = Field(default_factory=list, max_length=32)
     summary: str = Field(min_length=1, max_length=30000)
 

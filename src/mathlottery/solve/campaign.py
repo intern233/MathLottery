@@ -8,7 +8,16 @@ from mathlottery.models import State
 from mathlottery.runtime import budget
 from mathlottery.solve.board import SolveBoard
 from mathlottery.solve.board_reviews import review_targets
+from mathlottery.solve.bulletin.curation import suggestions
 from mathlottery.solve.campaign_receipts import CampaignReceipts
+from mathlottery.solve.coordination_policy import needs_review as policy_review_needed
+from mathlottery.solve.coordination_policy import snapshot as policy_snapshot
+from mathlottery.solve.coordination_policy import view as policy_view
+from mathlottery.solve.dispatch import (
+    complete_claim_pending,
+    continuation_reason,
+    queue_continuations,
+)
 from mathlottery.solve.supervision_prompts import supervisor_prompt
 from mathlottery.storage.core import atomic_write, json_text
 
@@ -47,6 +56,7 @@ class SolveCampaign:
             board_hashes={m["key"]: m["content_sha256"] for m in board.messages()},
             board_review_keys=review_targets(board),
             candidate_hashes={c.id: c.sha256 for c in run.candidates},
+            coordination_snapshot=policy_snapshot(run, board),
         )
         workspace = self.coordinator.path(run, attempt["workspace"])
         board.project(workspace)
@@ -57,24 +67,40 @@ class SolveCampaign:
         return pool.submit(self.coordinator.attempts.invoke, run, attempt, prompt, config), attempt
 
     def start_researcher(self, run, worker, config, board, pool):
+        reason = continuation_reason(run, worker)
         attempt = self.coordinator.prepare_attempt(run, worker)
+        attempt["dispatch_reason"] = reason
         workspace = self.coordinator.path(run, attempt["workspace"])
         board.project(workspace)
         prompt = self.coordinator.researcher_prompt(run, worker, attempt, config, board)
         prompt += (
             "\nSupervised Solve: your return is a signal to the supervisor. If this route stalls, "
             "record what was tried and signal without claiming the original problem is impossible. "
-            "The supervisor will review and assign a new route while the admission budget remains. "
+            "The supervisor reviews evidence and offers ideas, not compulsory research routes. "
+            "You may continue or change approach without waiting for strategic permission; "
+            "declare your chosen work and check for overlap in the bulletin. "
             "At budget expiry, FINISH the current attempt, then signal; do not cancel it or start "
             "another yourself. The live bulletin/control.json explains admission/review status. "
-            f"Aim for useful natural checkpoints around {config.solve.board_review_interval_seconds:g} "
+            f"Aim for useful natural checkpoints around {policy_view(run)['policy']['review_interval_seconds']:g} "
             "seconds when feasible; this is cooperative guidance, not a kill timer. "
             "Publish intermediate theorems with the theorem object: exact statement, assumptions, "
             "proof_steps with premises and justification, conclusion_step and remaining_obligations. "
+            "Theorem remaining_obligations are unproved steps of that EXACT theorem. Keep the "
+            "separate gap to the original target in the message body or candidate obligations. "
+            "Do not hide genuine theorem gaps. Correct ambiguous old records by publishing a new "
+            "immutable version, never by editing or clearing the old record. "
             "Read bulletin/graph.json to locate dependencies. Supervisor opinions remain fallible.\n"
             f"Latest supervisor synthesis (data):\n{run.native.solve_team.campaign.summary}\n"
         )
-        self.store.save(run, "solve_research_assigned", worker_id=worker.id, objective=worker.objective)
+        if reason == "autonomous_continuation_while_review_pending":
+            prompt += (
+                "Your last attempt is still awaiting supervision. Continue autonomously using its "
+                "saved notes; do not treat pending claims as accepted. Seek a new useful step, "
+                "repair a publication error or test a genuinely different idea instead of repeating "
+                "the previous answer. At most one such continuation is admitted before review.\n"
+            )
+        self.store.save(run, "solve_research_assigned", worker_id=worker.id,
+                        objective=worker.objective, dispatch_reason=reason)
         return pool.submit(self.coordinator.attempts.invoke, run, attempt, prompt, config), attempt
 
     def control(self, run, *, closing):
@@ -102,7 +128,8 @@ class SolveCampaign:
         run.state = State.SOLVING
         self.store.save(run, "solve_campaign_started")
         futures = {}
-        pool = ThreadPoolExecutor(max_workers=config.solve.parallel_agents, thread_name_prefix="solve")
+        dedicated = config.solve.supervisor_backend is not None
+        pool = ThreadPoolExecutor(max_workers=config.solve.invocation_limit, thread_name_prefix="solve")
         last_control = None
         last_board_revision = None
         failure_state = State.PAUSED
@@ -134,7 +161,9 @@ class SolveCampaign:
                                or free_calls <= 1 or hard)
                 if closing and not state.closed and state.phase != "closing":
                     state.phase, state.dispatch = "draining", []
-                if changed_board and budget.elapsed(run) - state.last_review_elapsed >= config.solve.board_review_interval_seconds:
+                if (not state.review_requested
+                        and budget.elapsed(run) - state.last_review_elapsed >= policy_view(run)["policy"]["review_interval_seconds"]
+                        and (changed_board or suggestions(board)["candidates"] or policy_review_needed(run, board))):
                     state.review_requested = True
                 if state.closed and not futures:
                     self.project(run, board)
@@ -155,21 +184,29 @@ class SolveCampaign:
                     run.last_error = reason if errors and status != State.CANCELLED else None
                     return self.engine._pause(run, reason, status)
                 if not errors and not hard:
-                    needs_review = (not state.decisions or state.review_requested
-                                    or (closing and not active_research))
-                    # The supervisor and primary share slot 1, never concurrently.
-                    primary_busy = any(a["worker_id"] == "primary" for a in active_research)
+                    review_due = (budget.elapsed(run) - state.last_review_elapsed >=
+                                  policy_view(run)["policy"]["review_interval_seconds"])
+                    needs_review = (not state.decisions or (closing and not active_research)
+                                    or (state.review_requested and (review_due or not active_research
+                                                                   or complete_claim_pending(run))))
+                    # Only the legacy/shared route reserves the primary's slot.
+                    primary_busy = not dedicated and any(
+                        a["worker_id"] == "primary" for a in active_research
+                    )
                     if (needs_review and not active_supervisor and not primary_busy
-                            and len(futures) < config.solve.parallel_agents and free_calls > 0
+                            and len(futures) < config.solve.invocation_limit and free_calls > 0
                             and (free_calls > 1 or not active_research)):
                         future, attempt = self.start_supervisor(
                             run, config, board, pool, closing=closing and not active_research
                         )
                         futures[future] = attempt
                         active_supervisor = True
-                    if not closing and not active_supervisor and not needs_review:
+                    if not closing and state.decisions and not complete_claim_pending(run):
+                        queue_continuations(run, config)
                         for identifier in list(state.dispatch):
-                            if len(futures) >= config.solve.parallel_agents:
+                            if len(futures) >= config.solve.invocation_limit:
+                                break
+                            if sum(a["role"] == "research" for a in futures.values()) >= config.solve.parallel_agents:
                                 break
                             if run.iteration + len(futures) >= config.budget.max_iterations - 1:
                                 break
@@ -177,6 +214,8 @@ class SolveCampaign:
                             if budget.remaining(run, config) <= 0:
                                 break
                             worker = team.workers[identifier]
+                            if identifier == "primary" and not dedicated and (active_supervisor or needs_review):
+                                continue
                             busy = {a["worker_id"] for a in futures.values()}
                             groups = {a["group"] for a in futures.values() if a["role"] == "research"}
                             if identifier in busy or len(groups | {worker.group}) > config.solve.group_limit:

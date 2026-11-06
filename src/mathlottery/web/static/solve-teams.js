@@ -2,16 +2,17 @@
 (function (root, factory) {
   "use strict";
   const common = typeof module === "object" && module.exports;
-  const api = factory((common ? require("./dom.js") : root.MathLotteryDOM), (common ? require("./i18n.js") : root.MathLotteryI18n));
+  const api = factory((common ? require("./dom.js") : root.MathLotteryDOM), (common ? require("./i18n.js") : root.MathLotteryI18n), (common ? require("./solve-board.js") : root.MathLotterySolveBoard));
   if (common) module.exports = api;
   if (root) root.MathLotterySolveTeams = api;
-})(typeof window === "object" ? window : null, function (MathLotteryDOM, MathLotteryI18n) {
+})(typeof window === "object" ? window : null, function (MathLotteryDOM, MathLotteryI18n, MathLotterySolveBoard) {
   "use strict";
 
   // Read-only projection of a checkpoint. Each view has its own render cache.
   function create(panel) {
     const { node } = MathLotteryDOM.scope(panel);
     let lastSignature;
+    const boardView = MathLotterySolveBoard.create(panel);
 
     function render(run, language) {
       const team = run.solve_team, zh = language === "zh";
@@ -49,7 +50,7 @@
       panel.append(node("p", "field-hint", `${zh ? "本轮分组" : "Groups in this round"}: ${(team.groups || []).length} · ${zh ? "组数上限" : "Group cap"}: ${team.max_groups ?? team.effective_max_groups ?? team.parallel_agents ?? "—"}`));
       for (const group of team.groups || []) {
         const mode = zh ? ({independent: "独立探索", peer: "同级协作", critique: "推导与质疑"}[group.mode] || group.mode) : group.mode;
-        panel.append(node("p", "", `${group.id} · ${group.agents} agent · ${mode}: ${group.objective}`));
+        panel.append(node("p", "", `${group.id} · ${group.agents} agent · ${mode} · ${zh ? "可选建议" : "Optional suggestion"}: ${group.objective}`));
       }
       const usage = team.supervisor_usage || {};
       panel.append(node("p", "field-hint", `${zh ? "监督开销（已计入任务总量）" : "Supervision overhead (included in totals)"}: ${compact(usage.input_tokens)} in / ${compact(usage.output_tokens)} out; ${usage.unknown_calls || 0} ${zh ? "次用量未知" : "calls with unknown usage"}`));
@@ -67,28 +68,7 @@
       }
       workers.open = open.has(workers.dataset.key); panel.append(workers);
       panel.append(node("p", "field-hint", zh ? "留言与自检均为 Solve 阶段研究记录，不表示独立验证通过。" : "Messages and self-checks are Solve research records, not independent verification."));
-      const board = node("details", "evidence-block"); board.dataset.key = "solve-board";
-      board.append(node("summary", "", `${zh ? "跨组留言" : "Cross-group messages"} · ${(team.messages || []).length}`));
-      for (const message of [...(team.messages || [])].reverse()) {
-        const entry = node("details", "evidence-block"); entry.dataset.key = message.key;
-        const status = zh ? ({unverified: "待核验", needs_recheck: "需重新检查", retracted: "已撤回", supervisor_accepted: "监督者认可（非 Verify）", supervisor_rejected: "监督者否定"}[message.standing] || message.standing) : message.standing;
-        entry.append(node("summary", "", `${message.group} · ${status} · ${message.title}`), node("pre", "", message.body));
-        if (message.assumptions.length) entry.append(node("p", "", `${zh ? "假设" : "Assumptions"}: ${message.assumptions.join("; ")}`));
-        if (message.depends_on.length) entry.append(node("p", "", `${zh ? "依赖" : "Dependencies"}: ${message.depends_on.join(", ")}`));
-        if (message.theorem) {
-          entry.append(node("pre", "", message.theorem.statement));
-          for (const step of message.theorem.proof_steps) entry.append(node("p", "", `${step.id} ← ${step.premises.join(", ") || (zh ? "已声明前提" : "declared premises")}: ${step.statement}\n${step.justification}`));
-          if (message.theorem.remaining_obligations.length) entry.append(node("p", "field-hint", `${zh ? "未完成义务" : "Open obligations"}: ${message.theorem.remaining_obligations.join("; ")}`));
-        }
-        if (message.supervisor_review) entry.append(node("pre", "", message.supervisor_review.rationale));
-        for (const artifact of message.artifacts) {
-          const link = node("a", "text-button", `${zh ? "下载材料" : "Download material"}: ${artifact.source}`);
-          link.href = `/api/runs/${encodeURIComponent(run.id)}/solve-material?sha256=${encodeURIComponent(artifact.sha256)}`;
-          entry.append(link);
-        }
-        entry.open = open.has(entry.dataset.key); board.append(entry);
-      }
-      board.open = open.has(board.dataset.key); panel.append(board);
+      boardView.render(run, language, open);
     }
 
     return { render };

@@ -13,7 +13,10 @@
 | 3 | API agent（Responses） | 环境变量 `RESEARCH_API_KEY_B`，API 计费 |
 | 4 | Codex agent | 独立 ChatGPT 登录，使用订阅额度 |
 
-各槽位可以选不同模型和推理设置；填写的模型与强度需要该账号或 API 端点实际支持，配置了名称不代表一定可用。
+新增 OpenAI 槽位默认使用 **`gpt-6-astra` / `max`**，适用于 Codex 订阅、Codex API Key 和 Responses，监督者配置也适用。各槽位仍可以选不同模型和推理设置；填写的模型与强度需要该账号或 API 端点实际支持，配置了名称不代表一定可用。
+
+Solve 槽位可登记活动并自主建立同伴通道，不切换账号、接入或模型。Codex 使用本地投影和助手，Responses 使用限定任务范围的留言板函数；讨论本身不会发布或认证定理。 [证明图谱与协作说明](proof-board.cn.md)。
+
 
 ## 配置与使用
 
@@ -32,7 +35,7 @@ mathlottery serve
 
 Codex API 鉴权连接 OpenAI 官方端点，保留原生 Codex harness。独立 API agent 继续用于厂商扩展：端点需要支持 MathLottery 使用的 Responses 功能，包括后台响应、查询、取消及配置的工具。监督式 Solve 还需要函数调用及 `function_call_output` 续接，供实时留言板使用。只有 API Key 或兼容 OpenAI 的 Chat Completions 接口还不够；未来接入 DeepSeek 等其他协议时需要相应适配器。见[提供方兼容要求](configuration.cn.md#providers)。
 
-监督者与主研究者顺序复用槽位 1。新监督式任务会审核研究信号并定期请求复查留言板；复查等待槽位 1 空闲，其他研究者可以继续。时间到达后等待当前尝试返回，再监督整理。见[监督式 Solve](solve-teams.cn.md)。这些调用计入任务预算；配置 4 个槽位时，不会因为监督再增加第 5 个同时调用者。监督可以让槽位闲置或重新分组，但每个研究者保留自己的接入和会话。显式限制并行数时，禁用 Codex 内部再启动额外 agent，避免绕过上限。
+默认监督者与主研究者顺序复用槽位 1，检查等待该槽位空闲，其他研究者可以继续工作。可选的[独立监督接入](#dedicated-supervisor)允许全部研究者工作时同时审核。时间到达后等待当前尝试返回，再监督整理，见[监督式 Solve](solve-teams.cn.md)。所有监督调用计入任务预算。监督可以让槽位闲置或重新分组，但每个研究者保留自己的接入和会话。显式限制并行数时，禁用 Codex 内部再启动额外 agent，避免绕过上限。
 
 ## 已有任务与隐私
 
@@ -63,7 +66,8 @@ solve:
       backend:
         mode: codex
         execution: native
-        model: null
+        model: gpt-6-astra
+        reasoning_effort: max
     - id: agent-2
       label: Researcher B
       backend:
@@ -71,16 +75,58 @@ solve:
         execution: native
         codex_auth: api_key
         codex_api_key_env: RESEARCH_API_KEY_A
-        model: your-supported-openai-model
+        model: gpt-6-astra
+        reasoning_effort: max
     - id: agent-3
       label: Researcher C
       backend:
         mode: chat
         execution: native
-        model: your-supported-model
+        model: gpt-6-astra
+        reasoning_effort: max
         chat:
           api_key_env: RESEARCH_API_KEY_B
           base_url: https://api.openai.com/v1
 ```
 
 使用与网页相同的槽位 ID，就会使用对应的隔离登录。`parallel_agents` 必须等于槽位数。Find、Verify、Organize 和组合命令 `run` 仍使用通常的后端配置；槽位路由只作用于独立的原生 Solve。
+
+<a id="dedicated-supervisor"></a>
+## 独立监督接入
+
+要使用“订阅账号监督 + 四个 API 计费的 Codex 研究者”，可在本地 YAML 中配置如下内容。下例使用项目默认模型与强度，也可按账号支持情况另行选择。密钥保存在环境变量中，YAML 只记录变量名。
+
+```yaml
+solve:
+  coordination: supervised
+  parallel_agents: 4
+  max_groups: 4
+  supervisor_backend:
+    mode: codex
+    codex_auth: chatgpt
+    model: gpt-6-astra
+    reasoning_effort: max
+  agent_slots:
+    - id: researcher-a1
+      backend: &api_a
+        mode: codex
+        codex_auth: api_key
+        codex_api_key_env: RESEARCH_API_KEY_A
+        model: gpt-6-astra
+        reasoning_effort: max
+    - id: researcher-a2
+      backend: *api_a
+    - id: researcher-b1
+      backend: &api_b
+        <<: *api_a
+        codex_api_key_env: RESEARCH_API_KEY_B
+    - id: researcher-b2
+      backend: *api_b
+budget:
+  max_wall_time_minutes: 60
+  max_iterations: 100
+```
+
+省略 `codex_identity` 时，监督者使用 `.mathlottery/codex-home` 中已有的 MathLottery 订阅登录，与个人 CLI/IDE 登录状态独立。如需其他隔离订阅身份，可指定其 `codex_identity` 并登录该身份。监督者不得与研究者共用同一个 Codex 鉴权命名空间。示例最多同时运行**四个研究者和一个监督者**，两个密钥各负责两个研究者。不同密钥不一定对应不同的服务商额度。
+
+目前此设置通过 YAML 配置，Agent 页面尚无额外的监督卡片。需同时明确研究槽位；已有任务保留其监督接入。新任务设置 `supervisor_backend: null` 可恢复默认的槽位 1 顺序复用。各接入不会相互复制密钥或登录状态，失败时也不会自动换账号。

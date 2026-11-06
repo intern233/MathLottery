@@ -182,15 +182,16 @@ def commands(store, run):
     return [json.loads(path.read_text()) for path in dict.fromkeys(paths) if path.is_file()]
 
 
-def test_native_defaults_inherit_model_and_remove_microstep_restrictions(tmp_path):
-    config = BackendConfig()
+@pytest.mark.parametrize("auth", ["chatgpt", "api_key"])
+def test_native_defaults_pin_model_and_preserve_native_tools(tmp_path, auth):
+    config = BackendConfig(codex_auth=auth)
     assert config.execution == "native"
-    assert config.model is config.reasoning_effort is config.native_turn_timeout_seconds is None
+    assert config.native_turn_timeout_seconds is None
     backend = NativeWorkBackend(config, root=tmp_path)
     backend.executable = "codex"
     cmd = backend.native_command(tmp_path, tmp_path / "workspace", None)
-    assert "--model" not in cmd
-    assert not any(value.startswith("model_reasoning_effort=") for value in cmd)
+    assert cmd[cmd.index("--model") + 1] == "gpt-6-astra"
+    assert 'model_reasoning_effort="max"' in cmd
     assert "--ephemeral" not in cmd and "--ignore-user-config" not in cmd
     assert "--output-schema" not in cmd and "mcp_servers={}" not in cmd
     assert "features.shell_tool=true" in cmd and 'web_search="live"' in cmd

@@ -13,7 +13,10 @@ Open **Agent configuration** from the local workspace, or append `/agents` to th
 | 3 | API agent (Responses) | `RESEARCH_API_KEY_B` / API billing |
 | 4 | Codex agent | Separate ChatGPT login / subscription allowance |
 
-Each slot has its own model and reasoning settings. Use a model and effort supported by that account or API endpoint. A configured name alone does not establish availability.
+New OpenAI slots default to **`gpt-6-astra` / `max`**, for Codex subscription, Codex API-key and Responses connections. These defaults also apply to supervisor configurations. Each slot can override its model and reasoning settings. Use a model and effort supported by that account or API endpoint. A configured name alone does not establish availability.
+
+Solve slots can register work and form voluntary peer channels without switching account, transport or model. Codex uses local board projections/helpers; Responses uses scoped board functions. Discussion does not itself publish or certify a theorem. [Proof graph and collaboration guide](proof-board.md).
+
 
 ## Set up and use the slots
 
@@ -32,7 +35,7 @@ mathlottery serve
 
 Codex API authentication uses the official OpenAI endpoint and preserves the Codex harness. The independent API agent remains available for vendor extensions. Its endpoint must implement the Responses features MathLottery uses, including background responses, retrieval, cancellation and the configured tools. Supervised Solve also requires function calls and `function_call_output` continuations for the live board. An API key or OpenAI-compatible Chat Completions endpoint alone is not enough; a future DeepSeek or other protocol integration needs the corresponding adapter. See [provider compatibility](configuration.md#providers).
 
-The supervisor shares slot 1 sequentially with the primary researcher. New supervised tasks review researcher signals and periodically request board inspection; inspection waits for slot 1 to be free, while other researchers can continue. At the time budget, current attempts finish before final supervision. See [supervised Solve](solve-teams.md). These calls count toward the task budget. They do not create a fifth simultaneous caller when four slots are configured. The supervisor may leave slots idle or change groups, but each researcher keeps its own connection and conversation. Nested Codex agent spawning is disabled when the harness enforces an explicit parallelism cap.
+By default, the supervisor shares slot 1 sequentially with the primary researcher. Inspection waits for slot 1 to be free, while other researchers can continue. An optional [dedicated connection](#dedicated-supervisor) allows supervision alongside all researchers. At the time budget, current attempts finish before final supervision. See [supervised Solve](solve-teams.md). All supervision calls count toward the task budget. The supervisor may leave slots idle or change groups, but each researcher keeps its own connection and conversation. Nested Codex agent spawning is disabled when the harness enforces an explicit parallelism cap.
 
 ## Saved tasks and privacy
 
@@ -63,7 +66,8 @@ solve:
       backend:
         mode: codex
         execution: native
-        model: null
+        model: gpt-6-astra
+        reasoning_effort: max
     - id: agent-2
       label: Researcher B
       backend:
@@ -71,16 +75,58 @@ solve:
         execution: native
         codex_auth: api_key
         codex_api_key_env: RESEARCH_API_KEY_A
-        model: your-supported-openai-model
+        model: gpt-6-astra
+        reasoning_effort: max
     - id: agent-3
       label: Researcher C
       backend:
         mode: chat
         execution: native
-        model: your-supported-model
+        model: gpt-6-astra
+        reasoning_effort: max
         chat:
           api_key_env: RESEARCH_API_KEY_B
           base_url: https://api.openai.com/v1
 ```
 
 Use the same slot IDs as the browser to reuse their isolated logins. `parallel_agents` must equal the number of slots. Find, Verify, Organize and the composed `run` retain their normal backend configuration; slot routing applies to standalone native Solve.
+
+<a id="dedicated-supervisor"></a>
+## Dedicated supervisor
+
+For a subscription supervisor and four API-funded Codex researchers, set the following in your local YAML. The example uses the project model defaults; select other values if required by your account. The two environment variables hold keys; the YAML contains only their names.
+
+```yaml
+solve:
+  coordination: supervised
+  parallel_agents: 4
+  max_groups: 4
+  supervisor_backend:
+    mode: codex
+    codex_auth: chatgpt
+    model: gpt-6-astra
+    reasoning_effort: max
+  agent_slots:
+    - id: researcher-a1
+      backend: &api_a
+        mode: codex
+        codex_auth: api_key
+        codex_api_key_env: RESEARCH_API_KEY_A
+        model: gpt-6-astra
+        reasoning_effort: max
+    - id: researcher-a2
+      backend: *api_a
+    - id: researcher-b1
+      backend: &api_b
+        <<: *api_a
+        codex_api_key_env: RESEARCH_API_KEY_B
+    - id: researcher-b2
+      backend: *api_b
+budget:
+  max_wall_time_minutes: 60
+  max_iterations: 100
+```
+
+With `codex_identity` omitted, the supervisor uses the existing MathLottery subscription login in `.mathlottery/codex-home`, independently of the personal CLI/IDE login. To use another isolated subscription identity, specify its `codex_identity` and sign in to that identity. A supervisor cannot share a Codex authentication namespace with a researcher. The example has at most **four simultaneous researchers plus one supervisor**, with two researchers funded by each key. Separate keys do not necessarily imply separate provider quotas.
+
+This setting is currently configured through YAML, not an extra supervisor card on the Agents page. Use it with explicit researcher slots; existing tasks retain their saved supervisor route. Setting `supervisor_backend: null` restores the default sequential slot-1 behavior for new tasks. No keys or logins are copied between routes, and failures do not trigger account substitution.

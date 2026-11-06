@@ -31,41 +31,60 @@ keep their existing protocols.
 
 For separate accounts/models, configure `/agents` and select **Use configured agent
 slots**. Each slot retains its account, transport and conversation across regrouping
-and recovery. The supervisor uses slot 1 **sequentially** with the primary researcher;
-it never adds an overlapping invocation on that slot. Explicit slot rosters are frozen
-in the run; changing identities or roster size requires a new task.
+and recovery. By default, the supervisor uses slot 1 **sequentially** with the primary
+researcher. An optional `solve.supervisor_backend` supplies a separate connection,
+allowing one supervisor alongside the full researcher cap. See the
+[dedicated supervisor configuration](agents.md#dedicated-supervisor). Explicit routes
+are frozen in the run; changing identities, supervisor or roster size requires a new task.
+
+`supervisor_timeout_seconds` defaults to 600 seconds per supervisor call. For long proof reviews, set a larger value (up to 86400 seconds) or `null` to let the current review finish naturally. An explicit timeout pauses the task and preserves its session; it is separate from the research admission budget. The supervisor prompt states this deadline and limits review opinions to the frozen evidence versions for that turn. New board entries are reviewed in a later snapshot.
+
+The proof board also supports compact graph navigation, reversible curation, an activity registry and voluntary peer channels. Existing tools and immutable evidence remain available. [Proof graph and collaboration guide](proof-board.md).
+
 
 ## Research and review loop
 
 ```mermaid
 flowchart TD
     P[Original problem] --> S[Global supervisor]
-    S -->|Original problem + route| R[Autonomous researchers]
+    S -->|Original problem + optional ideas| R[Autonomous researchers]
     R -->|Theorem + proof chain| B[Shared proof graph]
     B -->|Read relevant evidence| R
     B -->|Periodic review request| S
     R -->|Complete / partial / stalled signal| S
-    S -->|Unsolved, time remains: revise route| R
+    S -->|Suggest next steps; researchers choose| R
     S -->|Accepted claim, or research drained| E[Review and research summary]
 ```
 
-The supervisor proposes concrete routes and bounded groups. Researchers keep their
-native tools, persistent conversations, local notes and self-checks. They return at
-meaningful checkpoints. A return is a signal, not automatic completion of Solve.
-A stalled or partial attempt prompts the supervisor to inspect available evidence,
-record a synthesis on the board and assign another route while time remains.
+The supervisor allocates bounded capacity and offers optional ideas. Researchers choose
+their own directions, including approaches outside the suggested group objective or mode.
+They declare their topic, approach and intent on the board, then use peers' declarations
+and existing results to decide whether to collaborate, reuse or independently check.
+Declarations do not lock a topic. Tools, persistent conversations and local notes remain available.
+A return is a signal, not automatic completion of Solve; supervision reviews evidence and shares suggestions.
+
+An idle researcher with one unreviewed partial/unsolved signal can make **one autonomous
+continuation ahead of review**, within the saved capacity plan and remaining budget.
+A second unreviewed return waits for supervision, preventing a fast low-yield retry loop.
+Partial signals can be batched until periodic review is due or researchers are idle;
+complete-solution signals receive priority and hold new research admissions until reviewed.
+Other slots can continue while supervision runs. A shared primary slot remains reserved
+for a due supervisor call; it never runs two calls on that slot at once. No new account
+or extra concurrency is introduced. Receipt recovery and budget-expiry draining still apply.
 
 A complete claim must receive a supervisor review tied to its candidate ID and hash.
 The review covers the original statement, proof steps, hypotheses, boundary cases
 and remaining obligations. Rejected or incomplete claims return to research. Missing
 or malformed reviews pause execution; they never silently approve a proof. Approved
 claims may end early unless `budget.solve_until_budget_exhausted` is enabled.
+In `solution_reviews`, `accepted` means the original problem is completely solved. A sound partial or conditional candidate uses `needs_work`; its limited lemmas can still receive accepted board reviews. Rejected checkpoint feedback is preserved for the next supervision turn so it can correct the protocol without repeating the whole audit.
 Supervisor opinions are part of Solve and **do not replace independent Verify**, Lean
 checking, expert review or novelty assessment.
 
 `board_review_interval_seconds` requests periodic inspection of unreviewed or
-challenged theorems. A request waits for slot 1 to be free. Other researchers may keep
-working during supervision; a long primary turn is not killed to make room. Research
+challenged theorems. With shared supervision, a request waits for slot 1 to be free;
+with a dedicated connection, all researchers may keep working during supervision.
+A long primary turn is not killed to make room. Research
 prompts encourage natural checkpoints near this interval, without a forced turn timer.
 This is a scheduling interval, not a guaranteed review-completion deadline.
 
@@ -81,7 +100,7 @@ routes, intentions or retractions. A reusable theorem carries:
 
 - `theorem.statement`: the exact mathematical statement; `assumptions` on the message.
 - `theorem.proof_steps`: unique step IDs, conclusions, earlier premise IDs and justifications.
-- `theorem.conclusion_step`, source `references` and `remaining_obligations`.
+- `theorem.conclusion_step`, source `references` and `remaining_obligations`. `remaining_obligations` contains unproved steps of that exact theorem. Describe the remaining gap to the original problem in the message body or candidate obligations. A board version with nonempty theorem obligations cannot be accepted; publish a corrected immutable version when its scope was ambiguous.
 - `depends_on`: already-published theorem message keys; optional frozen UTF-8 proof files.
 
 The controller rejects cyclic or forward proof-step dependencies and missing message
@@ -99,10 +118,13 @@ dependent claims. Objections must be explicitly addressed before reacceptance; c
 to prerequisite reviews invalidate downstream acceptance until rechecked.
 `supervisor_accepted` and `author_checked` remain fallible research opinions.
 
-Responses agents have live `solve_board_search`, `solve_board_read`,
+Responses agents have live `solve_board_search`, `solve_board_explore`, `solve_board_read`,
 `solve_board_material`, `solve_board_publish` and `solve_board_status` functions,
 alongside their configured hosted tools. They can publish inline proof chains and read
 published materials during the same attempt, without general access to local files.
+`solve_board_activity`, `solve_board_channel` and `solve_board_event` expose activity
+registration and voluntary peer channels. See the [board guide](proof-board.md) for
+archive/restore decisions and native equivalents.
 The function loop follows the [official Responses function-calling protocol](https://developers.openai.com/api/docs/guides/function-calling).
 
 Message JSON is limited to 100 KB and each frozen artifact to 2 MB. Keep large datasets

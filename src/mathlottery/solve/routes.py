@@ -8,7 +8,7 @@ from mathlottery.storage.core import json_text
 
 
 def primary_config(config: Config) -> Config:
-    """Pin standalone Solve's supervisor, primary researcher and closing turn to slot 1."""
+    """Pin the primary researcher and, unless dedicated, supervision to slot 1."""
     if not config.solve.agent_slots:
         return config
     return config.model_copy(
@@ -50,7 +50,18 @@ def route_fingerprint(backend: BackendConfig) -> str:
 
 def attempt_config(config: Config, attempt: dict) -> Config:
     """Recover only through the route that originally created this conversation."""
-    selected = slot_config(config, attempt.get("slot_id"))
+    if attempt.get("route_kind") == "supervisor":
+        if attempt.get("role") != "supervision" or config.solve.supervisor_backend is None:
+            raise ValueError("The saved dedicated supervisor route is unavailable")
+        if attempt.get("slot_id") is not None or not attempt.get("route_sha256"):
+            raise ValueError("The saved dedicated supervisor route is incomplete")
+        selected = config.model_copy(deep=True, update={
+            "backend": config.solve.supervisor_backend.model_copy(deep=True),
+        })
+    else:
+        if attempt.get("role") == "supervision" and config.solve.supervisor_backend is not None:
+            raise ValueError("A saved shared supervisor cannot switch to a dedicated account")
+        selected = slot_config(config, attempt.get("slot_id"))
     expected = attempt.get("route_sha256")
     if expected and expected != route_fingerprint(selected.backend):
         raise ValueError("The saved Solve route changed; refusing to resume with another account")
@@ -61,6 +72,8 @@ def validate_resume_routes(previous: Config, requested: Config, mode: str | None
     """A continuation may change budgets/groups but never move a session across identities."""
     if previous.solve.coordination != requested.solve.coordination:
         raise ValueError("A saved Solve keeps its coordination protocol; start a new task to change it")
+    if previous.solve.supervisor_backend != requested.solve.supervisor_backend:
+        raise ValueError("A saved Solve keeps its supervisor account and model; start a new task to change them")
     old = previous.solve.agent_slots
     new = requested.solve.agent_slots
     if not (old or new):

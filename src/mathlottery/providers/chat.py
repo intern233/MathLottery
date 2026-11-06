@@ -219,6 +219,30 @@ class ChatBackend:
     ):
         return self._invoke(None, directory, timeout, None, cancelled, on_session, recover=True)
 
+    @staticmethod
+    def _unsubmitted_receipt(directory):
+        """Recognize a durable pre-connection failure, including older receipts.
+
+        Read/write failures are deliberately excluded: the server may already
+        have accepted those requests. A tool continuation is not a first POST.
+        """
+        if any((directory / name).exists() for name in (
+            "response.json", "tool-responses", "tool-continuations", "session.json",
+        )):
+            return False
+        path = directory / "receipt.json"
+        if not path.exists() or not (directory / "request.json").is_file():
+            return False
+        result = json.loads(path.read_text()).get("result", {})
+        errors = {
+            f"Chat API {kind}; artifacts preserved; no automatic retry"
+            for kind in ("ConnectError", "ConnectTimeout", "PoolTimeout")
+        }
+        return (
+            result.get("status") == "FAILED" and result.get("session_id") is None
+            and result.get("error") in errors
+        )
+
     def _invoke(self, prompt, directory, timeout, session_id, cancelled, on_session, recover=False):
         try:
             setup = self.check()
@@ -237,6 +261,12 @@ class ChatBackend:
                 if recover:
                     path = directory / "response.json"
                     if not path.exists():
+                        if self._unsubmitted_receipt(directory):
+                            return BackendResult(
+                                BackendStatus.FAILED,
+                                runtime={"creation_status": "not_submitted"},
+                                error="Recovered a connection failure before request submission",
+                            )
                         return BackendResult(
                             BackendStatus.FAILED,
                             pending=True,
@@ -270,6 +300,9 @@ class ChatBackend:
                     if session_id:
                         self._response_id({"id": session_id})
                         request["previous_response_id"] = session_id
+                        from mathlottery.providers.response_tools import resumed_input
+
+                        request["input"] = resumed_input(self, directory, session_id, prompt)
                     reasoning = {}
                     if self.config.reasoning_effort:
                         reasoning["effort"] = self.config.reasoning_effort
@@ -319,9 +352,16 @@ class ChatBackend:
                 error=f"Chat API HTTP {status}; check model, tools, endpoint and API account. No fallback.",
             )
         except (httpx.HTTPError, ValueError, OSError, TimeoutError) as error:
+            # Connection/pool establishment failed before the initial POST could
+            # be sent. Keep later polling/tool failures pending for recovery.
+            not_submitted = (
+                not recover and response is None
+                and isinstance(error, (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout))
+            )
             return BackendResult(
                 BackendStatus.FAILED,
-                invoked=submitted,
-                pending=submitted,
+                invoked=submitted and not not_submitted,
+                pending=submitted and not not_submitted,
+                runtime={"creation_status": "not_submitted"} if not_submitted else {},
                 error=f"Chat API {type(error).__name__}; artifacts preserved; no automatic retry",
             )

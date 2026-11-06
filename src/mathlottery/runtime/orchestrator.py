@@ -65,10 +65,10 @@ class Orchestrator:
             if config.solve.agent_slots:
                 if mode is not None and mode != config.backend.mode:
                     raise ValueError("Solve's primary backend is selected by its first agent slot")
-                if config.budget.max_external_cost_usd == 0 and any(
-                    slot.backend.uses_api_key for slot in config.solve.agent_slots
-                ):
-                    raise ValueError("API-funded agent slots are blocked by max_external_cost_usd: 0")
+            if config.budget.max_external_cost_usd == 0 and any(
+                backend.uses_api_key for backend in config.solve.configured_backends
+            ):
+                raise ValueError("API-funded agent slots or supervisor are blocked by max_external_cost_usd: 0")
         if workflow == Workflow.ORGANIZE:
             if not (problem and organization_context and organization_files and organization_candidates):
                 raise ValueError("Organize requires a frozen reviewed source; use organize(config, source_run_id)")
@@ -330,7 +330,7 @@ class Orchestrator:
             if requested_config.budget.max_external_cost_usd == 0 and (
                 requested_backend.uses_api_key
                 or (run.workflow == Workflow.SOLVE and any(
-                    slot.backend.uses_api_key for slot in requested_config.solve.agent_slots
+                    backend.uses_api_key for backend in requested_config.solve.configured_backends
                 ))
             ):
                 raise ValueError("API usage is blocked by max_external_cost_usd: 0")

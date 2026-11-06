@@ -11,7 +11,7 @@
 <a id="models"></a>
 ## 模型与配置优先级
 
-Codex 的模型 ID 与思考强度分别设置：
+Codex 订阅、Codex API Key 和 OpenAI Responses agent 均默认使用 `gpt-6-astra` / `max`，新建监督者与研究者配置也适用。模型 ID 与思考强度分别设置：
 
 ```yaml
 backend:
@@ -28,13 +28,13 @@ backend:
 | `backend.codex_auth` | Codex 的鉴权：`chatgpt`（默认，订阅登录）或 `api_key`（OpenAI API 计费），都使用原生 Codex agent。 |
 | `backend.codex_api_key_env` | Codex API 使用的环境变量**名称**，默认 `OPENAI_API_KEY`；不要填写密钥本身。 |
 | `backend.provider` | 可选配置 ID：`codex`、`chat` 或自定义名称，如 `research-api`。省略或设为 `null` 时使用该 mode 的内置接入。 |
-| `backend.model` | 准确的模型 ID，不附加 ` max` 等强度。`null` 时 Codex 使用独立目录的默认值；内置 Chat 可读取 `OPENAI_MODEL`。自定义 API 配置必须明确指定模型。 |
-| `backend.reasoning_effort` | 提供方支持的可选值，如 `max`；`null` 交给后端默认处理。 |
+| `backend.model` | 准确的模型 ID；OpenAI 配置省略时默认 `gpt-6-astra`。显式 `null` 保留 Codex 独立目录默认值或内置 Chat 的 `OPENAI_MODEL` 回退行为。自定义 API 配置需指定自己的模型。 |
+| `backend.reasoning_effort` | 默认 OpenAI 模型使用 `max`；显式 `null` 交给后端处理。另选模型或提供方且未指定强度时，使用其自身默认值。 |
 | `backend.chat.reasoning_mode` | 可选 Responses 字段：`pro`、`standard`，或 `null` 表示不发送。只在 `chat` 下使用，且需要提供方/模型支持。 |
 
 不要把 `pro` 写入 `reasoning_effort`，也不要自行给模型名加 `-pro`。API 设置不保证与 ChatGPT 网页产品具有相同行为。不支持的组合会报错，系统不会静默换模型或降低强度。报告区分请求设置与后端实际返回的设置。
 
-**新任务：**程序默认值 → `config.yaml`（或全局 `--config` 指定的文件）→ 显式 CLI/网页任务参数。例如 `mathlottery --config alternate.yaml find` 使用指定文件。`--backend`、`--model`、`--reasoning-effort`、`--reasoning-mode` 覆盖对应字段，不改写配置文件。手动换后端时，清除原先不兼容的模型/强度/模式；网页切换提供方会重置这些字段。
+**新任务：**程序默认值 → `config.yaml`（或全局 `--config` 指定的文件）→ 显式 CLI/网页任务参数。例如 `mathlottery --config alternate.yaml find` 使用指定文件。`--backend`、`--model`、`--reasoning-effort`、`--reasoning-mode` 覆盖对应字段，不改写配置文件。手动换后端时，清除原先不兼容的模型/强度/模式；网页切换到内置 OpenAI 提供方时恢复 `gpt-6-astra` / `max`，切换到自定义提供方时清除不兼容设置。
 
 **已有任务：**`resume` 从保存的配置快照开始。后来修改 `config.yaml` 或提供方配置，不会把已保存会话转向其他接口。网页续接保留模型设置；CLI 续接支持显式覆盖模型/后端。必须先恢复待处理调用，详见[恢复](#recovery)。
 
@@ -53,8 +53,8 @@ backend:
   execution: native
   codex_auth: api_key
   codex_api_key_env: OPENAI_API_KEY
-  model: your-api-model-id
-  reasoning_effort: null
+  model: gpt-6-astra
+  reasoning_effort: max
 ```
 
 在启动服务或 CLI 的终端设置对应环境变量，输入方法见下方。Agent 配置页选择 **Codex agent → API Key**。此模式走 OpenAI 官方 API 计费，不消耗 ChatGPT 订阅额度；不需要设备码登录，也不通过 `codex login` 保存密钥。MathLottery 只向 Codex 执行进程传入所选密钥，并清除其 shell 工具环境中的已知凭据值。部分依赖 ChatGPT 工作区的集成仍可能要求订阅登录，但原生终端与文件工具保留。见[官方认证说明](https://learn.chatgpt.com/docs/auth)。
@@ -69,8 +69,8 @@ API 模式的 Codex 状态保存在 `.mathlottery/codex-api-home`，各槽位使
 backend:
   mode: chat
   provider: chat
-  model: your-api-model-id
-  reasoning_effort: null
+  model: gpt-6-astra
+  reasoning_effort: max
   chat:
     api_key_env: OPENAI_API_KEY
     base_url: https://api.openai.com/v1
@@ -83,7 +83,7 @@ backend:
         container: {type: auto}
 ```
 
-替换 `your-api-model-id`，并使用该 API 模型支持的工具。在 Bash 中可用以下方式输入密钥，避免将其写入命令历史，再从该终端启动 MathLottery：
+需要时可另选模型，并使用该 API 模型支持的工具。在 Bash 中可用以下方式输入密钥，避免将其写入命令历史，再从该终端启动 MathLottery：
 
 ```bash
 read -rs -p 'OpenAI API key: ' OPENAI_API_KEY
@@ -91,7 +91,7 @@ export OPENAI_API_KEY
 mathlottery doctor
 ```
 
-`doctor` 检查本地配置，不发起收费模型调用，也不能确认 API 权限。密钥只从环境变量读取，不保存进配置或报告。`.env` 虽被 Git 忽略，但**不会自动加载**，请通过 Shell 或可信的环境管理工具设置。只有内置 `chat` 会在 `backend.model` 未设置时读取 `OPENAI_MODEL`。
+`doctor` 检查本地配置，不发起收费模型调用，也不能确认 API 权限。密钥只从环境变量读取，不保存进配置或报告。`.env` 虽被 Git 忽略，但**不会自动加载**，请通过 Shell 或可信的环境管理工具设置。只有内置 `chat` 在 `backend.model` 显式为 `null` 时才读取 `OPENAI_MODEL`；省略字段则使用 `gpt-6-astra`。
 
 使用其他提供方时，在本地配置中替换以下占位内容：
 
@@ -212,13 +212,15 @@ CLI、服务与后台进程启动时加载默认值，只影响各自进程，�
 | `solve.coordination` | 新配置默认 `supervised`；`allocation` 保留旧版按轮调度。缺少该字段的旧检查点继续使用 `allocation`。 |
 | `solve.parallel_agents` | `null` 保留原生自主委派；显式填写 1–32 启用托管研究。配合 `supervised` 时，1 个研究者也有独立监督会话。 |
 | `solve.max_groups` | 可选活动组数上限，要求明确并行数；不会使研究者总数超过人数上限。 |
-| `solve.board_review_interval_seconds` | `300` 秒，请求复查新增或变化的定理证据；请求等待槽位 1 空闲。 |
-| `solve.supervisor_timeout_seconds` | `600` 秒，单次监督调用的时限，独立于停止新研究派发的时间。 |
+| `solve.board_review_interval_seconds` | `300` 秒，请求复查新增或变化的定理证据；共用接入时等待槽位 1 空闲。 |
+| `solve.adaptive_coordination` | `false`；可选允许监督者调整本任务的复查间隔、归档候选筛选与协作建议。要求监督式 Solve 和明确的并行数。[详细说明](proof-board.cn.md#可选的监督机制优化)。 |
+| `solve.supervisor_timeout_seconds` | 默认 `600` 秒；可设不超过 `86400` 的正数，或 `null` 让审核自然结束。独立于停止新研究派发的时间。 |
 | `solve.agent_slots` | 可选的固定接入配置，数量须等于并行数；通过 [Agent 页面](agents.cn.md)或本地 YAML 设置。 |
+| `solve.supervisor_backend` | `null` 复用槽位 1；显式配置原生接入可增加一个独立监督者。要求监督式调度和明确的研究槽位，见[配置示例](agents.cn.md#dedicated-supervisor)。 |
 
 改变协调协议或固定槽位路由需要新建任务，旧任务续接保留原协议。明确并行数时禁用
-原生内部再创建 agent；研究者仍保留原生工具、文件、记忆设置和会话。监督顺序复用
-槽位 1，不额外增加同时调用者。
+原生内部再创建 agent；研究者仍保留原生工具、文件、记忆设置和会话。默认监督顺序复用
+槽位 1；独立监督接入最多增加一个并发调用，其时间、token 和调用次数仍计入同一任务预算。
 
 <a id="budgets"></a>
 ## 预算与用量

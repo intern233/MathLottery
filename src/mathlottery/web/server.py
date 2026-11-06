@@ -36,13 +36,14 @@ ASSETS = {
     "/model-selector.js": ("model-selector.js", "text/javascript; charset=utf-8"),
     "/account-panel.js": ("account-panel.js", "text/javascript; charset=utf-8"),
     "/solve-teams.js": ("solve-teams.js", "text/javascript; charset=utf-8"),
+    "/solve-board.js": ("solve-board.js", "text/javascript; charset=utf-8"),
     "/research-details.js": ("research-details.js", "text/javascript; charset=utf-8"),
     "/history.js": ("history.js", "text/javascript; charset=utf-8"),
     "/outcomes.js": ("outcomes.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/mark.svg": ("mark.svg", "image/svg+xml"),
 }
-RUN_ROUTE = re.compile(r"/api/runs/(run-[a-f0-9]{12})(?:/(resume|stop|report|artifact|organized|activity|solve-material))?")
+RUN_ROUTE = re.compile(r"/api/runs/(run-[a-f0-9]{12})(?:/(resume|stop|report|artifact|organized|activity|solve-material|solve-message|solve-channel))?")
 AGENT_ROUTE = re.compile(r"/api/agents/([a-z][a-z0-9_-]{0,63})/account(?:/(login|switch|logout|cancel))?")
 
 
@@ -266,6 +267,23 @@ class Handler(BaseHTTPRequestHandler):
                     suffix = "-public-text"
                 self.respond(200, data, content_type,
                              Content_Disposition=f'attachment; filename="{run_id}-expert-report{suffix}.{extension}"')
+            elif action in {"solve-message", "solve-channel"}:
+                from mathlottery.solve.board import SolveBoard
+                from mathlottery.solve.bulletin.events import channels, rows
+
+                service = self.server.service
+                service.store.load(run_id)
+                query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+                if set(query) != {"key"} or len(query["key"]) != 1:
+                    raise ValueError("Supply one run-local key")
+                board = SolveBoard(service.store, run_id)
+                if action == "solve-message":
+                    data = board.read(query["key"][0])
+                else:
+                    data = next((c for c in channels(rows(board)) if c["key"] == query["key"][0]), None)
+                    if data is None:
+                        raise ValueError("No such channel in this run")
+                self.respond(200, data)
             elif action == "solve-material":
                 from mathlottery.solve.board import SolveBoard
 

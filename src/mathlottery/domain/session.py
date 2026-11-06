@@ -33,7 +33,9 @@ class SolveGroup(Model):
     id: str = Field(pattern=r"^[a-z][a-z0-9_-]{0,39}$")
     agents: int = Field(ge=1, le=32, strict=True)
     mode: Literal["independent", "peer", "critique"] = "peer"
-    objective: str = Field(min_length=1, max_length=8000)
+    objective: str = Field(min_length=1, max_length=8000,
+                          description="Optional research suggestion, not a compulsory route. "
+                          "Researchers may choose another approach and declare it on the board.")
 
 
 class SolveWorker(Model):

@@ -16,6 +16,14 @@
 
     function configuredProvider() { return settings()?.provider || settings()?.backend || "codex"; }
     function selectedProvider() { return $("#backend").value || configuredProvider(); }
+    function choose(selector, value) {
+      const control = $(selector);
+      if (value && !Array.from(control.options).some(option => option.value === value)) {
+        const option = control.ownerDocument.createElement("option");
+        option.value = option.textContent = value; control.append(option);
+      }
+      control.value = value;
+    }
     function providers() {
       const entries = new Map([
         ["codex", { id: "codex", label: "Codex", transport: "codex", reasoning_modes: [] }],
@@ -86,6 +94,9 @@
     }
     function resetReasoningSelection() {
       $("#effort-select").value = "__default"; $("#effort").value = "";
+      if (["codex", "chat"].includes(selectedProvider()) && selectedModelId() === settings()?.model_defaults?.model) {
+        choose("#effort-select", settings().model_defaults.reasoning_effort);
+      }
       $("#reasoning-mode").value = "__default";
     }
     function modelSummary(settings, fallbackProvider) {
@@ -193,6 +204,10 @@
     $("#backend").addEventListener("change", () => {
       $("#model-select").value = $("#backend").value ? "__default" : ""; $("#model").value = ""; $("#effort").value = "";
       $("#effort-select").value = $("#reasoning-mode").value = $("#backend").value ? "__default" : "";
+      if ($("#backend").value && ["codex", "chat"].includes(selectedProvider()) && settings()?.model_defaults) {
+        choose("#model-select", settings().model_defaults.model);
+        choose("#effort-select", settings().model_defaults.reasoning_effort);
+      }
       modelState.data = null; onChange(); void loadModels();
     });
     $("#model-select").addEventListener("change", () => {

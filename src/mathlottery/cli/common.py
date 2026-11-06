@@ -8,7 +8,7 @@ from typing import Annotated
 
 import typer
 
-from mathlottery.config import ChatConfig, duration_minutes, load_config
+from mathlottery.config import BackendConfig, ChatConfig, duration_minutes, load_config
 from mathlottery.models import Problem, Run, State, Workflow, digest
 from mathlottery.providers.network import apply_network_environment
 from mathlottery.runtime.orchestrator import Orchestrator
@@ -132,8 +132,9 @@ def apply_options(config, mode, budget_time, max_iterations):
             if config.backend.provider in config.model_providers:
                 config.backend.chat = ChatConfig()
             config.backend.provider = None
-            config.backend.model = None
-            config.backend.reasoning_effort = None
+            defaults = BackendConfig(mode=mode.value, chat=config.backend.chat)
+            config.backend.model = defaults.model
+            config.backend.reasoning_effort = defaults.reasoning_effort
             config.backend.chat.reasoning_mode = None
         config.backend.mode = mode.value
     if budget_time:

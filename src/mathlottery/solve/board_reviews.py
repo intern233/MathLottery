@@ -12,7 +12,7 @@ from mathlottery.storage.core import json_text
 def content_hash(message):
     return digest(json_text({
         key: value for key, value in message.items()
-        if key not in {"standing", "supervisor_review", "content_sha256"}
+        if key not in {"standing", "supervisor_review", "content_sha256", "archived", "curation", "usage"}
     }))
 
 
@@ -31,7 +31,7 @@ def review_basis(target, values):
 def review_targets(board, limit=20):
     """Review new evidence, not the same unresolved lemma every timer tick."""
     values = {m["key"]: m for m in board.messages()}
-    return [m["key"] for m in values.values() if m.get("theorem") and m["standing"] != "retracted"
+    return [m["key"] for m in values.values() if m.get("theorem") and not m.get("archived") and m["standing"] != "retracted"
             and (m.get("supervisor_review") or {}).get("basis_sha256") != review_basis(m, values)][:limit]
 
 
@@ -93,7 +93,11 @@ def record_review(board, review, task_id, *, snapshot_hashes):
     if review.verdict == "accepted":
         theorem = target.get("theorem")
         if not theorem or theorem["remaining_obligations"]:
-            raise ValueError("Accept only a theorem with a proof chain and no remaining obligations")
+            raise ValueError(
+                "Accept only a theorem with a proof chain and no remaining obligations: "
+                f"{review.key}. Use needs_work for this version; the author can publish a new "
+                "version separating exact-theorem gaps from original-target obligations."
+            )
         if set(review.checked_steps) != {step["id"] for step in theorem["proof_steps"]}:
             raise ValueError("A theorem review must cover every proof step")
         if target["standing"] == "retracted":

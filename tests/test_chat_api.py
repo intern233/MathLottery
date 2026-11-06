@@ -192,6 +192,19 @@ def test_three_tasks_use_automatic_chat_api(store, chat_config, api, workflow):
             assert b"test-secret-never-persist" not in path.read_bytes()
 
 
+def test_openai_responses_default_model_and_effort_reach_request(store, monkeypatch, api):
+    monkeypatch.setenv("OPENAI_API_KEY", "synthetic-default-test-key")
+    monkeypatch.setenv("OPENAI_MODEL", "environment-model-must-not-override-default")
+    config = Config.model_validate({"backend": {"mode": "chat"}})
+    requests = api()
+    engine = Orchestrator(store)
+    run = engine.drive(engine.create(config, problem=demo_problem(), workflow=Workflow.SOLVE).id)
+    assert run.state == State.COMPLETED
+    payload = json.loads(requests[0].content)
+    assert payload["model"] == "gpt-6-astra"
+    assert payload["reasoning"]["effort"] == "max"
+
+
 def test_pipeline_chains_research_but_starts_fresh_review(store, chat_config, api):
     requests = api()
     run = Orchestrator(store).create(chat_config)
@@ -346,6 +359,72 @@ def test_pending_response_recovers_without_duplicate_creation(store, chat_config
     run = engine.resume(run.id)
     assert run.state == State.COMPLETED and run.iteration == 1
     assert run.usage.input_tokens == 20
+    assert [r.method for r in requests] == ["POST", "GET", "GET"]
+
+
+@pytest.mark.parametrize("error_type,ambiguous", [
+    (httpx.ConnectError, False), (httpx.ConnectTimeout, False), (httpx.PoolTimeout, False),
+    (httpx.ReadTimeout, True), (httpx.WriteError, True), (httpx.RemoteProtocolError, True),
+])
+def test_creation_failure_recovery_preserves_unknown_outcomes(
+    tmp_path, chat_config, api, error_type, ambiguous,
+):
+    from dataclasses import asdict
+
+    def fail(request):
+        raise error_type("synthetic network failure", request=request)
+
+    requests = api(fail)
+    backend = ChatBackend(chat_config.backend)
+    directory = tmp_path / "attempt"
+    result = backend.invoke_native("research", directory, tmp_path, 20)
+    assert result.pending == result.invoked == ambiguous
+    assert len(requests) == 1
+    # Recover an old receipt whose pre-connection failure was marked pending.
+    legacy = asdict(result)
+    legacy.update(pending=True, invoked=True, runtime={})
+    (directory / "receipt.json").write_text(json.dumps({"result": legacy}))
+    recovered = backend.recover_native(directory, 20)
+    assert recovered.pending == ambiguous
+    assert not recovered.invoked
+    assert recovered.runtime.get("creation_status") == (None if ambiguous else "not_submitted")
+    assert len(requests) == 1  # Recovery never resends the creation POST.
+
+
+@pytest.mark.parametrize("conflicting_artifact", ["session.json", "tool-continuations", "tool-responses"])
+def test_preconnection_receipt_with_continuation_evidence_stays_unknown(
+    tmp_path, chat_config, api, conflicting_artifact,
+):
+    requests = api()
+    (tmp_path / "request.json").write_text("{}")
+    (tmp_path / "receipt.json").write_text(json.dumps({"result": {
+        "status": "FAILED", "pending": True,
+        "error": "Chat API ConnectError; artifacts preserved; no automatic retry",
+    }}))
+    (tmp_path / conflicting_artifact).touch()
+    result = ChatBackend(chat_config.backend).recover_native(tmp_path, 20)
+    assert result.pending and not requests
+
+
+def test_connect_failure_during_poll_recovers_existing_response(store, chat_config, api):
+    saved = {}
+    failure = [True]
+
+    def serve(request):
+        if request.method == "POST":
+            saved["prompt"] = json.loads(request.content)["input"]
+            return httpx.Response(200, json=response("resp_connected", saved["prompt"], status="queued"))
+        if failure[0]:
+            failure[0] = False
+            raise httpx.ConnectError("poll connection failed", request=request)
+        return httpx.Response(200, json=response("resp_connected", saved["prompt"]))
+
+    requests = api(serve)
+    engine = Orchestrator(store)
+    run = engine.drive(engine.create(chat_config, demo_problem(), workflow=Workflow.SOLVE).id)
+    assert run.native.active_attempt and run.iteration == 0
+    run = engine.resume(run.id)
+    assert run.state == State.COMPLETED and run.iteration == 1
     assert [r.method for r in requests] == ["POST", "GET", "GET"]
 
 

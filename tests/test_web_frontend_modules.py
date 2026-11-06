@@ -9,7 +9,7 @@ import pytest
 from mathlottery.web.server import ASSETS
 
 STATIC = Path(__file__).parents[1] / "src/mathlottery/web/static"
-MODULES = ("dom.js", "i18n.js", "model-selector.js", "account-panel.js", "solve-teams.js")
+MODULES = ("dom.js", "i18n.js", "model-selector.js", "account-panel.js", "solve-board.js", "solve-teams.js")
 
 
 def test_all_browser_scripts_are_packaged_http_assets():
@@ -97,6 +97,24 @@ def test_model_catalog_race_does_not_restore_previous_provider(page):
     }
     page.evaluate("models.ensureLoaded()")
     assert page.evaluate("requests.length") == 2
+
+
+def test_openai_transport_switch_and_model_selection_use_project_defaults(page):
+    prepare_models(page)
+    page.evaluate("settings.model_defaults = {model: 'gpt-6-astra', reasoning_effort: 'max'}")
+    page.select_option("#backend", "chat")
+    resolve_models(page, 0, "chat", [{"id": "gpt-6-astra", "reasoning_efforts": ["high", "max"]}])
+    assert page.input_value("#model-select") == "gpt-6-astra"
+    assert page.input_value("#effort-select") == "max"
+    assert page.evaluate("models.overrides()") == {
+        "provider": "chat", "model": "gpt-6-astra", "reasoning_effort": "max", "reasoning_mode": None,
+    }
+    page.select_option("#effort-select", "high")
+    page.select_option("#model-select", "__default")
+    assert page.evaluate("models.overrides().reasoning_effort") is None
+    page.select_option("#model-select", "gpt-6-astra")
+    assert page.input_value("#effort-select") == "max"
+    assert page.evaluate("models.block()") == ""
 
 
 def test_model_changes_reset_inheritance_and_catalog_gaps_preserve_explicit_choices(page):
@@ -250,6 +268,58 @@ def test_solve_team_view_preserves_disclosures_and_keeps_untrusted_text_inert(pa
     }""")
 
 
+def test_compact_board_loads_proofs_and_channels_only_when_opened(page):
+    page.evaluate("""() => {
+      document.querySelector('#run-detail').hidden = false;
+      window.requests = [];
+      window.fetch = async url => {
+        requests.push(url);
+        const channel = url.includes('solve-channel');
+        return {ok: true, json: async () => channel ? {events: [{actor: 'a', action: 'channel_message',
+          time: '2026-01-01', body: '<img src=x onerror=alert(1)> peer discussion'}]} : {
+          body: '<script>bad()</script> archived derivation', artifacts: [], assumptions: [], depends_on: []}};
+      };
+      window.run = {id: 'run-fixture', busy: true, solve_team: {parallel_agents: 2, rounds: 1,
+        messages: [
+          {key: 'a:base', title: 'Base lemma', group: 'g', standing: 'unverified', content_sha256: 'base',
+           statement: 'x = x', archived: true, depends_on: [], assumptions: []},
+          {key: 'b:derived', title: 'Derived result', group: 'g', standing: 'unverified', content_sha256: 'derived',
+           statement: 'y = y', archived: false, depends_on: ['a:base'], assumptions: [], aliases: ['Equivalent notation']}],
+        collaboration: {agents: [{actor: 'a', runtime_status: 'running', objective: 'Check endpoints',
+          report_current: false, report: {time: '2026-01-01', status: 'blocked', summary: 'Old report',
+            topic: '<img src=x> alternate approach', approach: 'Independent calculation', overlap_reason: 'Check boundary assumptions'}}],
+          channels: [{key: 'a:channel', purpose: 'Compare endpoint proofs', creator: 'a', members: ['a'],
+            invitees: ['b'], responses: {b: 'deferred'}, closed: false, event_count: 1}]}}};
+      window.teams = MathLotterySolveTeams.create(document.querySelector('#solve-team'));
+      teams.render(run, 'en');
+      document.querySelector('[data-key="solve-board"]').open = true;
+    }""")
+    assert page.evaluate("requests.length") == 0
+    assert page.locator('[data-key="a:base"]').count() == 0
+    page.locator('[data-key="b:derived"] > summary').click()
+    page.locator('[data-key="b:derived"] button').click()
+    page.wait_for_function("requests.some(url => url.includes('a%3Abase'))")
+    assert "archived derivation" in page.locator('[data-key="a:base"]').text_content()
+    assert page.locator("#solve-team script, #solve-team img").count() == 0
+    page.evaluate("document.querySelector('[data-key=\"solve-collaboration\"]').open = true")
+    assert "Past report" in page.locator("#solve-team").text_content()
+    assert "Optional suggestion" in page.locator("#solve-team").text_content()
+    assert "Chosen work" in page.locator("#solve-team").text_content()
+    assert "Check boundary assumptions" in page.locator("#solve-team").text_content()
+    assert "b: deferred" in page.locator("#solve-team").text_content()
+    page.locator('[data-key="channel-a:channel"] > summary').click()
+    page.wait_for_function("requests.some(url => url.includes('solve-channel'))")
+    assert "peer discussion" in page.locator('[data-key="channel-a:channel"]').text_content()
+    assert page.locator("#solve-team img").count() == 0
+    count = page.evaluate("requests.length")
+    # A new opinion with the same content hash/standing must still refresh its rationale.
+    page.evaluate("""() => {
+      run.solve_team.messages[0].review_id = 'new-opinion';
+      teams.render(run, 'en');
+    }""")
+    page.wait_for_function("count => requests.length > count", arg=count)
+
+
 def test_supervised_single_researcher_shows_drain_reviews_and_proof_chain(page):
     data = {"id": "run-fixture", "busy": True, "solve_team": {
         "parallel_agents": 1, "coordination": "supervised", "rounds": 0,
@@ -279,3 +349,26 @@ def test_supervised_single_researcher_shows_drain_reviews_and_proof_chain(page):
     assert page.locator("#solve-team script").count() == 0
     page.evaluate("run => teams.render(run, 'en')", data)
     assert "total duration may exceed the budget" in page.locator("#solve-team").text_content()
+
+
+def test_coordination_history_shows_evidence_rejection_and_zero_values_safely(page):
+    data = {"id": "fixture", "busy": True, "solve_team": {
+        "parallel_agents": 2, "rounds": 1, "coordination_policy": {
+            "enabled": True, "update_count": 2, "history_path": "solve/coordination-policy.json",
+            "policy": {"review_interval_seconds": 60, "archive_min_age_seconds": 600,
+                       "archive_read_threshold": 2, "board_guidance": "", "collaboration_guidance": "Share lemmas"},
+            "history": [
+                {"task_id": "turn-one", "revision": 1, "time": "2026-01-01", "status": "applied",
+                 "before": {"archive_read_threshold": 0}, "after": {"archive_read_threshold": 2},
+                 "rationale": "<img src=x onerror=alert(1)>", "evidence": ["event:peer:help"],
+                 "previous_assessment": "No improvement established yet"},
+                {"task_id": "turn-two", "revision": 1, "time": "2026-01-01", "status": "rejected",
+                 "feedback": "Stale policy revision"},
+            ],
+        },
+    }}
+    page.evaluate("run => MathLotterySolveTeams.create(document.querySelector('#solve-team')).render(run, 'en')", data)
+    text = page.locator('[data-key="coordination-policy"]').text_content()
+    assert "Enabled" in text and "0 → 2" in text and "event:peer:help" in text
+    assert "No improvement established yet" in text and "Stale policy revision" in text
+    assert page.locator("#solve-team img").count() == 0

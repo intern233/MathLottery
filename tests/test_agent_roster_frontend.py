@@ -50,7 +50,7 @@ def ui(browser):
             if path == "/api/agents":
                 if method == "POST":
                     data["slots"] = deepcopy(body["slots"])
-                result = {"slots": data["slots"], "csrf_token": "test-csrf", "key_configured": {item["id"]: True for item in data["slots"] if item["backend"]["mode"] == "chat" or item["backend"].get("codex_auth") == "api_key"}}
+                result = {"slots": data["slots"], "model_defaults": {"model": "gpt-6-astra", "reasoning_effort": "max"}, "csrf_token": "test-csrf", "key_configured": {item["id"]: True for item in data["slots"] if item["backend"]["mode"] == "chat" or item["backend"].get("codex_auth") == "api_key"}}
             elif path.startswith("/api/agents/"):
                 parts = path.split("/")
                 identifier = parts[3]
@@ -126,6 +126,25 @@ def test_four_mixed_slots_roundtrip_metadata_only(ui):
     assert page.locator("#page-title").text_content() == "每个 agent，独立配置。"
     page.set_viewport_size({"width": 390, "height": 844})
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+
+def test_new_slots_keep_defaults_across_auth_and_transport_changes(ui):
+    page, data = ui
+    page.goto("http://mathlottery.test/agents")
+    page.wait_for_selector("#agent-1-model")
+    assert page.locator("#agent-1-model").input_value() == "gpt-6-astra"
+    assert page.locator("#agent-1-effort").input_value() == "max"
+    page.locator("#agent-count").fill("3")
+    page.locator("#agent-count").dispatch_event("change")
+    page.locator("#agent-2-auth").select_option("api_key")
+    page.locator("#agent-3-transport").select_option("chat")
+    page.locator("#agent-1-model").fill("")
+    page.locator("#agent-1-effort").fill("")
+    page.locator("#save-agents").click()
+    page.wait_for_function("document.querySelector('#save-status').textContent === 'Saved locally'")
+    for item in data["slots"]:
+        assert item["backend"]["model"] == "gpt-6-astra"
+        assert item["backend"]["reasoning_effort"] == "max"
 
 
 def test_slot_login_actions_are_isolated_and_explicit(ui):

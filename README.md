@@ -19,7 +19,7 @@
 
 MathLottery is a local mathematics research project: let an agent find public problems, attempt solutions, and review its results. We want to see whether people without a mathematics background or large computing resources can use AI to produce something new in mathematics.
 
-On the **`ai4math` branch**, Solve can coordinate a **global supervisor, autonomous research agents and a shared proof board**. The supervisor plans and reviews; researchers choose their own methods and share intermediate results. Find, independent Verify and Organize remain separate stages.
+On the **`ai4math` branch**, Solve can coordinate a **global supervisor, autonomous research agents and a shared proof board**. The supervisor offers ideas and reviews evidence; researchers choose their own directions and share intermediate results. Find, independent Verify and Organize remain separate stages.
 
 The idea came from a collection of mathematical research results published by OpenAI. OpenAI reported that each result used, on average, compute equivalent to roughly three hours of ChatGPT Pro thinking; the results were produced by internal models. That comparison makes us want to try, even if it does not mean the publicly available Pro mode already has the same capabilities. [Source: OpenAI's mathematics progress report](https://openai.com/index/sharing-ai-progress-in-mathematics/)
 
@@ -45,14 +45,22 @@ You can also give it a problem you care about. Start with a small lemma or ask i
 
 Give it a problem, some time, and access to tools. Let it decide how to proceed: search the literature, break down the problem, derive lemmas, write programs, run experiments, look for counterexamples, and change direction when an approach fails.
 
-The supervisor receives the original problem, proposes routes and sends each researcher the target and a direction. Researchers keep their own sessions and tools. They can publish intermediate theorems with assumptions, proof steps and dependencies to a shared board, or read relevant material on demand. The supervisor reviews new or challenged results and records its reasoning against the exact evidence version.
+The supervisor receives the original problem and offers ideas. **Researchers choose their own directions**: they may accept, adapt or decline a suggestion without asking permission. They declare their current work on the board, check for overlap, and decide whether to reuse a result, collaborate or perform an independent check. Each keeps its own session and native tools. Intermediate theorems carry assumptions, proof steps and dependencies; the supervisor reviews exact evidence versions and offers further suggestions.
+
+The board now separates compact theorem dependencies from on-demand proof archives. Researchers can register work, discover peers and voluntarily join observable channels; the supervisor can archive or restore entries without deleting evidence. [Proof graph and collaboration guide](docs/proof-board.md).
+
+Users may optionally enable **supervisor coordination adjustments**: tune review timing, archive suggestions and collaboration guidance from observed research activity, with a versioned history and outcome assessments. This is off by default; see the [board guide](docs/proof-board.md#optional-coordination-adjustments).
 
 ```mermaid
 flowchart TD
-    P["Selected or supplied problem"] --> S["Global supervisor<br/>Plan · review · revise"]
-    S -->|"Problem + route"| R["Autonomous researchers<br/>Independent sessions · native tools"]
+    P["Selected or supplied problem"] --> S["Global supervisor<br/>Suggest · review · synthesize"]
+    S -->|"Original target + optional ideas"| R["Autonomous researchers<br/>Choose routes · keep native tools"]
     R -->|"Result signal"| S
-    R -->|"Publish theorem + proof chain"| B[("Shared proof board<br/>Statements · dependencies · materials")]
+    R -->|"Publish theorem + proof chain"| B[("Proof dependency graph<br/>Statements · assumptions · standing")]
+    B -->|"Load derivations on demand"| A[("Proof archive<br/>Steps · sources · immutable versions")]
+    R <-->|"Register work · join voluntarily"| C["Activity registry + peer channels"]
+    C -->|"Inspect cooperation"| S
+    S -->|"Archive / restore; no deletion"| A
     B -->|"Read relevant evidence"| R
     B -->|"Periodic review requests"| S
     S -->|"Review opinions + research synthesis"| B
@@ -63,12 +71,12 @@ flowchart TD
     classDef agent fill:#e5f2ec,stroke:#2b7663,color:#173d33;
     classDef record fill:#f7f2e6,stroke:#a78b50,color:#493c24;
     class S,R agent;
-    class B,O record;
+    class B,O,A,C record;
 ```
 
-A researcher's return is a **signal**, not the end of Solve. A complete claim goes to the supervisor for review. If it is incomplete or rejected, the supervisor combines the board and previous attempts into a revised assignment while time remains. An accepted complete claim may close new assignments early; active researchers still return before the final summary; the optional **Use full Solve time budget** setting continues exploration and self-checking.
+A researcher's return is a **signal**, not the end of Solve. A complete claim goes to the supervisor for review. After a partial attempt, a free researcher can make one autonomous continuation ahead of review within the existing capacity and budget; ordinary partial signals are batched while peers work. Invitations, unread discussions and possible overlaps appear in a personal inbox. An accepted complete claim may close new assignments early; active researchers still return before the final summary. The optional **Use full Solve time budget** setting continues exploration and self-checking.
 
-**The time budget stops new assignments, not ongoing research.** At three hours, for example, active attempts keep working until they return. The supervisor then reviews and saves the outcome without relaunching an unsuccessful researcher. Total duration can exceed three hours; explicit stop, provider failures and other configured limits still apply. Periodic board reviews wait for slot 1 to be free, because the supervisor shares that slot sequentially with the primary researcher.
+**The time budget stops new assignments, not ongoing research.** At three hours, for example, active attempts keep working until they return. The supervisor then reviews and saves the outcome without relaunching an unsuccessful researcher. Total duration can exceed three hours; explicit stop, provider failures and other configured limits still apply. By default, periodic board reviews wait for slot 1 to be free. An optional [dedicated supervisor connection](docs/agents.md#dedicated-supervisor) can review while every researcher is busy, adding at most one simultaneous call.
 
 Enable this mode for a **new standalone Solve** by setting **Solve parallelism** to 1–32 in the browser, or `solve.coordination: supervised` and an explicit `solve.parallel_agents` in configuration. Set a group cap and separate connections on the [Agents page](docs/agents.md) if needed. A null parallelism setting retains native delegation; old saved tasks retain their allocation protocol. The automatic `run` command retains its existing workflow. See the [Solve guide](docs/solve-teams.md) for setup, budgets and recovery.
 
@@ -99,7 +107,7 @@ The report keeps missing steps, failed checks and uncertain novelty visible. Org
 We want to preserve as much of GPT's native agent capability as possible, leaving research methods and tool choices to the agent. MathLottery organizes each attempt into a research record that can be resumed, revisited, and checked:
 
 - **Continuous research:** preserve the same research session and working files, resume after interruptions, and add guidance along the way.
-- **Supervised collaboration:** assign and revise routes within user-set concurrency and group limits; share versioned theorems, proof chains and review opinions.
+- **Supervised collaboration:** autonomous route choice, work declarations and voluntary channels within user-set limits; share versioned theorems, proof chains and review opinions.
 - **Native tools:** use official Codex search, shell, computation, and file tools, with a dedicated MathLottery login and tool configuration.
 - **Research budgets:** account for researcher and supervisor usage; in supervised Solve, stop new work at the time limit and let current attempts return for review.
 - **Results and review:** save candidate proof versions, references, review feedback, and research reports, distinguishing progress, conjectures, and verification evidence.
@@ -109,6 +117,8 @@ We want to preserve as much of GPT's native agent capability as possible, leavin
 The code provides four independent workflows: **`find`, `solve`, `verify`, and `organize`**. The `run` workflow connects finding, solving and verification; organizing is an explicit, optional follow-up. Finding produces reusable problem statements, solving saves candidate proofs, verification produces a separate review, and organizing prepares matching Chinese and English expert reports, each in Markdown and PDF.
 
 Choose an entry point independently of the agent engine: use the **browser** or **terminal** with **Codex agent** (`codex`, native tools and sessions, authenticated by ChatGPT login or OpenAI API key) or **API agent** (`chat`, an independent Responses harness with persistent context and hosted tools). Configure each Solve slot separately on the [Agents page](docs/agents.md). Compatible Responses providers can be configured separately; other protocols require an adapter. See [backend and model configuration](docs/configuration.md).
+
+New OpenAI agent configurations use **`gpt-6-astra` / `max`** across subscription and API connections. Each slot can override these settings; saved tasks retain their original model configuration.
 
 Contributions to the harness are welcome: improve problem selection, reduce repeated exploration, strengthen reviews, or try your own research strategy.
 

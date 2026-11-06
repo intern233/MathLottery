@@ -9,7 +9,7 @@ from httpx import Client as HTTPClient
 from pydantic import ValidationError
 
 from mathlottery.cli import Mode, apply_options
-from mathlottery.config import Config, load_config
+from mathlottery.config import BackendConfig, Config, load_config
 from mathlottery.providers.catalog import ModelCatalog, normalize_codex_models
 from mathlottery.web.service import (
     Overrides,
@@ -58,6 +58,33 @@ def test_provider_config_resolves_explicit_connection_and_roundtrips(tmp_path):
     assert "RESEARCH_API_KEY" not in json.dumps(summary)
 
 
+def test_defaults_cover_researchers_and_supervisor_without_rewriting_saved_routes():
+    config = Config.model_validate({"solve": {
+        "parallel_agents": 3,
+        "supervisor_backend": {"mode": "codex"},
+        "agent_slots": [
+            {"id": "subscription", "backend": {"mode": "codex"}},
+            {"id": "api-codex", "backend": {"mode": "codex", "codex_auth": "api_key"}},
+            {"id": "responses", "backend": {"mode": "chat"}},
+        ],
+    }})
+    for backend in [config.backend, config.solve.supervisor_backend, *[s.backend for s in config.solve.agent_slots]]:
+        assert backend.model == "gpt-6-astra" and backend.reasoning_effort == "max"
+    saved = config.model_dump()
+    for backend in [saved["backend"], saved["solve"]["supervisor_backend"], *[s["backend"] for s in saved["solve"]["agent_slots"]]]:
+        backend.update(model=None, reasoning_effort=None)
+    assert Config.model_validate(saved).model_dump() == saved
+
+
+def test_openai_defaults_do_not_leak_into_custom_provider_or_explicit_other_model():
+    custom = provider_config(provider="research")
+    assert custom.backend.model is None and custom.backend.reasoning_effort is None
+    direct = BackendConfig(mode="chat", chat={"base_url": "https://api.example.invalid/v1"})
+    assert direct.model is None and direct.reasoning_effort is None
+    explicit = BackendConfig(model="another-model")
+    assert explicit.model == "another-model" and explicit.reasoning_effort is None
+
+
 @pytest.mark.parametrize("missing", ["base_url", "api_key_env", "tools"])
 def test_profiles_cannot_accidentally_inherit_openai_credentials_or_tools(missing):
     value = provider_config().model_dump()
@@ -96,9 +123,14 @@ def test_switch_provider_clears_incompatible_model_effort_mode_and_keeps_origina
     assert switched.backend.chat.tools == []
     assert config.model_dump() == original
     returned = Overrides(provider="chat").apply(switched)
-    assert returned.backend.model is None
+    assert returned.backend.model == "gpt-6-astra"
+    assert returned.backend.reasoning_effort == "max"
     assert returned.backend.chat.base_url == "https://api.openai.com/v1"
     assert returned.backend.chat.api_key_env == "OPENAI_API_KEY"
+    explicit_other = Overrides(provider="chat", model="research-model").apply(switched)
+    assert explicit_other.backend.reasoning_effort is None
+    explicit_null = Overrides(provider="chat", model=None).apply(switched)
+    assert explicit_null.backend.model is None and explicit_null.backend.reasoning_effort is None
 
 
 def test_builtin_switch_keeps_explicit_chat_connection_but_clears_pro():
@@ -422,13 +454,13 @@ def test_custom_selection_reaches_responses_and_resume_uses_saved_provider_snaps
 
 
 @pytest.mark.parametrize("mode", [Mode.codex, Mode.manual])
-def test_cli_switch_away_from_custom_provider_clears_connection_and_model(mode):
+def test_cli_switch_away_from_custom_provider_restores_builtin_defaults(mode):
     config = provider_config(provider="research", model="research-model", reasoning_effort="high")
     apply_options(config, mode, None, None)
     assert config.backend.mode == mode.value
     assert config.backend.provider is None
-    assert config.backend.model is None
-    assert config.backend.reasoning_effort is None
+    assert config.backend.model == ("gpt-6-astra" if mode == Mode.codex else None)
+    assert config.backend.reasoning_effort == ("max" if mode == Mode.codex else None)
     assert config.backend.chat.reasoning_mode is None
     assert config.backend.chat.base_url == "https://api.openai.com/v1"
     assert config.backend.chat.api_key_env == "OPENAI_API_KEY"

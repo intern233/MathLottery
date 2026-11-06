@@ -12,6 +12,68 @@ from mathlottery.providers.base import BackendResult, BackendStatus
 from mathlottery.storage.core import atomic_write, json_text
 
 
+def resumed_input(backend, directory, session_id, prompt):
+    """Replay saved tool outputs when a cancelled child left its parent as the cursor.
+
+    The completed parent contains outstanding function calls, so a plain user
+    message cannot continue it. Reuse exact durable results from this worker and
+    pinned route; never execute tools again or fork an unresolved remote call.
+    """
+    bridge = backend.local_tools
+    if bridge is None or not hasattr(bridge, "board"):
+        return prompt
+    root = bridge.board.store.run_dir(bridge.board.run_id)
+    matches = list(root.glob(f"tasks/*/attempt-*/tool-responses/{session_id}.json"))
+    if not matches:
+        return prompt  # Ordinary completed response, without a local tool continuation.
+    if len(matches) != 1:
+        raise ValueError("Ambiguous saved tool response")
+    parent_path = matches[0]
+    previous = parent_path.parent.parent
+    if not parent_path.resolve().is_relative_to(root.resolve()):
+        raise ValueError("Tool response is outside this run")
+    old_turn = json.loads((previous / "turn.json").read_text())
+    current_turn = json.loads((directory / "turn.json").read_text())
+    identity = ("worker_id", "slot_id", "route_sha256")
+    if old_turn.get("worker_id") != bridge.author or any(
+        old_turn.get(key) != current_turn.get(key) for key in identity
+    ):
+        raise ValueError("Tool response belongs to a different worker or pinned route")
+    parent = json.loads(parent_path.read_text())
+    calls = [item for item in parent.get("output", []) if item.get("type") == "function_call"]
+    if not calls:
+        return prompt
+    if parent.get("id") != session_id or parent.get("status") != "completed":
+        raise ValueError("Saved tool parent is not completed")
+    continuation = previous / "tool-continuations" / session_id
+    request = json.loads((continuation / "request.json").read_text())
+    child = json.loads((continuation / "response.json").read_text())
+    latest = json.loads((previous / "response.json").read_text())
+    if (latest.get("id") != child.get("id")
+            or latest.get("status") not in {"cancelled", "failed", "incomplete"}):
+        raise ValueError("Tool child outcome is unresolved; recover its existing attempt")
+    outputs = request.get("input")
+    call_ids = [call.get("call_id") for call in calls]
+    if (request.get("previous_response_id") != session_id or not isinstance(outputs, list)
+            or not all(isinstance(item, dict) and item.get("type") == "function_call_output"
+                       and isinstance(item.get("output"), str) for item in outputs)
+            or [item.get("call_id") for item in outputs] != call_ids
+            or len(set(call_ids)) != len(call_ids)):
+        raise ValueError("Saved tool outputs do not match the completed parent")
+    for call, output in zip(calls, outputs, strict=True):
+        saved = json.loads((previous / "tool-results" /
+                            f"{digest(session_id + ':' + call['call_id'])}.json").read_text())
+        if (saved.get("call_sha256") != digest(json_text(call))
+                or output["output"] != json_text(saved["output"])):
+            raise ValueError("Saved tool result changed")
+    atomic_write(directory / "resumed-tool-context.json", json_text({
+        "previous_response_id": session_id, "cancelled_child_id": latest["id"],
+        "child_status": latest["status"], "source_attempt": str(previous.relative_to(root)),
+        "call_ids": call_ids, "tools_reexecuted": False,
+    }))
+    return [*outputs, {"role": "user", "content": prompt}]
+
+
 def run_tools(backend, client, response, directory, deadline, cancelled, on_session):
     while True:
         result = backend._poll_response(client, response, directory, deadline, cancelled, on_session)

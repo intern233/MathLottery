@@ -7,7 +7,13 @@ from urllib.parse import urlsplit
 
 from pydantic import Field, StrictBool, model_validator
 
-from mathlottery.config import ChatConfig, Config
+from mathlottery.config import (
+    DEFAULT_MODEL,
+    DEFAULT_REASONING_EFFORT,
+    BackendConfig,
+    ChatConfig,
+    Config,
+)
 from mathlottery.models import Model
 from mathlottery.providers.catalog import effective_provider, validate_configured_selection
 
@@ -24,6 +30,7 @@ class Overrides(Model):
     solve_until_budget_exhausted: bool | None = None
     solve_parallel_agents: int | None = Field(default=None, ge=1, le=32, strict=True)
     solve_max_groups: int | None = Field(default=None, ge=1, le=32, strict=True)
+    solve_adaptive_coordination: StrictBool | None = None
     native_multi_agent: bool | None = None
     native_memories: bool | None = None
     codex_auth: Literal["chatgpt", "api_key"] | None = None
@@ -49,16 +56,22 @@ class Overrides(Model):
         if provider_changed:
             backend["provider"] = provider
             backend["mode"] = mode
-            backend["model"] = None
             # Switching away from a custom profile must never inherit its endpoint/key/tools.
             if provider in config.model_providers:
                 backend["chat"] = config.model_providers[provider].chat.model_dump()
             elif original_provider in config.model_providers:
                 backend["chat"] = ChatConfig().model_dump()
+            defaults = BackendConfig(mode=mode, provider=provider, chat=backend["chat"])
+            backend["model"] = defaults.model
+            backend["reasoning_effort"] = defaults.reasoning_effort
         elif self.provider:
             backend["provider"] = provider
+        if "model" in self.model_fields_set and (provider_changed or model_changed):
+            backend["reasoning_effort"] = (
+                DEFAULT_REASONING_EFFORT
+                if self.model == DEFAULT_MODEL and provider in {"codex", "chat"} else None
+            )
         if provider_changed or model_changed:
-            backend["reasoning_effort"] = None
             backend["chat"]["reasoning_mode"] = None
         for field in ("model", "reasoning_effort"):
             if field in self.model_fields_set:
@@ -84,6 +97,8 @@ class Overrides(Model):
             config.solve.parallel_agents = self.solve_parallel_agents
         if self.solve_max_groups is not None:
             config.solve.max_groups = self.solve_max_groups
+        if self.solve_adaptive_coordination is not None:
+            config.solve.adaptive_coordination = self.solve_adaptive_coordination
         for field in ("native_multi_agent", "native_memories"):
             if field in self.model_fields_set:
                 if config.backend.mode != "codex":
@@ -193,6 +208,7 @@ class ResumeRequest(Model):
     solve_until_budget_exhausted: bool | None = None
     solve_parallel_agents: int | None = Field(default=None, ge=1, le=32, strict=True)
     solve_max_groups: int | None = Field(default=None, ge=1, le=32, strict=True)
+    solve_adaptive_coordination: StrictBool | None = None
     formal_memory_mb: int | None = Field(default=None, ge=256, le=32768)
     formal_address_space_mb: int | None = Field(default=None, ge=1024, le=32768)
     formal_timeout_seconds: float | None = Field(default=None, ge=1, le=1800, allow_inf_nan=False)

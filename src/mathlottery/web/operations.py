@@ -52,9 +52,10 @@ class WorkflowOperations:
             for value in (
                 request.options.solve_parallel_agents,
                 request.options.solve_max_groups,
+                request.options.solve_adaptive_coordination,
             )
         ):
-            raise ValueError("Research parallelism and group limits apply only to Solve")
+            raise ValueError("Research parallelism, group limits and adaptive coordination apply only to Solve")
         base = self._config()
         if request.options.use_agent_slots:
             base = AgentRosterStore(self.store.root).load().apply(base)
@@ -63,6 +64,7 @@ class WorkflowOperations:
             # must not invisibly override the displayed default model/account.
             data = base.model_dump()
             data["solve"]["agent_slots"] = []
+            data["solve"]["supervisor_backend"] = None
             base = Config.model_validate(data)
         if request.workflow == "solve" and base.solve.agent_slots:
             conflicting = request.options.model_fields_set & {
@@ -229,15 +231,17 @@ class WorkflowOperations:
             for value in (
                 request.solve_parallel_agents,
                 request.solve_max_groups,
+                request.solve_adaptive_coordination,
             )
         ):
-            raise ValueError("Research parallelism and group limits apply only to Solve")
+            raise ValueError("Research parallelism, group limits and adaptive coordination apply only to Solve")
         config = Overrides(
             budget_minutes=request.budget_minutes,
             max_iterations=request.max_iterations,
             solve_until_budget_exhausted=request.solve_until_budget_exhausted,
             solve_parallel_agents=request.solve_parallel_agents,
             solve_max_groups=request.solve_max_groups,
+            solve_adaptive_coordination=request.solve_adaptive_coordination,
         ).apply(Config.model_validate(run.config))
         for field in ("formal_memory_mb", "formal_address_space_mb", "formal_timeout_seconds"):
             value = getattr(request, field)
@@ -266,7 +270,7 @@ class WorkflowOperations:
             config = Config.model_validate(run.config)
             connections = [config.backend]
             if run.workflow == Workflow.SOLVE:
-                connections.extend(slot.backend for slot in config.solve.agent_slots)
+                connections.extend(config.solve.configured_backends)
             used = any(
                 backend.mode in {"codex", "work"} and backend.codex_auth == "chatgpt"
                 and backend.codex_identity == profile

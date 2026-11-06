@@ -13,6 +13,7 @@ from mathlottery.models import Run, Workflow, digest
 from mathlottery.organize.downloads import summary as organization_summary
 from mathlottery.runtime import budget
 from mathlottery.runtime.resources import Coordinator
+from mathlottery.solve.coordination_policy import view as policy_view
 from mathlottery.storage.core import Store, safe_path
 from mathlottery.telemetry.activity import export_activity_archive, read_activity, read_run_activity
 from mathlottery.telemetry.metrics import run_metrics
@@ -215,6 +216,7 @@ class RunQueries:
         from mathlottery.solve.board import SolveBoard
 
         team = run.native.solve_team
+        board = SolveBoard(self.store, run.id)
         settings = Config.model_validate(run.config).solve
         attempts = {
             item["worker_id"]: str(Path(item["answer"]).parent)
@@ -252,9 +254,12 @@ class RunQueries:
             "groups": [g.model_dump(mode="json") for g in team.groups],
             "workers": workers,
             "supervisor_usage": team.supervisor_usage.model_dump(mode="json"),
-            "messages": SolveBoard(self.store, run.id).messages(),
-            "graph": SolveBoard(self.store, run.id).graph(),
+            "messages": board.cards(),
+            "graph": board.graph(),
+            "collaboration": board.collaboration(run),
+            "curation_feedback": team.campaign.decisions[-1].get("curation_error") if team.campaign.decisions else None,
             "coordination": settings.coordination,
+            "coordination_policy": policy_view(run, include_history=True),
             "campaign": team.campaign.model_dump(mode="json", include={
                 "phase", "review_requested", "last_review_elapsed", "candidate_reviews",
                 "summary", "summary_path", "accepted_candidate_id", "closed", "signals",

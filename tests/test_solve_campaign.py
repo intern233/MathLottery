@@ -24,10 +24,12 @@ def theorem(statement="For every natural n, n + 0 = n."):
 
 
 class CampaignBackend:
-    def __init__(self, *, reject_first=False, complete=True, research=None, supervision=None, agents=1):
+    def __init__(self, *, reject_first=False, complete=True, research=None, supervision=None,
+                 agents=1, dedicated=False):
         self.calls, self.research_turns = [], 0
         self.reject_first, self.complete = reject_first, complete
         self.research, self.supervision, self.agents = research, supervision, agents
+        self.dedicated = dedicated
         self.lock = threading.Lock()
         self.active = set()
 
@@ -36,8 +38,9 @@ class CampaignBackend:
         supervising = "Task: SOLVE global supervision" in prompt
         author = "supervisor" if supervising else "primary" if workspace.name == "workspace" else workspace.name
         with self.lock:
-            # Supervisor and primary must never consume slot 1 concurrently.
-            assert not ({author, *self.active} >= {"primary", "supervisor"})
+            # Sharing a route never permits concurrent primary and supervision.
+            if not self.dedicated:
+                assert not ({author, *self.active} >= {"primary", "supervisor"})
             self.active.add(author)
             self.calls.append({"author": author, "session": kwargs.get("session_id"),
                                "prompt": prompt, "directory": directory, "workspace": workspace,
@@ -114,6 +117,87 @@ def test_complete_requires_supervisor_review_and_preserves_separate_verify(store
     assert run.usage.input_tokens == 30
     assert run.native.solve_team.supervisor_usage.input_tokens == 20
     assert (store.run_dir(run.id) / campaign.summary_path).is_file()
+
+
+def test_accepted_solution_can_omit_routes_without_another_model_call(store):
+    def supervision(backend, payload, context, kwargs):
+        if payload["solution_reviews"]:
+            payload["groups"] = []
+
+    backend = CampaignBackend(supervision=supervision)
+    engine, created = setup(store, backend)
+    run = engine.drive(created.id)
+    assert run.state == State.COMPLETED, run.last_error
+    campaign = run.native.solve_team.campaign
+    assert campaign.closed and campaign.accepted_candidate_id == run.candidates[-1].id
+    assert not campaign.dispatch
+    assert backend.research_turns == 1 and len(backend.calls) == 3
+    assert not run.candidates[-1].reviews
+
+
+def test_acceptance_without_routes_drains_and_reviews_an_active_peer(store):
+    peer_started = threading.Event()
+
+    def research(backend, author, workspace, kwargs, turn):
+        if author == "primary":
+            assert peer_started.wait(5)
+            return
+        peer_started.set()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            assert not kwargs["cancelled"](), "Acceptance must not kill the in-flight peer"
+            control = workspace / "bulletin/control.json"
+            if control.exists() and json.loads(control.read_text())["admissions_closed"]:
+                return
+            time.sleep(0.02)
+        pytest.fail("An accepted solution with no routes should close admissions")
+
+    def supervision(backend, payload, context, kwargs):
+        if payload["solution_reviews"]:
+            payload["groups"] = []
+
+    backend = CampaignBackend(agents=2, research=research, supervision=supervision)
+    engine, created = setup(store, backend, parallel=2)
+    run = engine.drive(created.id)
+    assert run.state == State.COMPLETED, run.last_error
+    campaign = run.native.solve_team.campaign
+    assert len(run.candidates) == len(campaign.candidate_reviews) == 2
+    assert campaign.closed and not campaign.dispatch and not run.native.solve_team.active_attempts
+    assert backend.research_turns == 2 and len(backend.calls) == 5
+    assert "Purpose: closing" in backend.calls[-1]["prompt"]
+    assert not any(candidate.reviews for candidate in run.candidates)
+
+
+@pytest.mark.parametrize(("case", "expected"), [
+    ("unsolved", "Supply a bounded capacity plan"),
+    ("full_budget", "Supply a bounded capacity plan"),
+    ("stale", "different candidate version"),
+    ("missing_dependency", "unknown board prerequisite"),
+])
+def test_empty_plan_cannot_bypass_budget_or_acceptance_checks(store, case, expected):
+    def supervision(backend, payload, context, kwargs):
+        if not payload["solution_reviews"]:
+            return
+        payload["groups"] = []
+        review = payload["solution_reviews"][0]
+        if case == "unsolved":
+            review["verdict"] = "needs_work"
+        elif case == "stale":
+            review["candidate_sha256"] = "0" * 64
+        elif case == "missing_dependency":
+            review["depends_on"] = ["missing:lemma"]
+
+    backend = CampaignBackend(supervision=supervision)
+    engine, created = setup(store, backend)
+    if case == "full_budget":
+        created.config["budget"]["solve_until_budget_exhausted"] = True
+        store.save(created, "test_full_budget")
+    run = engine.drive(created.id)
+    assert run.state == State.PAUSED
+    assert expected in run.last_error
+    assert not run.native.solve_team.campaign.candidate_reviews
+    assert not run.native.solve_team.campaign.accepted_candidate_id
+    assert backend.research_turns == 1
 
 
 def test_rejected_claim_gets_new_route_and_same_research_session(store):
@@ -229,7 +313,9 @@ def test_proof_graph_reviews_retraction_and_dependency_invalidation(store):
     board.publish("one", "algebra", Message(id="retract", kind="retraction", title="Retract", body="Gap found", target="one:base"), workspace)
     assert board.messages()[1]["standing"] == "needs_recheck"
     graph = board.graph()
-    assert graph["edges"] == [{"from": "one:base", "to": "two:derived", "kind": "premise"}]
+    assert [{k: e[k] for k in ("from", "to", "kind")} for e in graph["edges"]] == [
+        {"from": "one:base", "to": "two:derived", "kind": "premise"}]
+    assert graph["edges"][0]["proof_path"] == graph["nodes"][1]["path"]
 
 
 def test_partial_theorem_cannot_be_accepted(store):
@@ -452,3 +538,36 @@ def test_pending_responses_retrieved_once_and_research_not_resubmitted(store):
     assert backend.recoveries == backend.research_turns == 1
     assert resumed.usage.measured_calls == len(backend.calls) == 3
     assert not resumed.native.solve_team.active_attempts and len(resumed.candidates) == 1
+
+
+def test_resume_resolves_legacy_unsubmitted_call_without_charging_or_repausing(store):
+    class Unsubmitted(CampaignBackend):
+        failed = False
+        recoveries = 0
+
+        def invoke_native(self, prompt, directory, workspace, timeout, **kwargs):
+            if workspace.name == "workspace" and not self.failed:
+                self.failed = True
+                return BackendResult(BackendStatus.FAILED, invoked=True, pending=True,
+                                     error="Chat API ConnectError; artifacts preserved; no automatic retry")
+            return super().invoke_native(prompt, directory, workspace, timeout, **kwargs)
+
+        def recover_native(self, directory, timeout, **kwargs):
+            self.recoveries += 1
+            return BackendResult(BackendStatus.FAILED,
+                                 runtime={"creation_status": "not_submitted"},
+                                 error="Recovered a connection failure before request submission")
+
+    backend = Unsubmitted()
+    engine, created = setup(store, backend)
+    created.mode = "chat"
+    created.config["backend"]["mode"] = "chat"
+    store.save(created, "test_legacy_connection_failure")
+    run = engine.drive(created.id)
+    assert run.state == State.PAUSED and len(run.native.solve_team.active_attempts) == 1
+    resumed = engine.resume(run.id)
+    assert resumed.state == State.COMPLETED, resumed.last_error
+    assert backend.recoveries == backend.research_turns == 1
+    assert resumed.iteration == resumed.usage.measured_calls == len(backend.calls)
+    assert resumed.usage.unknown_calls == 0
+    assert not resumed.native.solve_team.active_attempts

@@ -398,3 +398,9 @@ footer > span:first-child { font-weight: 650; }
 .statement-risk p, .statement-risk pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .statement-risk-item { margin: 12px 0; }
 .statement-risk-item p { margin: 5px 0; }
+/* Compact proof navigation, including narrow local-browser layouts. */
+.board-controls, .board-links { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; }
+.board-controls input[type="search"] { flex: 1; min-width: 12rem; }
+.board-controls label { display: inline-flex; align-items: center; gap: .4rem; }
+.board-controls input[type="checkbox"] { width: auto; }
+.board-links button { overflow-wrap: anywhere; }

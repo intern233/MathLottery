@@ -88,9 +88,22 @@ class AgentConnections:
         """Use the task snapshot, including when the editable roster has since changed."""
         roster = AgentRoster(slots=config.solve.agent_slots).resolved(config)
         if config.budget.max_external_cost_usd == 0 and any(
-            slot.backend.uses_api_key for slot in roster.slots
+            backend.uses_api_key for backend in config.solve.configured_backends
         ):
-            raise ValueError("API-key agent slots are blocked by max_external_cost_usd: 0")
+            raise ValueError("API-key agent slots or supervisor are blocked by max_external_cost_usd: 0")
+        supervisor = config.solve.supervisor_backend
+        if supervisor is not None:
+            try:
+                if supervisor.mode == "chat":
+                    ChatBackend(supervisor).check()
+                else:
+                    backend = NativeWorkBackend(supervisor, self.service.store.root)
+                    backend.identity.excluded_env.update(self.excluded_env(config))
+                    backend.check()
+            except (OSError, subprocess.SubprocessError):
+                raise ValueError("Supervisor: Codex CLI is unavailable or timed out") from None
+            except ValueError as error:
+                raise ValueError(f"Supervisor: {error}") from None
         for slot in roster.slots:
             if slot.backend.mode == "codex" and slot.backend.codex_auth == "api_key":
                 try:

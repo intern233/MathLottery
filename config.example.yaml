@@ -6,6 +6,7 @@ backend:
   # Both use the same native Codex tools. Keys stay in the launching environment.
   codex_auth: chatgpt
   codex_api_key_env: OPENAI_API_KEY
+  # Default for Codex subscription, Codex API key and OpenAI Responses agents.
   model: gpt-6-astra
   reasoning_effort: max
   chat:
@@ -21,7 +22,7 @@ backend:
         container:
           type: auto
 
-  # 以下为运行设置。model / reasoning_effort 改为 null 可继承 Codex 用户配置。
+  # 以下为运行设置。显式 null 可使用 MathLottery 独立 Codex 目录的默认配置。
   execution: native
   codex_command: codex
   codex_profile: null
@@ -50,14 +51,23 @@ solve:
   # Optional cap on active research groups (1–32), across which the above agents
   # are shared. Requires parallel_agents; null follows the total researcher cap.
   max_groups: null
-  # Supervision shares slot 1 sequentially. Review requests wait for that slot;
+  # By default, supervision shares slot 1 sequentially. Requests wait for that slot;
   # in-flight research is not cancelled to free it.
+  # Per-call supervision timeout; null lets a long proof review finish naturally.
   supervisor_timeout_seconds: 600
   board_review_interval_seconds: 300
+  # Opt-in: let the supervisor tune board curation suggestions and voluntary
+  # collaboration guidance within this run. Requires explicit parallel_agents.
+  adaptive_coordination: false
   # Optional per-researcher connections (native standalone Solve only).
   # Use the /agents page for browser tasks, or configure slots here for CLI Solve.
   # With slots, parallel_agents must equal their count. See docs/agents.md.
   agent_slots: []
+  # Optional dedicated native supervisor connection (same fields as backend).
+  # Requires supervised coordination and explicit researcher slots; adds at most
+  # one simultaneous call beyond parallel_agents. null preserves slot 1 sharing.
+  # See docs/agents.md for a subscription supervisor with four API researchers.
+  supervisor_backend: null
 discovery:
   # Frozen Find dossier passed to a user-selected Solve task; skipped files are reported.
   context_max_files: 300

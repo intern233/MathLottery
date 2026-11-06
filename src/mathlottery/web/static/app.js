@@ -146,6 +146,8 @@ async function loadReviewSource() {
   finally { if (generation === reviewSource.generation) { reviewSource.loading = false; renderReviewSource(); updateExecutionControls(); } }
 }
 function newTaskBlock() {
+  if (state.workflow === "solve" && !$("#solve-adaptive-field").hidden && $("#solve-adaptive").checked
+      && !($("#solve-parallel").value || state.settings?.solve_parallel_agents)) return t("adaptiveNeedsParallel");
   if (agentSlots.enabled()) return agentSlots.block();
   if (state.settings?.execution && state.settings.execution !== "native") return t("nativeExecutionRequired");
   if (state.workflow === "solve" && ($("#solve-groups").value || state.settings?.solve_max_groups)
@@ -166,7 +168,9 @@ function updateExecutionControls() {
   const subscriptionResume = run && !savedAgentSlots(run) && ["codex", "work"].includes(run.settings.backend || run.mode) && run.settings.codex_auth !== "api_key";
   if (subscriptionResume) account.ensureLoaded(true);
   const resumeAccountBlock = run && !savedAgentSlots(run) ? account.block(run.settings.backend || run.mode, run.settings) : "";
-  const resumeBlock = resumeGroupBlock || resumeAccountBlock;
+  const resumePolicyBlock = run?.workflow === "solve" && !$("#resume-adaptive-field").hidden && $("#resume-adaptive").checked
+    && !($("#resume-parallel").value || run.settings.solve_parallel_agents) ? t("adaptiveNeedsParallel") : "";
+  const resumeBlock = resumeGroupBlock || resumePolicyBlock || resumeAccountBlock;
   $("#resume-submit").disabled = state.resuming || !run || run.busy || !state.csrf || Boolean(resumeBlock);
   $("#resume-account").hidden = !subscriptionResume || !resumeAccountBlock || run.busy;
   notice("#resume-readiness", resumeBlock ? `${resumeBlock}${subscriptionResume && resumeAccountBlock ? ` ${t("resumeAccountHint")}` : ""}` : "");
@@ -204,6 +208,7 @@ function updateForm() {
   $("#solve-groups-field").hidden = flow !== "solve";
   $("#solve-team-limits").hidden = flow !== "solve";
   $("#solve-full-budget-field").hidden = flow !== "solve" || state.settings?.execution !== "native";
+  $("#solve-adaptive-field").hidden = flow !== "solve" || state.settings?.execution !== "native" || state.settings?.solve_coordination !== "supervised";
   $("#saved-review").hidden = !savedReview; $("#problem-fields").hidden = ["find", "organize"].includes(flow) || savedReview;
   $("#proof-fields").hidden = flow !== "verify" || savedReview;
   $("#new-problem").hidden = Boolean($("#problem-id").value);
@@ -312,6 +317,7 @@ function renderOverview() {
     $("#solve-parallel").placeholder = state.settings.solve_parallel_agents ?? t("inherited");
     $("#solve-groups").placeholder = state.settings.solve_max_groups ?? t("solveGroupsDefault");
     if (!$("#solve-full-budget").dataset.touched) $("#solve-full-budget").checked = Boolean(state.settings.solve_until_budget_exhausted);
+    if (!$("#solve-adaptive").dataset.touched) $("#solve-adaptive").checked = Boolean(state.settings.solve_adaptive_coordination);
     text("#solve-full-budget-hint", `${t("fullSolveBudgetHint")} ${finalizationBudgetHint(state.settings)}`);
   }
   const availableProblems = state.problems.map((problem) => [problem.id, state.discoveryChoice?.problem.id === problem.id ? state.discoveryChoice.problem.title : problem.title]);
@@ -639,6 +645,11 @@ function renderDetail(run) {
   $("#resume-groups").placeholder = run.settings.solve_max_groups ?? t("solveGroupsDefault");
   solveTeams.render(run, state.language);
   $("#resume-full-budget-field").hidden = run.workflow !== "solve" || run.settings.execution !== "native";
+  $("#resume-adaptive-field").hidden = run.workflow !== "solve" || run.settings.execution !== "native" || run.settings.solve_coordination !== "supervised";
+  if ($("#resume-adaptive").dataset.runId !== run.id) {
+    $("#resume-adaptive").checked = Boolean(run.settings.solve_adaptive_coordination);
+    $("#resume-adaptive").dataset.runId = run.id;
+  }
   if ($("#resume-full-budget").dataset.runId !== run.id) {
     $("#resume-full-budget").checked = Boolean(run.settings.solve_until_budget_exhausted);
     $("#resume-full-budget").dataset.runId = run.id;
@@ -688,6 +699,7 @@ async function selectRun(id, scroll = false) {
     const run = await api(`/api/runs/${id}`);
     if (state.selected !== id) return;
     delete $("#resume-full-budget").dataset.runId;
+    delete $("#resume-adaptive").dataset.runId;
     $("#resume-budget").value = ""; $("#resume-rounds").value = ""; $("#resume-parallel").value = ""; $("#resume-groups").value = ""; $("#direction").value = "";
     state.detail = run; renderOverview(); renderDetail(run);
     $("#resume-budget").placeholder = run.settings.budget_minutes; $("#resume-rounds").placeholder = run.settings.max_iterations;
@@ -725,6 +737,7 @@ function overrides() {
     const input = $("#" + id); if (input.value && !input.disabled) values[key] = input.value === "inherit" ? null : input.value === "true";
   }
   if (!$("#solve-full-budget-field").hidden && !$("#solve-full-budget").disabled) values.solve_until_budget_exhausted = $("#solve-full-budget").checked;
+  if (!$("#solve-adaptive-field").hidden && !$("#solve-adaptive").disabled) values.solve_adaptive_coordination = $("#solve-adaptive").checked;
   if (!$("#solve-parallel-field").hidden && !$("#solve-parallel").disabled && $("#solve-parallel").value) values.solve_parallel_agents = Number($("#solve-parallel").value);
   if (!$("#solve-groups-field").hidden && $("#solve-groups").value) values.solve_max_groups = Number($("#solve-groups").value);
   return values;
@@ -732,6 +745,8 @@ function overrides() {
 $("#solve-parallel").addEventListener("change", updateForm);
 ["solve-parallel", "solve-groups", "resume-parallel", "resume-groups"].forEach(id => $("#" + id).addEventListener("input", updateExecutionControls));
 $("#solve-full-budget").addEventListener("change", () => { $("#solve-full-budget").dataset.touched = "true"; });
+$("#solve-adaptive").addEventListener("change", () => { $("#solve-adaptive").dataset.touched = "true"; updateExecutionControls(); });
+$("#resume-adaptive").addEventListener("change", updateExecutionControls);
 $$("[data-workflow]").forEach((button) => button.addEventListener("click", () => setWorkflow(button.dataset.workflow, button.classList.contains("nav-item"))));
 $("#verify-mode").addEventListener("change", updateForm);
 $("#problem-id").addEventListener("change", () => { state.discoveryChoice = null; state.resultsKey = ""; if (state.detail) renderResults(state.detail); updateForm(); });
@@ -794,6 +809,7 @@ $("#resume-form").addEventListener("submit", async (event) => {
   if (!$("#resume-parallel-field").hidden && !$("#resume-parallel").disabled && $("#resume-parallel").value) body.solve_parallel_agents = Number($("#resume-parallel").value);
   if (!$("#resume-groups-field").hidden && $("#resume-groups").value) body.solve_max_groups = Number($("#resume-groups").value);
   if (!$("#resume-full-budget-field").hidden) body.solve_until_budget_exhausted = $("#resume-full-budget").checked;
+  if (!$("#resume-adaptive-field").hidden) body.solve_adaptive_coordination = $("#resume-adaptive").checked;
   if (!$("#resume-lean-limits").hidden) {
     for (const [field, selector] of Object.entries({formal_memory_mb: "#resume-lean-memory", formal_address_space_mb: "#resume-lean-address", formal_timeout_seconds: "#resume-lean-timeout"})) {
       if ($(selector).value) body[field] = Number($(selector).value);

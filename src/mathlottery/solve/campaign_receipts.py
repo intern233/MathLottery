@@ -35,7 +35,9 @@ class CampaignReceipts:
         history = {
             **{key: receipt.get(key) for key in (
                 "task_id", "worker_id", "group", "role", "mode", "model", "provider", "slot_id",
+                "route_kind", "codex_auth",
                 "invocation_seconds", "source_observed_at", "checkpoint_error",
+                "dispatch_reason",
             )},
             "phase": "SOLVE", "status": result.status, "usage": result.usage,
             "runtime": result.runtime, "session_id": result.session_id,
@@ -77,6 +79,8 @@ class CampaignReceipts:
                 history["supervision"] = decision.model_dump(mode="json")
             except ValueError as exc:
                 error = f"Supervision needs correction: {exc}"
+                # Resume clears last_error; preserve actionable feedback with the failed turn.
+                history["checkpoint_error"] = error
         else:
             state.review_requested = True
         if result.status != BackendStatus.COMPLETED and not receipt.get("recovered"):
@@ -104,8 +108,6 @@ class CampaignReceipts:
         if not set(attempt.get("board_review_keys", [])) <= {r.key for r in decision.board_reviews}:
             raise ValueError("Review each queued board theorem; use needs_work when evidence is insufficient")
         closing = attempt["purpose"] == "closing"
-        if not closing and not decision.groups:
-            raise ValueError("Supply research routes; only the scheduler ends research admissions")
         # Validate all exact candidate versions before recording any acceptance.
         for review in decision.solution_reviews:
             candidate = candidates.get(review.candidate_id)
@@ -140,12 +142,35 @@ class CampaignReceipts:
                 },
                 "source_keys": sources,
             })
+        # A validated full solution can close admissions before the time limit
+        # when full-budget research is disabled. Check the proposed reviews before
+        # committing them: an empty plan alone must never end unsolved research.
+        acceptance_ends_research = bool(
+            not config.budget.solve_until_budget_exhausted
+            and self.accepted(run, board, additional_reviews=new_reviews)
+        )
+        if not closing and not decision.groups and not acceptance_ends_research:
+            raise ValueError("Supply a bounded capacity plan with optional suggestions; only the scheduler ends research admissions")
+        from mathlottery.solve.coordination_policy import decide as decide_policy
+
+        policy_update = decide_policy(run, attempt, decision.coordination_update)
+        curation_error = None
+        try:
+            board.curate(decision.board_curation, attempt["task_id"], snapshot_hashes=attempt["board_hashes"])
+        except ValueError as exc:
+            # Optional visibility maintenance must not abort good research when a
+            # live publication/focus protects a node after the frozen snapshot.
+            curation_error = str(exc)
         state.candidate_reviews.extend(new_reviews)
         state.acknowledged_signals = list(dict.fromkeys([
             *state.acknowledged_signals, *attempt["signal_ids"],
         ]))
         state.decisions.append({"task_id": attempt["task_id"], "purpose": attempt["purpose"],
-                                "rationale": decision.rationale, "summary": decision.summary})
+                                "rationale": decision.rationale, "summary": decision.summary,
+                                "board_curation": [a.model_dump(mode="json") for a in decision.board_curation],
+                                "curation_error": curation_error,
+                                "coordination_update": policy_update,
+                                "coordination_observation": (attempt.get("coordination_snapshot") or {}).get("observation")})
         state.summary = decision.summary
         state.last_review_elapsed = budget.elapsed(run)
         state.review_requested = any(
@@ -155,7 +180,7 @@ class CampaignReceipts:
         # When all researchers have already returned, this successful review's
         # required synthesis is also the closing report; do not buy a redundant turn.
         state.closed = closing or bool(
-            self.accepted(run, board) and not config.budget.solve_until_budget_exhausted
+            acceptance_ends_research
             and not state.review_requested
             and not any(a["task_id"] != attempt["task_id"] for a in team.active_attempts)
         )
@@ -168,7 +193,7 @@ class CampaignReceipts:
             body=decision.summary,
         ), workspace)
         state.dispatch = []
-        if not state.closed:
+        if not state.closed and not acceptance_ends_research:
             # Do not mutate busy workers' assignments in the authoritative checkpoint.
             snapshot = run.model_copy(deep=True)
             for worker in self.coordinator.selected_workers(snapshot, config, config.solve.parallel_agents):
@@ -178,9 +203,9 @@ class CampaignReceipts:
                     state.dispatch.append(worker.id)
             team.rounds += 1
 
-    def accepted(self, run, board):
+    def accepted(self, run, board, *, additional_reviews=()):
         state = run.native.solve_team.campaign
-        latest = {r["candidate_id"]: r for r in state.candidate_reviews}
+        latest = {r["candidate_id"]: r for r in (*state.candidate_reviews, *additional_reviews)}
         messages = {m["key"]: m for m in board.messages()}
         for candidate in reversed(run.candidates):
             review = latest.get(candidate.id)
